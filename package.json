@@ -1,0 +1,12 @@
+{
+  "name": "ik-accounting-platform",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev",
+    "db:local": "wrangler d1 execute ik-platform --local --file migrations/0001_schema.sql && wrangler d1 execute ik-platform --local --file migrations/0002_seed.sql"
+  },
+  "devDependencies": {
+    "wrangler": "4.152.0"
+  }
+}

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>الشهادة | Mr. Islam Khalifa</title>
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js"></script>
+</head>
+<body>
+<style>
+  .cert-shell{overflow-x:auto;padding:8px 0}
+  .cert{position:relative;width:1123px;height:794px;margin:0 auto;background:#fff;color:var(--navy);font-family:var(--f-display);text-align:center;overflow:hidden;box-shadow:var(--shadow)}
+  .cert.has-bg{background-size:cover;background-position:center}
+  .cert:not(.has-bg)::before{content:"";position:absolute;inset:22px;border:2px solid var(--gold);border-radius:6px}
+  .cert:not(.has-bg)::after{content:"";position:absolute;inset:32px;border:1px solid rgba(201,164,92,.5);border-radius:4px}
+  .cert .band{position:absolute;inset-inline:0;top:0;height:150px;background:var(--navy)}
+  .cert.has-bg .band{display:none}
+  .cert .in{position:relative;z-index:1;padding:44px 90px 0;height:100%;display:flex;flex-direction:column;align-items:center}
+  .cert img.logo{height:70px;background:#fff;border-radius:10px;padding:6px 10px}
+  .cert .brand{direction:ltr;color:#fff;font-size:15px;letter-spacing:.06em;margin-top:8px}
+  .cert.has-bg .brand{color:var(--navy)}
+  .cert h1{font-size:46px;margin-top:46px;color:var(--navy)}
+  .cert .en-t{direction:ltr;font-family:var(--f-body);font-size:15px;letter-spacing:.3em;color:var(--gold-deep);margin-top:2px}
+  .cert .lead{font-family:var(--f-body);font-size:19px;color:var(--ink-2);margin-top:28px}
+  .cert .name{font-size:44px;font-weight:800;margin-top:10px;padding:0 30px 6px;border-bottom:2px solid var(--gold)}
+  .cert .course{font-size:27px;margin-top:20px}
+  .cert .meta{position:absolute;bottom:72px;inset-inline:90px;display:flex;justify-content:space-between;align-items:flex-end;font-family:var(--f-body);font-size:14px;color:var(--ink-2)}
+  .cert .meta b{display:block;font-family:var(--f-display);font-size:18px;color:var(--navy)}
+  .cert .sig b{font-family:"Brush Script MT",cursive;font-size:30px;direction:ltr}
+  .cert .slogan{position:absolute;bottom:42px;inset-inline:0;font-size:13px;color:var(--gold-deep);direction:ltr}
+  @media print{
+    @page{size:A4 landscape;margin:0}
+    body *{visibility:hidden}
+    .cert,.cert *{visibility:visible}
+    .cert{position:fixed;inset:0;box-shadow:none;width:297mm;height:210mm}
+  }
+</style>
+<main class="wrap">
+  <div class="page-head spread">
+    <div><span class="eyebrow">شهادة إتمام</span><h1>مبروك على إنهاء الكورس</h1>
+      <p>تقدر تطبع الشهادة أو تحفظها PDF من زر الطباعة (اختار "Save as PDF").</p></div>
+    <button class="btn btn-gold" type="button" onclick="print()">اطبع أو احفظ PDF</button>
+  </div>
+  <div class="cert-shell"><div id="cert" class="cert"><div class="loading">جاري التحميل...</div></div></div>
+</main>
+<script>
+(async function () {
+  const me = await IK.requireUser();
+  const site = await IK.chrome({ user: me });
+  const s = site.settings;
+  const el = IK.$("#cert");
+  let c;
+  try { c = await IK.api("/student/certificate/" + encodeURIComponent(IK.qs("c") || "financial")); }
+  catch (e) { el.innerHTML = `<div class="empty" style="padding-top:300px">${IK.esc(e.message)}</div>`; return; }
+  if (c.has_bg) { el.classList.add("has-bg"); el.style.backgroundImage = "url(/api/public/cert-bg)"; }
+  const verify = location.origin + "/verify?code=" + c.code;
+  el.innerHTML = `<div class="band"></div><div class="in">
+      <img class="logo" src="/assets/logo.webp" alt="">
+      <div class="brand">${IK.esc(s.brand_name || "")}</div>
+      <h1>شهادة إتمام</h1><div class="en-t">CERTIFICATE OF COMPLETION</div>
+      <p class="lead">تشهد المنصة بأن</p>
+      <div class="name">${IK.esc(c.name)}</div>
+      <p class="lead">أتم بنجاح كورس</p>
+      <div class="course">${IK.esc(c.course)}</div>
+    </div>
+    <div class="meta">
+      <div style="text-align:start">تاريخ الإصدار<b class="num">${IK.esc(c.issued_at)}</b></div>
+      <div>كود التحقق<b class="num">${IK.esc(c.code)}</b><span class="num" style="font-size:12px">${IK.esc(verify)}</span></div>
+      <div class="sig" style="text-align:end">المحاضر<b>${IK.esc(c.signature)}</b></div>
+    </div>
+    <div class="slogan">${IK.esc(s.footer_line1 || "")} — ${IK.esc(s.footer_line2 || "")}</div>`;
+})();
+</script>
+</body>
+</html>

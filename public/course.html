@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>الكورس | Mr. Islam Khalifa</title>
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <div id="root"><div class="loading">جاري التحميل...</div></div>
+</main>
+<style>
+  .hero-c{background:var(--navy);color:#fff;border-radius:var(--r-l);padding:clamp(24px,4vw,44px);margin-top:28px}
+  .hero-c h1{color:#fff;font-size:clamp(26px,3.6vw,40px)}
+  .hero-c .eyebrow{color:var(--gold);font-weight:600;font-size:14px}
+  .hero-c p{color:rgba(255,255,255,.85);margin-top:12px;max-width:72ch;font-size:17px;line-height:2}
+  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+  .plan ul{margin:0;padding-inline-start:20px;color:var(--ink-2)}
+  .price b{font-family:var(--f-display);font-size:24px;color:var(--navy)}
+  .lv{display:grid;grid-template-columns:auto 1fr;gap:16px;background:var(--white);border:1px solid var(--line);border-radius:var(--r-l);padding:18px 20px}
+  .lv .n{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--gold);color:var(--gold-deep);font-family:var(--f-mono)}
+  .lv .topics{font-size:14px;color:var(--ink-3);margin-top:2px}
+  .lv .teaser{margin-top:8px;color:var(--ink-2)}
+  .cum{border-style:dashed;border-color:var(--gold);background:#FBF7EE}
+  .sec{margin-top:36px}
+  .sec>h2{font-size:22px;margin-bottom:14px}
+</style>
+<script>
+(async function () {
+  let me = null;
+  try { me = await IK.api("/auth/me", { noRedirect: true }); } catch (e) {}
+  const site = await IK.chrome({ user: me });
+  const s = site.settings;
+  const slug = IK.qs("c") || "financial";
+  const root = IK.$("#root");
+  let d;
+  try { d = await fetch("/api/public/course/" + encodeURIComponent(slug)).then((r) => r.ok ? r.json() : Promise.reject()); }
+  catch (e) { root.innerHTML = '<div class="card empty" style="margin-top:28px">الكورس ده مش موجود.</div>'; return; }
+  const c = d.course;
+  document.title = c.title + " | Mr. Islam Khalifa";
+  let enrolled = false;
+  if (me) { try { await IK.api("/student/course/" + encodeURIComponent(slug), { noRedirect: true }); enrolled = true; } catch (e) {} }
+  const sub = (p) => IK.wa(s.whatsapp, IK.fill(s.subscribe_message, { course: c.title, plan: p.name }));
+  const cumAfter = (n) => d.exams.filter((e) => e.kind === "cumulative" && e.after_level === n);
+  const soon = c.status === "soon";
+  root.innerHTML = `
+    <section class="hero-c">
+      <span class="eyebrow">${soon ? "قيد الافتتاح قريباً" : "كورس متاح الآن"}</span>
+      <h1>${IK.esc(c.title)}</h1>
+      ${c.subtitle ? `<p style="font-weight:600;color:var(--sky)">${IK.esc(c.subtitle)}</p>` : ""}
+      ${c.intro ? `<p>${IK.esc(c.intro)}</p>` : ""}
+      ${c.audience ? `<p><b style="color:var(--gold)">الكورس ده لمين؟</b> ${IK.esc(c.audience)}</p>` : ""}
+      <div class="row" style="margin-top:22px">
+        ${enrolled ? `<a class="btn btn-gold" href="/learn?c=${encodeURIComponent(slug)}">ادخل الكورس</a>` :
+          soon ? `<a class="btn btn-wa" target="_blank" rel="noopener" href="${IK.wa(s.whatsapp, IK.fill(s.notify_message, { course: c.title }))}">${IK.chatIcon}بلغني أول ما يفتح</a>` :
+          `<a class="btn btn-wa" href="#plans">${IK.chatIcon}اشترك دلوقتي</a>`}
+        ${me ? "" : '<a class="btn btn-ghost" href="/login">مشترك بالفعل؟ ادخل</a>'}
+      </div>
+    </section>
+    ${d.levels.length ? `<section class="sec">
+      <h2>المستويات (${d.levels.length})</h2>
+      <div class="levels">${d.levels.map((l) => `
+        <article class="lv"><span class="n">${l.num}</span><div>
+          <h3>المستوى ${l.num}: ${IK.esc(l.title)}</h3>
+          ${l.topics ? `<p class="topics">${IK.esc(l.topics)}</p>` : ""}
+          ${l.teaser ? `<p class="teaser">${IK.esc(l.teaser)}</p>` : ""}
+          <p class="topics" style="margin-top:8px">+ امتحان المستوى ${l.num}</p>
+        </div></article>
+        ${cumAfter(l.num).map((e) => `<article class="lv cum"><span class="n">★</span><div><h3>${IK.esc(e.title)}</h3><p class="topics">امتحان تراكمي على كل اللي فات، ولازم تعديه علشان تكمل.</p></div></article>`).join("")}`).join("")}
+      </div></section>` : ""}
+    <section class="sec">
+      <h2>نظام الامتحانات والشهادة</h2>
+      <div class="card stack">
+        <p>بعد كل مستوى فيه امتحان، والنجاح فيه بيفتحلك المستوى اللي بعده. النجاح بأكتر من ${d.exams[0] ? d.exams[0].pass_pct : 50}%، والمحاولات مفتوحة، والأسئلة بتتغير في كل محاولة.</p>
+        <p>وفيه امتحانات تراكمية بتجمع اللي فات، وفي الآخر امتحان شامل. لما تخلص كل الامتحانات بتطلعلك <b>شهادة إتمام</b> باسمك وبكود تحقق.</p>
+      </div>
+    </section>
+    ${!soon && !enrolled && d.plans.length ? `<section class="sec" id="plans">
+      <h2>الاشتراك</h2>
+      <div class="plans">${d.plans.map((p) => `
+        <article class="card plan stack">
+          <div class="spread"><h3>${IK.esc(p.name)}</h3>${p.code === "pro" ? '<span class="badge gold">Pro</span>' : ""}</div>
+          <div>${IK.priceHTML(p)}</div>
+          ${p.features.length ? `<ul>${p.features.map((f) => `<li>${IK.esc(f)}</li>`).join("")}</ul>` : ""}
+          <a class="btn btn-wa" target="_blank" rel="noopener" href="${sub(p)}">${IK.chatIcon}اشترك على واتساب</a>
+        </article>`).join("")}</div>
+      <p class="muted" style="margin-top:10px">الدفع بيتم مع المحاضر على واتساب، وبعدها بيتعملك حساب على المنصة.</p>
+    </section>` : ""}`;
+})();
+</script>
+</body>
+</html>
