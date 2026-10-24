@@ -18,7 +18,7 @@
 ## التشغيل على Cloudflare (مرة واحدة)
 
 1. اعمل حساب مجاني على [Cloudflare](https://dash.cloudflare.com/sign-up).
-2. **قاعدة البيانات:** من Storage & Databases ← D1 ← Create، سميها `ik-platform`. انسخ الـ Database ID وابعته (أو حطه في `wrangler.toml` مكان الأصفار).
+2. **قاعدة البيانات:** من Storage & Databases ← D1 ← Create، سميها `ik-platform`. الـ Database ID متسجل في `wrangler.toml`.
 3. **الجداول:** افتح قاعدة البيانات ← Console، والصق محتوى `migrations/0001_schema.sql` واضغط Execute، وبعدين نفس الكلام مع `migrations/0002_seed.sql`.
 4. **الموقع:** من Workers & Pages ← Create ← Pages ← Connect to Git، واختار الريبو `ik-accounting-platform`. سيب Build command فاضي، وخلي Build output directory = `public`.
 5. **كود الإعداد:** من Settings ← Variables and Secrets، ضيف `SETUP_KEY` كـ Secret بأي كلمة سر طويلة إنت بس اللي تعرفها، واعمل Redeploy.
