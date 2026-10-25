@@ -64,20 +64,20 @@
       </div>
     </section>
     ${d.levels.length ? `<section class="sec">
-      <h2>المستويات (${d.levels.length})</h2>
+      <h2>${IK.U(d.course.unit).pl} (${d.levels.length})</h2>
       <div class="levels">${d.levels.map((l) => `
         <article class="lv"><span class="n">${l.num}</span><div>
-          <h3>المستوى ${l.num}: ${IK.esc(l.title)}</h3>
+          <h3>${IK.U(d.course.unit).the} ${l.num}: ${IK.esc(l.title)}</h3>
           ${l.topics ? `<p class="topics">${IK.esc(l.topics)}</p>` : ""}
           ${l.teaser ? `<p class="teaser">${IK.esc(l.teaser)}</p>` : ""}
-          <p class="topics" style="margin-top:8px">+ امتحان المستوى ${l.num}</p>
+          <p class="topics" style="margin-top:8px">+ امتحان ${IK.U(d.course.unit).the} ${l.num}</p>
         </div></article>
         ${cumAfter(l.num).map((e) => `<article class="lv cum"><span class="n">★</span><div><h3>${IK.esc(e.title)}</h3><p class="topics">امتحان تراكمي على كل اللي فات، ولازم تعديه علشان تكمل.</p></div></article>`).join("")}`).join("")}
       </div></section>` : ""}
     <section class="sec">
       <h2>نظام الامتحانات والشهادة</h2>
       <div class="card stack">
-        <p>بعد كل مستوى فيه امتحان، والنجاح فيه بيفتحلك المستوى اللي بعده. النجاح بأكتر من ${d.exams[0] ? d.exams[0].pass_pct : 50}%، والمحاولات مفتوحة، والأسئلة بتتغير في كل محاولة.</p>
+        <p>بعد كل ${IK.U(d.course.unit).a} فيه امتحان، والنجاح فيه بيفتحلك ${IK.U(d.course.unit).the} ${IK.U(d.course.unit).key === "unit" ? "اللي بعدها" : "اللي بعده"}. النجاح بأكتر من ${d.exams[0] ? d.exams[0].pass_pct : 50}%، والمحاولات مفتوحة، والأسئلة بتتغير في كل محاولة.</p>
         <p>وفيه امتحانات تراكمية بتجمع اللي فات، وفي الآخر امتحان شامل. لما تخلص كل الامتحانات بتطلعلك <b>شهادة إتمام</b> باسمك وبكود تحقق.</p>
       </div>
     </section>

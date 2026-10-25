@@ -27,10 +27,11 @@
   const e = info.exam;
   document.title = e.title + " | " + info.course.title;
   const back = `/level?id=${info.level.id}`;
+  const U = IK.U(info.course.unit);
 
   function intro() {
     root.innerHTML = `
-      <div class="page-head"><a class="muted" href="${back}">← المستوى ${info.level.num}: ${IK.esc(info.level.title)}</a>
+      <div class="page-head"><a class="muted" href="${back}">← ${U.the} ${info.level.num}: ${IK.esc(info.level.title)}</a>
         <h1>${IK.esc(e.title)}</h1></div>
       <div class="card stack">
         <p>الامتحان فيه <b>${e.questions}</b> سؤال اختيار من متعدد، والنجاح بأكتر من <b>${e.pass_pct}%</b>.</p>
@@ -108,7 +109,7 @@
         <p>جاوبت صح على <b>${r.correct}</b> من <b>${r.total}</b> سؤال. النجاح بأكتر من ${r.pass_pct}%.</p>
         <p class="muted">${r.passed ? "المرحلة الجاية اتفتحتلك. وتقدر تتمرن بأسئلة جديدة وقت ما تحب." : "راجع أخطاءك تحت، وارجع للمادة العلمية، وادخل تاني. الأسئلة هتتغير."}</p>
         <div class="row" style="justify-content:center">
-          <a class="btn btn-primary" href="${back}">ارجع للمستوى</a>
+          <a class="btn btn-primary" href="${back}">ارجع ${U.li}</a>
           <button class="btn btn-ghost" id="again" type="button">امتحان جديد بأسئلة مختلفة</button>
           <a class="btn btn-ghost" href="/dashboard">جدول امتحاناتي</a>
         </div>

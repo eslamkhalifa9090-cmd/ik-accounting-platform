@@ -170,7 +170,7 @@
     box.innerHTML = `<div class="card" style="border-color:var(--gold)">
       <div class="spread"><h2>تقدم: ${esc(r.user.name)}</h2><button class="btn btn-ghost btn-sm" type="button" id="x">قفل</button></div>
       ${r.courses.map((c) => `<h3 style="margin-top:14px">${esc(c.title)} · ${c.progress}% ${c.completed ? '<span class="badge ok">خلص الكورس</span>' : ""}</h3>
-        <div class="table-wrap" style="margin-top:8px"><table class="t"><thead><tr><th>المستوى</th><th>الحالة</th><th>المادة</th><th>امتحان المستوى</th><th>التراكمي</th></tr></thead><tbody>
+        <div class="table-wrap" style="margin-top:8px"><table class="t"><thead><tr><th>${esc(IK.U(c.unit).the)}</th><th>الحالة</th><th>الفصول</th><th>الامتحان</th><th>التراكمي</th></tr></thead><tbody>
         ${c.levels.map((l) => `<tr><td>${l.num}. ${esc(l.title)}</td><td>${l.status === "locked" ? "مقفول" : l.status === "done" ? "مكتمل" : "مفتوح"}</td>
           <td>${l.materials.filter((m) => m.done).length} / ${l.materials.length}</td><td>${ex(l.exam)}</td><td>${l.cumulative ? ex(l.cumulative) : ""}</td></tr>`).join("")}
         </tbody></table></div>`).join("") || '<p class="muted">مش مشترك في أي كورس.</p>'}
@@ -191,6 +191,8 @@
           <div class="field full"><label>المقدمة (النبذة)</label><textarea name="intro" rows="4">${esc(c.intro || "")}</textarea></div>
           <div class="field full"><label>الكورس لمين؟</label><input name="audience" value="${esc(c.audience || "")}"></div>
           <div class="field"><label>الترتيب</label><input name="sort" type="number" value="${c.sort}"></div>
+          <div class="field"><label>اسم التقسيم <small>(بيظهر للمتدرب في كل الصفحات وعناوين الامتحانات)</small></label>
+            <select name="unit">${opt("level", "مستويات (المستوى 1، 2 ...)", c.unit.key)}${opt("unit", "وحدات (الوحدة 1، 2 ...)", c.unit.key)}${opt("module", "موديولات (الموديول 1، 2 ...)", c.unit.key)}</select></div>
           <div class="full row"><button class="btn btn-primary" type="submit">حفظ الكورس</button><span class="status" hidden></span></div>
         </form>
         <h3 style="margin-top:22px">الباقات والأسعار</h3>
@@ -210,17 +212,17 @@
             <div class="field"><label>المميزات <small>(كل ميزة في سطر)</small></label><textarea name="features" rows="4">${esc(p.features.join("\n"))}</textarea></div>
             <div class="row"><button class="btn btn-primary btn-sm" type="submit">حفظ الباقة</button><span class="status" hidden></span></div>
           </form>`).join("")}</div>
-        <h3 style="margin-top:22px">المستويات</h3>
+        <h3 style="margin-top:22px">${c.unit.pl}</h3>
         <div class="stack" style="margin-top:10px">${c.levels.map((l) => `
           <form class="card js-level" data-id="${l.id}" style="background:var(--paper)">
             <div class="form-grid">
-              <div class="field full"><label>المستوى ${l.num}: العنوان</label><input name="title" value="${esc(l.title)}"></div>
+              <div class="field full"><label>${c.unit.the} ${l.num}: العنوان</label><input name="title" value="${esc(l.title)}"></div>
               <div class="field full"><label>المحتوى</label><input name="topics" value="${esc(l.topics || "")}"></div>
               <div class="field full"><label>المقدمة التشويقية</label><textarea name="teaser" rows="2">${esc(l.teaser || "")}</textarea></div>
             </div>
-            <div class="row" style="margin-top:10px"><button class="btn btn-primary btn-sm" type="submit">حفظ المستوى</button><span class="status" hidden></span></div>
+            <div class="row" style="margin-top:10px"><button class="btn btn-primary btn-sm" type="submit">حفظ</button><span class="status" hidden></span></div>
           </form>`).join("")}
-          <form class="card js-addlevel row" data-course="${c.id}"><div class="field" style="flex:1"><input name="title" placeholder="عنوان مستوى جديد"></div><button class="btn btn-ghost" type="submit">إضافة مستوى</button></form>
+          <form class="card js-addlevel row" data-course="${c.id}"><div class="field" style="flex:1"><input name="title" placeholder="عنوان ${c.unit.a} جديد"></div><button class="btn btn-ghost" type="submit">إضافة ${c.unit.a}</button></form>
         </div>
       </div>`).join("") + `
       <div class="card"><h2>إضافة مديول جديد</h2>
@@ -234,7 +236,7 @@
     const note = (form, kind, msg) => { const s = form.querySelector(".status"); IK.status(s, kind, msg); setTimeout(() => (s.hidden = true), 2500); };
     panel.querySelectorAll(".js-course").forEach((f) => (f.onsubmit = async (e) => {
       e.preventDefault();
-      try { await api("/admin/courses/" + f.closest("[data-course]").dataset.course, { method: "PATCH", body: Object.fromEntries(new FormData(f)) }); note(f, "ok", "اتحفظ"); await loadCourses(); }
+      try { await api("/admin/courses/" + f.closest("[data-course]").dataset.course, { method: "PATCH", body: Object.fromEntries(new FormData(f)) }); await loadCourses(); coursesTab(); }
       catch (err) { note(f, "bad", err.message); }
     }));
     panel.querySelectorAll(".js-plan").forEach((f) => (f.onsubmit = async (e) => {
@@ -268,7 +270,7 @@
     if (!pick.level || !c.levels.find((l) => String(l.id) === String(pick.level))) pick.level = c.levels[0] && c.levels[0].id;
     const html = `<div class="row" style="margin-bottom:16px">
       <div class="field"><label>الكورس</label><select id="pc">${courseOptions(c.slug)}</select></div>
-      <div class="field" style="flex:1;min-width:220px"><label>المستوى</label><select id="pl">${c.levels.map((l) => opt(l.id, l.num + ". " + l.title, pick.level)).join("")}</select></div></div>`;
+      <div class="field" style="flex:1;min-width:220px"><label>${c.unit.the}</label><select id="pl">${c.levels.map((l) => opt(l.id, l.num + ". " + l.title, pick.level)).join("")}</select></div></div>`;
     const bind = () => {
       $("#pc").onchange = (e) => { pick.course = e.target.value; pick.level = null; onChange(); };
       $("#pl").onchange = (e) => { pick.level = e.target.value; onChange(); };
@@ -278,78 +280,156 @@
 
   async function contentTab() {
     const p = pickers(contentTab);
-    if (!pick.level) { panel.innerHTML = p.html + '<div class="card empty">الكورس ده مفيهوش مستويات لسه. ضيف مستويات من تاب الكورسات.</div>'; p.bind(); return; }
+    const U = p.course.unit;
+    if (!pick.level) { panel.innerHTML = p.html + `<div class="card empty">الكورس ده مفيهوش ${U.pl} لسه. ضيفها من تاب الكورسات.</div>`; p.bind(); return; }
     const mats = await api(`/admin/levels/${pick.level}/materials`);
     panel.innerHTML = p.html + `
       <div class="card">
-        <h2>المادة العلمية للمستوى</h2>
-        <p class="muted" style="margin-top:4px">ملف الـ PDF بيتحول لصفحات صور محمية عليها اسم المتدرب، ومحدش يقدر يحمل الملف أو ينسخ منه. ولو رفعت نسخة جديدة بتحل مكان القديمة على طول.</p>
-        <div class="stack" style="margin-top:14px">${mats.map((m) => `
+        <h2>فصول ${U.the}</h2>
+        <p class="muted" style="margin-top:4px">كل فصل ملف لوحده، والمتدرب بيفتحهم بالترتيب ده: الفصل مايفتحش غير لما يخلص اللي قبله. رتبهم بالأسهم. ملف الـ PDF بيتحول لصفحات صور محمية عليها اسم المتدرب، ولو رفعت نسخة جديدة بتحل مكان القديمة على طول.</p>
+        <div class="stack" style="margin-top:14px">${mats.map((m, i) => `
           <div class="card" style="background:var(--paper)" data-mat="${m.id}">
-            <div class="spread"><div><b>${m.kind === "pdf" ? "📄" : "🎬"} ${esc(m.title)}</b>
-              <p class="muted">${m.kind === "pdf" ? (m.pages ? m.pages + " صفحة · نسخة " + m.version : "لسه ما اترفعش ملف") : esc(m.video_url || "من غير رابط")} · ${m.min_plan === "pro" ? "باقة Pro" : "كل الباقات"}</p></div>
+            <div class="spread"><div class="row" style="gap:10px;flex-wrap:nowrap"><span class="badge num">${i + 1}</span><div><b>${m.kind === "pdf" ? "📄" : "🎬"} ${esc(m.title)}</b>
+              <p class="muted">${m.kind === "pdf" ? (m.pages ? m.pages + " صفحة · نسخة " + m.version : "لسه ما اترفعش ملف") : esc(m.video_url || "من غير رابط")} · ${m.min_plan === "pro" ? "باقة Pro" : "كل الباقات"}</p></div></div>
               <div class="row">
+                <button class="btn btn-ghost btn-sm js-up" type="button" aria-label="لفوق"${i === 0 ? " disabled" : ""}>▲</button>
+                <button class="btn btn-ghost btn-sm js-down" type="button" aria-label="لتحت"${i === mats.length - 1 ? " disabled" : ""}>▼</button>
                 ${m.kind === "pdf" ? `<label class="btn btn-primary btn-sm">${m.pages ? "رفع نسخة جديدة" : "رفع PDF"}<input type="file" accept="application/pdf" hidden class="js-file"></label>` : ""}
                 <button class="btn btn-ghost btn-sm js-edit" type="button">تعديل</button>
                 <button class="btn btn-danger btn-sm js-del" type="button">مسح</button>
               </div></div>
             <div class="js-prog" hidden style="margin-top:10px"><div class="bar"><i style="width:0%"></i></div><p class="muted js-ptext"></p></div>
-          </div>`).join("") || '<p class="muted">مفيش مادة علمية للمستوى ده لسه.</p>'}</div>
+          </div>`).join("") || `<p class="muted">مفيش فصول في ${U.this} لسه.</p>`}</div>
       </div>
-      <div class="card"><h2>إضافة مادة</h2>
+      <div class="card" id="split"><h2>رفع ملف ${U.the} كله وتقسيمه لفصول</h2>
+        <p class="muted" style="margin-top:4px">اختار ملف الـ PDF الكامل، واكتب كل فصل في سطر: العنوان، وبعده علامة | وبعدها الصفحات من-إلى. المنصة بتعمل فصل لكل سطر وترفعه، والفصول بتتضاف بعد الموجودين بنفس الترتيب.</p>
+        <div class="form-grid" style="margin-top:12px">
+          <div class="field full"><label class="btn btn-ghost" style="justify-self:start">اختار ملف PDF<input type="file" accept="application/pdf" hidden id="sp-file"></label> <span class="muted" id="sp-name"></span></div>
+          <div class="field full"><label>الفصول <small>(مثال: الفصل الأول: كريم وقرار العمر | 4-4)</small></label>
+            <textarea id="sp-lines" rows="8" dir="rtl" placeholder="مقدمة: خريطة الرحلة | 1-3&#10;الفصل الأول: كريم وقرار العمر | 4-4&#10;الفصل الثاني: الفروض المحاسبية | 5-6"></textarea></div>
+          <div class="field"><label>متاحة لـ</label><select id="sp-plan">${opt("basic", "كل الباقات")}${opt("pro", "باقة Pro بس")}</select></div>
+          <div class="full row"><button class="btn btn-primary" type="button" id="sp-go" disabled>قسّم وارفع</button></div>
+          <div class="full" id="sp-prog" hidden><div class="bar"><i style="width:0%"></i></div><p class="muted" id="sp-text"></p></div>
+        </div></div>
+      <div class="card"><h2>إضافة فصل واحد</h2>
         <form id="addm" class="form-grid" style="margin-top:12px">
           <div class="field"><label>النوع</label><select name="kind">${opt("pdf", "PDF")}${opt("video", "فيديو (باقة Pro)")}</select></div>
-          <div class="field"><label>العنوان</label><input name="title" required placeholder="مثلاً: شرح المستوى الأول"></div>
+          <div class="field"><label>العنوان</label><input name="title" required placeholder="مثلاً: الفصل الأول: كريم وقرار العمر"></div>
           <div class="field"><label>متاحة لـ</label><select name="min_plan">${opt("basic", "كل الباقات")}${opt("pro", "باقة Pro بس")}</select></div>
           <div class="field"><label>رابط الفيديو <small>(للفيديو بس: YouTube غير مدرج أو Bunny)</small></label><input name="video_url" dir="ltr"></div>
           <div class="full row"><button class="btn btn-primary" type="submit">إضافة</button><span class="status" hidden></span></div>
         </form></div>`;
     p.bind();
+    const nextSort = () => (mats.length ? Math.max(...mats.map((m) => m.sort || 0), mats.length * 10) + 10 : 10);
     $("#addm").onsubmit = async (e) => {
       e.preventDefault();
-      try { await api(`/admin/levels/${pick.level}/materials`, { method: "POST", body: Object.fromEntries(new FormData(e.target)) }); contentTab(); }
+      try { await api(`/admin/levels/${pick.level}/materials`, { method: "POST", body: { ...Object.fromEntries(new FormData(e.target)), sort: nextSort() } }); contentTab(); }
       catch (err) { IK.status(e.target.querySelector(".status"), "bad", err.message); }
     };
-    panel.querySelectorAll("[data-mat]").forEach((box) => {
-      const m = mats.find((x) => String(x.id) === box.dataset.mat);
+    // الترتيب: بنعيد ترقيم الكل 10، 20، 30 ... بعد التبديل
+    const move = async (i, d) => {
+      const order = mats.slice();
+      [order[i], order[i + d]] = [order[i + d], order[i]];
+      await Promise.all(order.map((m, k) => api("/admin/materials/" + m.id, { method: "PATCH", body: { sort: (k + 1) * 10 } })));
+      contentTab();
+    };
+    panel.querySelectorAll("[data-mat]").forEach((box, i) => {
+      const m = mats[i];
       const file = box.querySelector(".js-file");
       if (file) file.onchange = () => file.files[0] && uploadPdf(m, file.files[0], box);
+      box.querySelector(".js-up").onclick = () => move(i, -1);
+      box.querySelector(".js-down").onclick = () => move(i, 1);
       box.querySelector(".js-del").onclick = async () => {
-        if (!confirm("متأكد إنك عايز تمسح المادة دي؟")) return;
+        if (!confirm("متأكد إنك عايز تمسح الفصل ده؟")) return;
         await api("/admin/materials/" + m.id, { method: "DELETE" }); contentTab();
       };
       box.querySelector(".js-edit").onclick = async () => {
-        const title = prompt("عنوان المادة", m.title);
+        const title = prompt("عنوان الفصل", m.title);
         if (title === null) return;
         const body = { title };
         if (m.kind === "video") { const v = prompt("رابط الفيديو", m.video_url || ""); if (v !== null) body.video_url = v; }
         await api("/admin/materials/" + m.id, { method: "PATCH", body }); contentTab();
       };
     });
+
+    // تقسيم ملف كامل لفصول
+    let spPdf = null;
+    $("#sp-file").onchange = async (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const pdf = await openPdfFile(f, $("#sp-name"));
+      if (!pdf) return;
+      spPdf = pdf;
+      $("#sp-name").textContent = `${f.name} · ${pdf.numPages} صفحة`;
+      if (!$("#sp-lines").value.trim()) $("#sp-lines").value = `${f.name.replace(/\.pdf$/i, "")} | 1-${pdf.numPages}`;
+      $("#sp-go").disabled = false;
+    };
+    $("#sp-go").onclick = async () => {
+      const txt = $("#sp-text"), bar = $("#sp-prog").querySelector("i");
+      $("#sp-prog").hidden = false;
+      const parts = [];
+      for (const [k, raw] of $("#sp-lines").value.split("\n").map((s) => s.trim()).filter(Boolean).entries()) {
+        const m = raw.match(/^(.+?)\s*\|\s*([0-9٠-٩]+)\s*[-–]\s*([0-9٠-٩]+)\s*$/);
+        const num = (s) => Number(String(s).replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+        if (!m) { txt.textContent = `السطر ${k + 1} مكتوب غلط. اكتبه كده: العنوان | 4-6`; return; }
+        const from = num(m[2]), to = num(m[3]);
+        if (!(from >= 1 && to >= from && to <= spPdf.numPages)) { txt.textContent = `صفحات السطر ${k + 1} غلط: الملف فيه ${spPdf.numPages} صفحة بس.`; return; }
+        parts.push({ title: m[1].trim(), from, to });
+      }
+      if (!parts.length) { txt.textContent = "اكتب فصل واحد على الأقل."; return; }
+      $("#sp-go").disabled = true;
+      const all = parts.reduce((a, x) => a + x.to - x.from + 1, 0);
+      let doneN = 0, sort = nextSort();
+      try {
+        for (const [k, part] of parts.entries()) {
+          const { id } = await api(`/admin/levels/${pick.level}/materials`, { method: "POST", body: { kind: "pdf", title: part.title, min_plan: $("#sp-plan").value, sort } });
+          sort += 10;
+          await pushPages({ id, version: 0 }, spPdf, part.from, part.to, (n, total) => {
+            txt.textContent = `الفصل ${k + 1} من ${parts.length} (${part.title}): صفحة ${n} من ${total}...`;
+            bar.style.width = Math.round(((doneN + n) / all) * 100) + "%";
+          });
+          doneN += part.to - part.from + 1;
+        }
+        txt.textContent = `تم. اترفع ${parts.length} فصل ووصلوا للمتدربين.`;
+        setTimeout(contentTab, 1500);
+      } catch (err) { txt.textContent = "الرفع وقف: " + err.message + " الفصول اللي اترفعت موجودة فوق، كمل الباقي."; $("#sp-go").disabled = false; }
+    };
+  }
+
+  async function openPdfFile(file, msgEl) {
+    if (!window.pdfjsLib) { msgEl.textContent = "مكتبة قراءة الـ PDF ما اتحملتش. اتأكد من النت وحدث الصفحة."; return null; }
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "/assets/vendor/pdfjs-3.11.174/pdf.worker.min.js";
+    return pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  }
+
+  // بيحول صفحات from..to من الملف لصور ويرفعها كنسخة جديدة من المادة، وبعدين ينشرها
+  async function pushPages(m, pdf, from, to, onPage) {
+    const version = m.version + 1, total = to - from + 1;
+    const canvas = document.createElement("canvas"), ctx = canvas.getContext("2d");
+    for (let n = 1; n <= total; n++) {
+      onPage(n, total);
+      const page = await pdf.getPage(from + n - 1);
+      const base = page.getViewport({ scale: 1 });
+      const vp = page.getViewport({ scale: Math.min(2.5, 1400 / base.width) });
+      canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      const blob = await new Promise((r) => canvas.toBlob(r, "image/webp", 0.82));
+      await api(`/admin/materials/${m.id}/pages/${n}?v=${version}`, { method: "PUT", body: blob, type: "image/webp" });
+    }
+    await api(`/admin/materials/${m.id}/publish`, { method: "POST", body: { version, pages: total } });
   }
 
   async function uploadPdf(m, file, box) {
     const prog = box.querySelector(".js-prog"), bar = prog.querySelector("i"), txt = box.querySelector(".js-ptext");
     prog.hidden = false;
-    if (!window.pdfjsLib) { txt.textContent = "مكتبة قراءة الـ PDF ما اتحملتش. اتأكد من النت وحدث الصفحة."; return; }
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "/assets/vendor/pdfjs-3.11.174/pdf.worker.min.js";
     try {
-      const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-      const version = m.version + 1;
-      const canvas = document.createElement("canvas"), ctx = canvas.getContext("2d");
-      for (let n = 1; n <= pdf.numPages; n++) {
-        txt.textContent = `بحول وبرفع صفحة ${n} من ${pdf.numPages}...`;
-        const page = await pdf.getPage(n);
-        const base = page.getViewport({ scale: 1 });
-        const vp = page.getViewport({ scale: Math.min(2.5, 1400 / base.width) });
-        canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
-        ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        await page.render({ canvasContext: ctx, viewport: vp }).promise;
-        const blob = await new Promise((r) => canvas.toBlob(r, "image/webp", 0.82));
-        await api(`/admin/materials/${m.id}/pages/${n}?v=${version}`, { method: "PUT", body: blob, type: "image/webp" });
-        bar.style.width = Math.round((n / pdf.numPages) * 100) + "%";
-      }
-      await api(`/admin/materials/${m.id}/publish`, { method: "POST", body: { version, pages: pdf.numPages } });
+      const pdf = await openPdfFile(file, txt);
+      if (!pdf) return;
+      await pushPages(m, pdf, 1, pdf.numPages, (n, total) => {
+        txt.textContent = `بحول وبرفع صفحة ${n} من ${total}...`;
+        bar.style.width = Math.round((n / total) * 100) + "%";
+      });
       txt.textContent = `تم. اترفعت ${pdf.numPages} صفحة ووصلت للمتدربين.`;
       setTimeout(contentTab, 1200);
     } catch (err) { txt.textContent = "الرفع وقف: " + err.message + " جرب تاني."; }
@@ -365,7 +445,7 @@
     panel.innerHTML = `
       <div class="row" style="margin-bottom:16px"><div class="field"><label>الكورس</label><select id="pc">${courseOptions(c.slug)}</select></div></div>
       <div class="card"><h2>امتحانات الكورس</h2>
-        <div class="table-wrap" style="margin-top:12px"><table class="t"><thead><tr><th>الامتحان</th><th>بعد مستوى</th><th>أسئلة في كل محاولة</th><th>النجاح بأكتر من %</th><th>المدة (دقيقة)</th><th>بنك الأسئلة</th><th></th></tr></thead><tbody>
+        <div class="table-wrap" style="margin-top:12px"><table class="t"><thead><tr><th>الامتحان</th><th>بعد ${esc(c.unit.the)}</th><th>أسئلة في كل محاولة</th><th>النجاح بأكتر من %</th><th>المدة (دقيقة)</th><th>بنك الأسئلة</th><th></th></tr></thead><tbody>
         ${exams.map((e) => `<tr data-ex="${e.id}"${String(e.id) === String(examPick) ? ' style="background:#FBF7EE"' : ""}>
           <td><input class="js-t" value="${esc(e.title)}" style="font:inherit;width:100%;border:1px solid var(--line);border-radius:6px;padding:4px 8px"></td>
           <td>${e.after_level}${e.kind === "cumulative" ? ' <span class="badge gold">تراكمي</span>' : ""}</td>
@@ -376,8 +456,8 @@
           <td><div class="row"><button class="btn btn-ghost btn-sm js-save" type="button">حفظ</button><button class="btn btn-primary btn-sm js-open" type="button">الأسئلة</button>
           ${e.kind === "cumulative" ? '<button class="btn btn-danger btn-sm js-delx" type="button">مسح</button>' : ""}</div></td></tr>`).join("")}
         </tbody></table></div>
-        <p class="muted" style="margin-top:8px">لو بنك الأسئلة أكبر من عدد أسئلة المحاولة، كل محاولة بتسحب أسئلة مختلفة. يفضل يكون البنك ضعف العدد أو أكتر. المستوى الجاي مش بيفتح غير لما المتدرب يعدي الامتحان، فلازم كل امتحان يبقى فيه أسئلة. المدة هي متوسط الحل اللي بيظهر للمتدرب، ولما تخلص الامتحان بيتسلم لوحده (0 = من غير وقت). اضغط حفظ بعد أي تعديل.</p>
-        <form id="addx" class="row" style="margin-top:12px"><span>إضافة امتحان تراكمي بعد المستوى</span><input name="after_level" type="number" min="1" style="width:70px" required><button class="btn btn-ghost btn-sm" type="submit">إضافة</button></form>
+        <p class="muted" style="margin-top:8px">لو بنك الأسئلة أكبر من عدد أسئلة المحاولة، كل محاولة بتسحب أسئلة مختلفة. يفضل يكون البنك ضعف العدد أو أكتر. ${esc(c.unit.the)} ${c.unit.key === "unit" ? "الجاية" : "الجاي"} مش ${c.unit.opens} غير لما المتدرب يعدي الامتحان، فلازم كل امتحان يبقى فيه أسئلة. المدة هي متوسط الحل اللي بيظهر للمتدرب، ولما تخلص الامتحان بيتسلم لوحده (0 = من غير وقت). اضغط حفظ بعد أي تعديل.</p>
+        <form id="addx" class="row" style="margin-top:12px"><span>إضافة امتحان تراكمي بعد ${esc(c.unit.the)}</span><input name="after_level" type="number" min="1" style="width:70px" required><button class="btn btn-ghost btn-sm" type="submit">إضافة</button></form>
       </div>
       ${ex ? `<div class="card" id="qs"><div class="loading">جاري تحميل الأسئلة...</div></div>` : ""}`;
     $("#pc").onchange = (e) => { pick.course = e.target.value; examPick = null; examsTab(); };
@@ -486,7 +566,7 @@
       <div class="card stack">
         <div class="spread"><h2>متدربين منقطعين</h2>
           <form id="dd" class="row"><span>مدخلوش من</span><input name="days" type="number" min="1" max="365" value="${r.days}" style="width:70px"><span>يوم أو أكتر</span><button class="btn btn-ghost btn-sm" type="submit">عرض</button></form></div>
-        <p class="muted">دول المتدربين اللي اشتراكهم ساري ولسه ما خلصوش الكورس ومدخلوش المنصة في المدة دي. زرار التذكير بيفتح واتساب برسالة جاهزة باسمه والمستوى اللي واقف عنده، وتقدر تعدل الرسالة من الإعدادات.</p>
+        <p class="muted">دول المتدربين اللي اشتراكهم ساري ولسه ما خلصوش الكورس ومدخلوش المنصة في المدة دي. زرار التذكير بيفتح واتساب برسالة جاهزة باسمه والمكان اللي واقف عنده، وتقدر تعدل الرسالة من الإعدادات.</p>
         ${r.students.length ? `<div class="table-wrap"><table class="t"><thead><tr><th>الاسم</th><th>الكورس</th><th>واقف عند</th><th>التقدم</th><th>آخر نشاط</th><th></th></tr></thead><tbody>
           ${r.students.map((u) => `<tr><td>${esc(u.name)}<br><span class="muted num">${esc(u.phone || u.email || "")}</span></td><td>${esc(u.course)}</td><td>${esc(u.level)}</td>
             <td class="num">${u.progress}%</td><td>${esc(ago(u.seen))}</td>
@@ -521,13 +601,13 @@
         ${field("whatsapp", "واتساب خدمة العملاء", "الاشتراك، الاستفسار عن الكورسات، التجديد", true)}
         ${field("whatsapp_display", "رقم خدمة العملاء زي ما يظهر للزوار", "", true)}
         ${field("support_whatsapp", "واتساب الدعم الفني", "نسيت الباسورد، مشاكل الدخول والملفات. فاضي = رقم خدمة العملاء", true)}
-        ${field("lecturer_whatsapp", "واتساب المحاضر", "أسئلة الشرح جوه المستويات. فاضي = رقم خدمة العملاء", true)}
+        ${field("lecturer_whatsapp", "واتساب المحاضر", "أسئلة الشرح جوه الكورس. فاضي = رقم خدمة العملاء", true)}
         <h2 class="full" style="margin-top:10px">رسايل الواتساب الجاهزة</h2>
         ${field("subscribe_message", "رسالة الاشتراك (خدمة العملاء)", "{course} اسم الكورس، {plan} الباقة", false, true)}
         ${field("notify_message", "رسالة بلغني لما يفتح (خدمة العملاء)", "{course} اسم الكورس", false, true)}
         ${field("support_message", "رسالة الدعم الفني", "{name} اسم المتدرب", false, true)}
-        ${field("follow_message", "رسالة المحاضر", "{name} الاسم، {course} الكورس، {level} المستوى", false, true)}
-        ${field("reminder_message", "رسالة تذكير المتدرب المنقطع", "{name} الاسم، {course} الكورس، {level} المستوى، {link} رابط المنصة", false, true)}
+        ${field("follow_message", "رسالة المحاضر", "{name} الاسم، {course} الكورس، {level} واقف عند فين", false, true)}
+        ${field("reminder_message", "رسالة تذكير المتدرب المنقطع", "{name} الاسم، {course} الكورس، {level} واقف عند فين، {link} رابط المنصة", false, true)}
         ${field("inactive_days", "يعتبر منقطع بعد كام يوم من غير دخول", "", true)}
         <div class="full row"><button class="btn btn-primary" type="submit">حفظ الإعدادات</button><span class="status" hidden></span></div>
       </form>
@@ -543,7 +623,7 @@
     const prev = () => {
       const cv = $("#wm-prev"), ctx = cv.getContext("2d");
       ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
-      ctx.fillStyle = "#102B4E"; ctx.font = '700 38px "IBM Plex Sans Arabic", Tahoma'; ctx.textAlign = "center"; ctx.fillText("المستوى الأول: نموذج صفحة", 400, 110);
+      ctx.fillStyle = "#102B4E"; ctx.font = '700 38px "IBM Plex Sans Arabic", Tahoma'; ctx.textAlign = "center"; ctx.fillText("نموذج صفحة من المادة العلمية", 400, 110);
       ctx.fillStyle = "#d9dee5";
       for (let y = 180; y < 880; y += 46) ctx.fillRect(80 + ((y / 46) % 3) * 30, y, 640 - ((y / 46) % 3) * 30, 14);
       IK.drawPageMarks(ctx, cv.width, cv.height, { ...s, ...Object.fromEntries(new FormData(sf)) }, { name: "أحمد محمد", phone: "01012345678" });
