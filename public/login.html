@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تسجيل الدخول | Mr. Islam Khalifa</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js"></script>
+</head>
+<body>
+<main class="wrap narrow">
+  <div class="page-head">
+    <span class="eyebrow">منصة المتدربين</span>
+    <h1>تسجيل الدخول</h1>
+    <p>ادخل بالميل أو رقم التليفون والباسورد اللي استلمتهم من المحاضر.</p>
+  </div>
+  <div class="card">
+    <form id="f" class="stack" novalidate>
+      <div class="field">
+        <label for="id">الميل أو رقم التليفون</label>
+        <input id="id" name="id" autocomplete="username" dir="ltr" required placeholder="01xxxxxxxxx">
+      </div>
+      <div class="field">
+        <label for="pw">الباسورد</label>
+        <input id="pw" name="password" type="password" autocomplete="current-password" dir="ltr" required>
+      </div>
+      <div class="status" id="st" role="status" aria-live="polite" hidden></div>
+      <div class="spread">
+        <button class="btn btn-primary" id="go" type="submit">دخول</button>
+        <a class="muted" id="forgot" href="#" target="_blank" rel="noopener">نسيت الباسورد؟ كلم المحاضر على واتساب</a>
+      </div>
+    </form>
+  </div>
+  <p class="muted" style="margin-top:16px">لسه مش مشترك؟ <a href="/#platform">شوف الكورسات المتاحة</a></p>
+</main>
+<script>
+(async function () {
+  const site = await IK.chrome();
+  const s = site.settings || {};
+  IK.$("#forgot").href = IK.wa(s.lecturer_whatsapp || s.whatsapp, "السلام عليكم، نسيت باسورد المنصة.");
+  const rawNext = IK.qs("next") || "";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
+  try {
+    const me = await IK.api("/auth/me", { noRedirect: true });
+    location.href = next || (me.role === "admin" ? "/admin" : "/dashboard");
+    return;
+  } catch (e) {}
+  const f = IK.$("#f"), st = IK.$("#st"), go = IK.$("#go");
+  f.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    go.disabled = true;
+    try {
+      const r = await IK.api("/auth/login", { method: "POST", body: { id: IK.$("#id").value, password: IK.$("#pw").value }, noRedirect: true });
+      location.href = r.must_change ? "/account?first=1" : (next || (r.role === "admin" ? "/admin" : "/dashboard"));
+    } catch (e) {
+      IK.status(st, "bad", e.message);
+      go.disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

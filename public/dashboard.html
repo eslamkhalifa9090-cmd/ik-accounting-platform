@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة المتدرب | Mr. Islam Khalifa</title>
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <div class="page-head">
+    <span class="eyebrow">لوحة المتدرب</span>
+    <h1 id="hello">أهلاً بيك</h1>
+    <p>هنا هتلاقي كورساتك ونسبة تقدمك في كل كورس، وتكمل من المكان اللي وقفت عنده.</p>
+  </div>
+  <div id="mine" class="grid grid-2"><div class="loading">جاري التحميل...</div></div>
+  <section style="margin-top:36px">
+    <h2 style="font-size:20px;margin-bottom:12px">مسارات تانية في المنصة</h2>
+    <div id="others" class="grid grid-3"></div>
+  </section>
+</main>
+<script>
+(async function () {
+  const me = await IK.requireUser();
+  const site = await IK.chrome({ user: me });
+  const s = site.settings;
+  IK.$("#hello").textContent = "أهلاً بيك يا " + me.name.split(" ")[0];
+  const d = await IK.api("/student/dashboard");
+  const mine = IK.$("#mine");
+  if (!d.courses.length) {
+    mine.innerHTML = '<div class="card empty">لسه مفيش كورسات متفعلة على حسابك. لو دفعت الاشتراك، كلم المحاضر علشان يفعله.</div>';
+  } else {
+    mine.innerHTML = d.courses.map((c) => `
+      <article class="card stack">
+        <div class="spread"><h2>${IK.esc(c.title)}</h2><span class="badge ${c.plan === "pro" ? "gold" : ""}">${c.plan === "pro" ? "باقة Pro" : "الباقة الأساسية"}</span></div>
+        <p class="muted">${IK.esc(c.subtitle || "")}</p>
+        <div><div class="spread"><span>نسبة التقدم</span><b class="num">${c.progress}%</b></div><div class="bar"><i style="width:${c.progress}%"></i></div></div>
+        <p>${c.completed ? "خلصت الكورس كله. مبروك!" : "إنت دلوقتي في المستوى " + c.current_level + " من " + c.levels + ": <b>" + IK.esc(c.current_title) + "</b>"}</p>
+        ${c.active ? "" : '<div class="status bad">اشتراكك انتهى. كلم المحاضر علشان تجدده.</div>'}
+        ${c.expires_at && c.active ? '<p class="muted">الاشتراك متاح لحد ' + IK.esc(c.expires_at) + "</p>" : ""}
+        <div class="row">
+          ${c.active ? `<a class="btn btn-primary" href="/learn?c=${encodeURIComponent(c.slug)}">${c.progress ? "كمل الكورس" : "ابدأ الكورس"}</a>` : ""}
+          ${c.completed ? `<a class="btn btn-gold" href="/certificate?c=${encodeURIComponent(c.slug)}">شهادتك</a>` : ""}
+        </div>
+      </article>`).join("");
+  }
+  const enrolled = new Set(d.courses.map((c) => c.slug));
+  IK.$("#others").innerHTML = site.courses.filter((c) => !enrolled.has(c.slug)).map((c) => `
+    <article class="card stack">
+      <div class="spread"><h3>${IK.esc(c.title)}</h3>${c.status === "soon" ? '<span class="badge lock">قيد الافتتاح قريباً</span>' : '<span class="badge ok">متاح</span>'}</div>
+      <p class="muted">${IK.esc(c.subtitle || "")}</p>
+      ${c.status === "open"
+        ? `<a class="btn btn-ghost" href="/course?c=${encodeURIComponent(c.slug)}">تفاصيل الكورس</a>`
+        : `<a class="btn btn-ghost" target="_blank" rel="noopener" href="${IK.wa(s.whatsapp, IK.fill(s.notify_message, { course: c.title }))}">${IK.chatIcon}بلغني أول ما يفتح</a>`}
+    </article>`).join("") || '<p class="muted">إنت مشترك في كل المسارات المتاحة.</p>';
+})();
+</script>
+</body>
+</html>

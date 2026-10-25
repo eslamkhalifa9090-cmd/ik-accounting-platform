@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>الكورس | Mr. Islam Khalifa</title>
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <div id="root"><div class="loading">جاري التحميل...</div></div>
+</main>
+<script>
+(async function () {
+  const me = await IK.requireUser();
+  const site = await IK.chrome({ user: me });
+  const s = site.settings;
+  const slug = IK.qs("c") || "financial";
+  const root = IK.$("#root");
+  let d;
+  try { d = await IK.api("/student/course/" + encodeURIComponent(slug)); }
+  catch (e) { root.innerHTML = `<div class="card empty" style="margin-top:28px">${IK.esc(e.message)}</div>`; return; }
+  document.title = d.course.title + " | Mr. Islam Khalifa";
+  const cur = d.levels.find((l) => l.num === d.current_level);
+  const follow = IK.wa(s.lecturer_whatsapp || s.whatsapp, IK.fill(s.follow_message, {
+    name: me.name, course: d.course.title, level: cur ? "المستوى " + cur.num + " (" + cur.title + ")" : "",
+  }));
+  const examChip = (e) => !e ? "" : e.passed
+    ? `<span class="badge ok">${IK.esc(e.kind === "level" ? "عديت الامتحان" : "عديت التراكمي")} · ${e.best}%</span>`
+    : e.tries ? `<span class="badge bad">لسه معديتش ${IK.esc(e.kind === "level" ? "الامتحان" : "التراكمي")} · أعلى درجة ${e.best}%</span>` : "";
+  root.innerHTML = `
+    <div class="page-head spread">
+      <div><span class="eyebrow">كورساتي</span><h1>${IK.esc(d.course.title)}</h1><p>${IK.esc(d.course.subtitle || "")}</p></div>
+      <a class="btn btn-wa" target="_blank" rel="noopener" href="${follow}">${IK.chatIcon}كلم المحاضر</a>
+    </div>
+    <div class="card stack">
+      <div class="spread"><b>نسبة تقدمك في الكورس</b><b class="num">${d.progress}%</b></div>
+      <div class="bar"><i style="width:${d.progress}%"></i></div>
+      <p class="muted">${d.completed ? "خلصت الكورس كله. مبروك!" : "كل مستوى بيفتح لما تعدي امتحان المستوى اللي قبله."}</p>
+      ${d.completed ? `<a class="btn btn-gold" href="/certificate?c=${encodeURIComponent(slug)}">استلم شهادتك</a>` : ""}
+    </div>
+    <div class="levels" style="margin-top:20px">${d.levels.map((l) => {
+      const inner = `<span class="n">${l.status === "done" ? "✓" : l.num}</span>
+        <div><h3>المستوى ${l.num}: ${IK.esc(l.title)}</h3><p>${IK.esc(l.topics || "")}</p>
+        <div class="row" style="margin-top:6px">${examChip(l.exam)} ${examChip(l.cumulative)}
+        ${l.cumulative && !l.cumulative.passed && l.cumulative.available ? `<span class="badge gold">${IK.esc(l.cumulative.title)} مستنيك</span>` : ""}</div></div>
+        <span class="end">${l.status === "locked" ? '<span class="badge lock">مقفول</span>' : l.status === "done" ? '<span class="badge ok">مكتمل</span>' : '<span class="badge gold">متاح</span>'}</span>`;
+      return l.unlocked ? `<a class="level ${l.status}" href="/level?id=${l.id}">${inner}</a>` : `<div class="level locked">${inner}</div>`;
+    }).join("")}</div>`;
+})();
+</script>
+</body>
+</html>

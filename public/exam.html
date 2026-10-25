@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>الامتحان | Mr. Islam Khalifa</title>
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js"></script>
+</head>
+<body>
+<main class="wrap narrow">
+  <div id="root"><div class="loading">جاري التحميل...</div></div>
+</main>
+<script>
+(async function () {
+  const me = await IK.requireUser();
+  await IK.chrome({ user: me });
+  const root = IK.$("#root");
+  const id = IK.qs("id");
+  let info;
+  try { info = await IK.api("/student/exams/" + encodeURIComponent(id)); }
+  catch (e) { root.innerHTML = `<div class="card empty" style="margin-top:28px">${IK.esc(e.message)}</div>`; return; }
+  const e = info.exam;
+  document.title = e.title + " | " + info.course.title;
+  const back = `/level?id=${info.level.id}`;
+
+  function intro() {
+    root.innerHTML = `
+      <div class="page-head"><a class="muted" href="${back}">← المستوى ${info.level.num}: ${IK.esc(info.level.title)}</a>
+        <h1>${IK.esc(e.title)}</h1></div>
+      <div class="card stack">
+        <p>الامتحان فيه <b>${e.questions}</b> سؤال اختيار من متعدد، والنجاح بأكتر من <b>${e.pass_pct}%</b>.</p>
+        <p>المحاولات مفتوحة، والأسئلة بتتغير في كل محاولة. اقرا كل سؤال كويس قبل ما تختار.</p>
+        ${e.tries ? `<p class="muted">حاولت قبل كده ${e.tries} مرة، وأعلى درجة ليك ${e.best}%.</p>` : ""}
+        <div><button class="btn btn-primary" id="start" type="button">ابدأ الامتحان</button></div>
+      </div>`;
+    IK.$("#start").onclick = start;
+  }
+
+  async function start() {
+    root.innerHTML = '<div class="loading">جاري تجهيز الأسئلة...</div>';
+    let a;
+    try { a = await IK.api(`/student/exams/${id}/start`, { method: "POST" }); }
+    catch (err) { root.innerHTML = `<div class="card empty">${IK.esc(err.message)}</div>`; return; }
+    root.innerHTML = `
+      <div class="page-head"><h1>${IK.esc(e.title)}</h1><p class="muted">جاوب على كل الأسئلة وبعدين اضغط "سلّم الامتحان".</p></div>
+      <form id="f">${a.questions.map((q) => `
+        <fieldset class="q" style="margin:0 0 12px">
+          <h3>${q.n}. ${IK.esc(q.body)}</h3>
+          ${q.options.map((o, i) => `<label><input type="radio" name="q${q.id}" value="${i}"><span>${IK.esc(o)}</span></label>`).join("")}
+        </fieldset>`).join("")}
+        <div class="status" id="st" hidden></div>
+        <div class="spread" style="margin-top:16px"><span class="muted" id="left"></span><button class="btn btn-primary" id="send" type="submit">سلّم الامتحان</button></div>
+      </form>`;
+    const f = IK.$("#f"), left = IK.$("#left");
+    const count = () => a.questions.filter((q) => f.querySelector(`input[name="q${q.id}"]:checked`)).length;
+    const upd = () => { left.textContent = `جاوبت ${count()} من ${a.questions.length}`; };
+    f.addEventListener("change", upd); upd();
+    window.onbeforeunload = () => true;
+    f.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      if (count() < a.questions.length && !confirm("لسه فيه أسئلة ما جاوبتش عليها. تسلم كده؟")) return;
+      const answers = {};
+      for (const q of a.questions) { const c = f.querySelector(`input[name="q${q.id}"]:checked`); if (c) answers[q.id] = Number(c.value); }
+      IK.$("#send").disabled = true;
+      try {
+        const r = await IK.api(`/student/attempts/${a.attempt}/submit`, { method: "POST", body: { answers } });
+        window.onbeforeunload = null;
+        result(r);
+      } catch (err) { IK.status(IK.$("#st"), "bad", err.message); IK.$("#send").disabled = false; }
+    });
+  }
+
+  function result(r) {
+    root.innerHTML = `
+      <div class="page-head"><h1>${r.passed ? "مبروك، عديت الامتحان" : "قربت.. حاول تاني"}</h1></div>
+      <div class="card stack" style="text-align:center">
+        <p style="font-family:var(--f-display);font-size:48px;color:${r.passed ? "var(--ok)" : "var(--bad)"}" class="num">${r.score}%</p>
+        <p>جاوبت صح على <b>${r.correct}</b> من <b>${r.total}</b> سؤال. النجاح بأكتر من ${r.pass_pct}%.</p>
+        <p class="muted">${r.passed ? "المرحلة الجاية اتفتحتلك." : "راجع المادة العلمية للمستوى، وادخل الامتحان تاني. الأسئلة هتتغير."}</p>
+        <div class="row" style="justify-content:center">
+          <a class="btn btn-primary" href="${back}">ارجع للمستوى</a>
+          ${r.passed ? "" : '<button class="btn btn-ghost" id="again" type="button">حاول تاني</button>'}
+        </div>
+      </div>`;
+    const again = IK.$("#again");
+    if (again) again.onclick = start;
+  }
+
+  intro();
+})();
+</script>
+</body>
+</html>

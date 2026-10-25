@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إعداد المنصة | Mr. Islam Khalifa</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js"></script>
+</head>
+<body>
+<main class="wrap narrow">
+  <div class="page-head"><span class="eyebrow">أول تشغيل</span><h1>إنشاء حساب الأدمن</h1>
+    <p>الصفحة دي بتشتغل مرة واحدة بس، لإنشاء حسابك كأدمن. بعد كده بتتقفل.</p></div>
+  <div class="card">
+    <div id="done" class="status ok" hidden>حساب الأدمن معمول. <a href="/login">ادخل من هنا</a>.</div>
+    <form id="f" class="form-grid" novalidate>
+      <div class="field full"><label for="key">كود الإعداد <small>(SETUP_KEY اللي حطيته في Cloudflare)</small></label><input id="key" dir="ltr" required></div>
+      <div class="field"><label for="name">الاسم</label><input id="name" required></div>
+      <div class="field"><label for="phone">رقم التليفون <small>(اختياري)</small></label><input id="phone" dir="ltr"></div>
+      <div class="field"><label for="email">الميل</label><input id="email" type="email" dir="ltr" required></div>
+      <div class="field"><label for="pw">الباسورد</label><input id="pw" type="password" dir="ltr" required minlength="6"></div>
+      <div class="status full" id="st" hidden></div>
+      <div class="full"><button class="btn btn-primary" type="submit">إنشاء الحساب</button></div>
+    </form>
+  </div>
+</main>
+<script>
+(async function () {
+  await IK.chrome();
+  const f = IK.$("#f"), st = IK.$("#st");
+  const status = await fetch("/api/setup/status").then((r) => r.json()).catch(() => ({}));
+  if (!status.needed) { f.hidden = true; IK.$("#done").hidden = false; return; }
+  f.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      await IK.api("/setup", { method: "POST", body: { key: IK.$("#key").value.trim(), name: IK.$("#name").value, phone: IK.$("#phone").value, email: IK.$("#email").value, password: IK.$("#pw").value }, noRedirect: true });
+      f.hidden = true; IK.$("#done").hidden = false;
+    } catch (err) { IK.status(st, "bad", err.message); }
+  });
+})();
+</script>
+</body>
+</html>

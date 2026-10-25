@@ -1,0 +1,11 @@
+name = "ik-accounting-platform"
+pages_build_output_dir = "public"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ik-platform"
+# بعد ما تعمل قاعدة البيانات على Cloudflare حط الـ id بتاعها هنا
+database_id = "46a14b5f-eb8c-4313-8458-44c8e7db4b64"
+migrations_dir = "migrations"
+

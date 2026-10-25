@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>التحقق من الشهادة | Mr. Islam Khalifa</title>
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js"></script>
+</head>
+<body>
+<main class="wrap narrow">
+  <div class="page-head"><span class="eyebrow">التحقق من الشهادات</span><h1>تأكد من صحة شهادة</h1>
+    <p>اكتب كود التحقق المكتوب على الشهادة.</p></div>
+  <div class="card stack">
+    <form id="f" class="row"><div class="field" style="flex:1"><input id="code" dir="ltr" placeholder="IK-XXXXXXXX" required></div>
+      <button class="btn btn-primary" type="submit">تحقق</button></form>
+    <div class="status" id="st" hidden></div>
+  </div>
+</main>
+<script>
+(async function () {
+  await IK.chrome();
+  const st = IK.$("#st");
+  async function check(code) {
+    try {
+      const r = await fetch("/api/public/verify/" + encodeURIComponent(code.trim()));
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      st.className = "status ok"; st.hidden = false;
+      st.innerHTML = "الشهادة صحيحة: <b>" + IK.esc(d.name) + "</b> أتم كورس <b>" + IK.esc(d.course) + "</b> بتاريخ " + IK.esc(d.issued_at) + ".";
+    } catch (e) { IK.status(st, "bad", e.message || "مفيش شهادة بالكود ده."); }
+  }
+  IK.$("#f").addEventListener("submit", (e) => { e.preventDefault(); check(IK.$("#code").value); });
+  const q = IK.qs("code");
+  if (q) { IK.$("#code").value = q; check(q); }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>حسابي | Mr. Islam Khalifa</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js"></script>
+</head>
+<body>
+<main class="wrap narrow">
+  <div class="page-head">
+    <span class="eyebrow">حسابي</span>
+    <h1>تغيير الباسورد</h1>
+    <p id="first-note" hidden>أهلاً بيك في المنصة. قبل ما تبدأ، غير الباسورد اللي استلمته لباسورد خاص بيك.</p>
+  </div>
+  <div class="card">
+    <form id="f" class="stack" novalidate>
+      <div class="field"><label for="cur">الباسورد الحالي</label><input id="cur" type="password" autocomplete="current-password" dir="ltr" required></div>
+      <div class="field"><label for="nw">الباسورد الجديد <small>(6 حروف أو أرقام على الأقل)</small></label><input id="nw" type="password" autocomplete="new-password" dir="ltr" required minlength="6"></div>
+      <div class="field"><label for="nw2">اكتب الباسورد الجديد تاني</label><input id="nw2" type="password" autocomplete="new-password" dir="ltr" required></div>
+      <div class="status" id="st" role="status" aria-live="polite" hidden></div>
+      <button class="btn btn-primary" id="go" type="submit">حفظ الباسورد</button>
+    </form>
+  </div>
+</main>
+<script>
+(async function () {
+  const me = await IK.requireUser();
+  await IK.chrome({ user: me });
+  if (IK.qs("first")) IK.$("#first-note").hidden = false;
+  const st = IK.$("#st"), go = IK.$("#go");
+  IK.$("#f").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const nw = IK.$("#nw").value;
+    if (nw !== IK.$("#nw2").value) return IK.status(st, "bad", "الباسورد الجديد مش متطابق في الخانتين.");
+    go.disabled = true;
+    try {
+      await IK.api("/auth/password", { method: "POST", body: { current: IK.$("#cur").value, next: nw } });
+      IK.status(st, "ok", "تم تغيير الباسورد.");
+      setTimeout(() => { location.href = me.role === "admin" ? "/admin" : "/dashboard"; }, 900);
+    } catch (e) { IK.status(st, "bad", e.message); go.disabled = false; }
+  });
+})();
+</script>
+</body>
+</html>
