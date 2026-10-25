@@ -18,7 +18,7 @@
     <h1 id="hello">أهلاً بيك</h1>
     <p>هنا هتلاقي كورساتك ونسبة تقدمك في كل كورس، وتكمل من المكان اللي وقفت عنده.</p>
   </div>
-  <div id="mine" class="grid grid-2"><div class="loading">جاري التحميل...</div></div>
+  <div id="mine" class="stack"><div class="loading">جاري التحميل...</div></div>
   <section style="margin-top:36px">
     <h2 style="font-size:20px;margin-bottom:12px">مسارات تانية في المنصة</h2>
     <div id="others" class="grid grid-3"></div>
@@ -32,21 +32,50 @@
   IK.$("#hello").textContent = "أهلاً بيك يا " + me.name.split(" ")[0];
   const d = await IK.api("/student/dashboard");
   const mine = IK.$("#mine");
+  const care = IK.wa(IK.contact(s, "customer"), "السلام عليكم، أنا " + me.name + " ومحتاج أسأل عن اشتراكي في المنصة.");
+  const statusBadge = {
+    passed: '<span class="badge ok">ناجح</span>', failed: '<span class="badge bad">محتاج تعيده</span>', ready: '<span class="badge gold">متاح دلوقتي</span>',
+    materials: '<span class="badge lock">بعد ما تخلص المادة</span>', locked: '<span class="badge lock">مقفول</span>', not_ready: '<span class="badge lock">الأسئلة بتتجهز</span>',
+  };
+  const nextHref = (c) => {
+    const n = c.next;
+    if (!n) return "/learn?c=" + encodeURIComponent(c.slug);
+    if (n.type === "certificate") return "/certificate?c=" + encodeURIComponent(c.slug);
+    if (n.type === "exam") return "/exam?id=" + n.exam_id;
+    if (n.type === "material") return "/level?id=" + n.level_id + "&m=" + n.material_id;
+    return "/level?id=" + n.level_id;
+  };
+  const pct = (v) => (v === null || v === undefined ? "—" : v + "%");
+  const examsTable = (c) => `
+    <div class="table-wrap"><table class="t"><thead><tr><th>#</th><th>الامتحان</th><th>حليته؟</th><th>أول درجة</th><th>أعلى درجة</th><th>المحاولات</th><th>الحالة</th><th></th></tr></thead><tbody>
+    ${c.exams.map((e) => `<tr>
+      <td class="num">${e.n}</td>
+      <td>${IK.esc(e.title)}${e.kind === "cumulative" ? ' <span class="badge gold">تراكمي</span>' : ""}</td>
+      <td>${e.tries ? "✓ أيوه" : "لسه"}</td>
+      <td class="num">${pct(e.first)}</td><td class="num"><b>${pct(e.best)}</b></td><td class="num">${e.tries}</td>
+      <td>${statusBadge[e.status] || ""}</td>
+      <td>${c.active && ["ready", "failed", "passed"].includes(e.status) ? `<a class="btn btn-ghost btn-sm" href="/exam?id=${e.id}">${e.status === "passed" ? "اتمرن تاني" : "ادخل"}</a>` : ""}</td>
+    </tr>`).join("")}
+    </tbody></table></div>`;
   if (!d.courses.length) {
-    mine.innerHTML = '<div class="card empty">لسه مفيش كورسات متفعلة على حسابك. لو دفعت الاشتراك، كلم المحاضر علشان يفعله.</div>';
+    mine.innerHTML = `<div class="card empty">لسه مفيش كورسات متفعلة على حسابك. لو دفعت الاشتراك، <a href="${care}" target="_blank" rel="noopener">كلم خدمة العملاء</a> علشان يفعلوه.</div>`;
   } else {
     mine.innerHTML = d.courses.map((c) => `
       <article class="card stack">
         <div class="spread"><h2>${IK.esc(c.title)}</h2><span class="badge ${c.plan === "pro" ? "gold" : ""}">${c.plan === "pro" ? "باقة Pro" : "الباقة الأساسية"}</span></div>
-        <p class="muted">${IK.esc(c.subtitle || "")}</p>
-        <div><div class="spread"><span>نسبة التقدم</span><b class="num">${c.progress}%</b></div><div class="bar"><i style="width:${c.progress}%"></i></div></div>
-        <p>${c.completed ? "خلصت الكورس كله. مبروك!" : "إنت دلوقتي في المستوى " + c.current_level + " من " + c.levels + ": <b>" + IK.esc(c.current_title) + "</b>"}</p>
-        ${c.active ? "" : '<div class="status bad">اشتراكك انتهى. كلم المحاضر علشان تجدده.</div>'}
-        ${c.expires_at && c.active ? '<p class="muted">الاشتراك متاح لحد ' + IK.esc(c.expires_at) + "</p>" : ""}
-        <div class="row">
-          ${c.active ? `<a class="btn btn-primary" href="/learn?c=${encodeURIComponent(c.slug)}">${c.progress ? "كمل الكورس" : "ابدأ الكورس"}</a>` : ""}
-          ${c.completed ? `<a class="btn btn-gold" href="/certificate?c=${encodeURIComponent(c.slug)}">شهادتك</a>` : ""}
+        <div><div class="spread"><span>نسبة التقدم في الكورس</span><b class="num">${c.progress}%</b></div><div class="bar"><i style="width:${c.progress}%"></i></div></div>
+        <div class="stats-row">
+          <div><b class="num">${c.current_level}<small> / ${c.levels}</small></b><span>المستوى الحالي</span></div>
+          <div><b class="num">${c.summary.passed}<small> / ${c.summary.total}</small></b><span>امتحانات عديتها</span></div>
+          <div><b class="num">${c.summary.avg_best === null ? "—" : c.summary.avg_best + "%"}</b><span>متوسط أعلى درجاتك</span></div>
         </div>
+        ${c.active ? "" : `<div class="status bad">اشتراكك انتهى. <a href="${care}" target="_blank" rel="noopener">كلم خدمة العملاء</a> علشان تجدده.</div>`}
+        ${c.expires_at && c.active ? '<p class="muted">الاشتراك متاح لحد ' + IK.esc(c.expires_at) + "</p>" : ""}
+        ${c.active && c.next ? `<div class="next-step"><span class="muted">الخطوة الجاية</span><b>${IK.esc(c.next.label)}</b>
+          <div class="row"><a class="btn ${c.next.type === "certificate" ? "btn-gold" : "btn-primary"}" href="${nextHref(c)}">${c.next.type === "certificate" ? "استلم شهادتك" : c.progress ? "كمل من حيث وقفت" : "ابدأ الكورس"}</a>
+          <a class="btn btn-ghost" href="/learn?c=${encodeURIComponent(c.slug)}">خريطة المستويات</a></div></div>` : ""}
+        <h3 style="margin-top:6px">امتحاناتك</h3>
+        ${examsTable(c)}
       </article>`).join("");
   }
   const enrolled = new Set(d.courses.map((c) => c.slug));

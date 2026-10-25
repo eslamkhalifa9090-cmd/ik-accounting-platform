@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="/assets/app.css">
 <script src="/assets/app.js"></script>
+<script src="/assets/vendor/qrcode-generator-1.4.4/qrcode.js"></script>
 </head>
 <body>
 <style>
@@ -31,6 +32,8 @@
   .cert .course{font-size:27px;margin-top:20px}
   .cert .meta{position:absolute;bottom:72px;inset-inline:90px;display:flex;justify-content:space-between;align-items:flex-end;font-family:var(--f-body);font-size:14px;color:var(--ink-2)}
   .cert .meta b{display:block;font-family:var(--f-display);font-size:18px;color:var(--navy)}
+  .cert .qr{display:flex;align-items:flex-end;gap:12px;text-align:start}
+  .cert .qr svg{width:84px;height:84px;background:#fff;padding:4px;border-radius:4px;flex:none}
   .cert .sig b{font-family:"Brush Script MT",cursive;font-size:30px;direction:ltr}
   .cert .slogan{position:absolute;bottom:42px;inset-inline:0;font-size:13px;color:var(--gold-deep);direction:ltr}
   @media print{
@@ -61,7 +64,7 @@
   const verify = location.origin + "/verify?code=" + c.code;
   el.innerHTML = `<div class="band"></div><div class="in">
       <img class="logo" src="/assets/logo.webp" alt="">
-      <div class="brand">${IK.esc(s.brand_name || "")}</div>
+      <div class="brand">${IK.esc(c.issuer)}</div>
       <h1>شهادة إتمام</h1><div class="en-t">CERTIFICATE OF COMPLETION</div>
       <p class="lead">تشهد المنصة بأن</p>
       <div class="name">${IK.esc(c.name)}</div>
@@ -70,10 +73,17 @@
     </div>
     <div class="meta">
       <div style="text-align:start">تاريخ الإصدار<b class="num">${IK.esc(c.issued_at)}</b></div>
-      <div>كود التحقق<b class="num">${IK.esc(c.code)}</b><span class="num" style="font-size:12px">${IK.esc(verify)}</span></div>
+      <div class="qr"><span id="qr"></span><div>كود التحقق<b class="num">${IK.esc(c.code)}</b><span class="num" style="font-size:12px">${IK.esc(verify)}</span></div></div>
       <div class="sig" style="text-align:end">المحاضر<b>${IK.esc(c.signature)}</b></div>
     </div>
     <div class="slogan">${IK.esc(s.footer_line1 || "")} — ${IK.esc(s.footer_line2 || "")}</div>`;
+  // QR بيفتح صفحة التحقق من الشهادة
+  try {
+    const qr = qrcode(0, "M");
+    qr.addData(verify);
+    qr.make();
+    IK.$("#qr").innerHTML = qr.createSvgTag({ cellSize: 3, margin: 0, scalable: true });
+  } catch (e) {}
 })();
 </script>
 </body>

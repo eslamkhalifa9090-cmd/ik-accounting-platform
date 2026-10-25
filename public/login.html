@@ -17,7 +17,7 @@
   <div class="page-head">
     <span class="eyebrow">منصة المتدربين</span>
     <h1>تسجيل الدخول</h1>
-    <p>ادخل بالميل أو رقم التليفون والباسورد اللي استلمتهم من المحاضر.</p>
+    <p>ادخل بالميل أو رقم التليفون والباسورد اللي وصلوك على واتساب.</p>
   </div>
   <div class="card">
     <form id="f" class="stack" novalidate>
@@ -32,7 +32,7 @@
       <div class="status" id="st" role="status" aria-live="polite" hidden></div>
       <div class="spread">
         <button class="btn btn-primary" id="go" type="submit">دخول</button>
-        <a class="muted" id="forgot" href="#" target="_blank" rel="noopener">نسيت الباسورد؟ كلم المحاضر على واتساب</a>
+        <a class="muted" id="forgot" href="#" target="_blank" rel="noopener">نسيت الباسورد؟ كلم الدعم الفني على واتساب</a>
       </div>
     </form>
   </div>
@@ -42,7 +42,7 @@
 (async function () {
   const site = await IK.chrome();
   const s = site.settings || {};
-  IK.$("#forgot").href = IK.wa(s.lecturer_whatsapp || s.whatsapp, "السلام عليكم، نسيت باسورد المنصة.");
+  IK.$("#forgot").href = IK.wa(IK.contact(s, "support"), "السلام عليكم، نسيت باسورد المنصة.");
   const rawNext = IK.qs("next") || "";
   const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
   try {

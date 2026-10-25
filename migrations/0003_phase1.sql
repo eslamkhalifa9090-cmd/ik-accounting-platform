@@ -1,0 +1,15 @@
+-- المرحلة الأولى: مدة الامتحان، آخر نشاط للمتدرب، آخر صفحة وقف عندها، وأرقام التواصل
+ALTER TABLE exams ADD COLUMN duration_min INTEGER NOT NULL DEFAULT 15;
+ALTER TABLE users ADD COLUMN last_seen TEXT;
+CREATE TABLE IF NOT EXISTS reading (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  material_id INTEGER NOT NULL REFERENCES materials(id) ON DELETE CASCADE,
+  page INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, material_id)
+);
+UPDATE exams SET duration_min = 40 WHERE kind = 'cumulative';
+INSERT OR IGNORE INTO settings (key, value) VALUES ('support_whatsapp', '201500069190');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('support_message', 'السلام عليكم، أنا {name} من متدربي المنصة، ومحتاج مساعدة فنية في:');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('reminder_message', 'أهلاً يا {name}، وحشتنا في كورس {course}! إنت واقف عند {level}. كمل من هنا: {link}');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('inactive_days', '7');

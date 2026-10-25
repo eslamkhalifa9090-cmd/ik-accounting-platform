@@ -31,7 +31,7 @@
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
       st.className = "status ok"; st.hidden = false;
-      st.innerHTML = "الشهادة صحيحة: <b>" + IK.esc(d.name) + "</b> أتم كورس <b>" + IK.esc(d.course) + "</b> بتاريخ " + IK.esc(d.issued_at) + ".";
+      st.innerHTML = "الشهادة صحيحة: <b>" + IK.esc(d.name) + "</b> أتم كورس <b>" + IK.esc(d.course) + "</b> بتاريخ " + IK.esc(d.issued_at) + (d.issuer ? "، والشهادة صادرة من " + IK.esc(d.issuer) : "") + ".";
     } catch (e) { IK.status(st, "bad", e.message || "مفيش شهادة بالكود ده."); }
   }
   IK.$("#f").addEventListener("submit", (e) => { e.preventDefault(); check(IK.$("#code").value); });
