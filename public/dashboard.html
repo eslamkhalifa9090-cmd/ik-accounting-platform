@@ -65,7 +65,7 @@
         <div class="spread"><h2>${IK.esc(c.title)}</h2><span class="badge ${c.plan === "pro" ? "gold" : ""}">${c.plan === "pro" ? "باقة Pro" : "الباقة الأساسية"}</span></div>
         <div><div class="spread"><span>نسبة التقدم في الكورس</span><b class="num">${c.progress}%</b></div><div class="bar"><i style="width:${c.progress}%"></i></div></div>
         <div class="stats-row">
-          <div><b class="num">${c.current_level}<small> / ${c.levels}</small></b><span>المستوى الحالي</span></div>
+          <div><b class="num">${c.current_level}<small> / ${c.levels}</small></b><span>${IK.U(c.unit).the} الحالي${IK.U(c.unit).key === "unit" ? "ة" : ""}</span></div>
           <div><b class="num">${c.summary.passed}<small> / ${c.summary.total}</small></b><span>امتحانات عديتها</span></div>
           <div><b class="num">${c.summary.avg_best === null ? "—" : c.summary.avg_best + "%"}</b><span>متوسط أعلى درجاتك</span></div>
         </div>
@@ -73,7 +73,7 @@
         ${c.expires_at && c.active ? '<p class="muted">الاشتراك متاح لحد ' + IK.esc(c.expires_at) + "</p>" : ""}
         ${c.active && c.next ? `<div class="next-step"><span class="muted">الخطوة الجاية</span><b>${IK.esc(c.next.label)}</b>
           <div class="row"><a class="btn ${c.next.type === "certificate" ? "btn-gold" : "btn-primary"}" href="${nextHref(c)}">${c.next.type === "certificate" ? "استلم شهادتك" : c.progress ? "كمل من حيث وقفت" : "ابدأ الكورس"}</a>
-          <a class="btn btn-ghost" href="/learn?c=${encodeURIComponent(c.slug)}">خريطة المستويات</a></div></div>` : ""}
+          <a class="btn btn-ghost" href="/learn?c=${encodeURIComponent(c.slug)}">خريطة ${IK.U(c.unit).pl}</a></div></div>` : ""}
         <h3 style="margin-top:6px">امتحاناتك</h3>
         ${examsTable(c)}
       </article>`).join("");

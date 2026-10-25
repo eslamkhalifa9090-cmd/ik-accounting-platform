@@ -71,6 +71,18 @@ const PUBLIC_SETTINGS = ["whatsapp", "whatsapp_display", "support_whatsapp", "le
 const ADMIN_SETTINGS = [...PUBLIC_SETTINGS, "reminder_message", "inactive_days", "cert_issuer"];
 const WHATSAPP_KEYS = ["whatsapp", "support_whatsapp", "lecturer_whatsapp"];
 
+// اسم التقسيم في كل كورس (مستوى / وحدة / موديول)، بيتحفظ في الإعدادات تحت unit_<id>
+const UNITS = {
+  level: { key: "level", the: "المستوى", a: "مستوى", pl: "المستويات", li: "للمستوى", this: "المستوى ده", closed: "مقفول", opens: "بيفتح", will: "هيفتح", before: "اللي قبله" },
+  unit: { key: "unit", the: "الوحدة", a: "وحدة", pl: "الوحدات", li: "للوحدة", this: "الوحدة دي", closed: "مقفولة", opens: "بتفتح", will: "هتفتح", before: "اللي قبلها" },
+  module: { key: "module", the: "الموديول", a: "موديول", pl: "الموديولات", li: "للموديول", this: "الموديول ده", closed: "مقفول", opens: "بيفتح", will: "هيفتح", before: "اللي قبله" },
+};
+const unitFrom = (s, courseId) => UNITS[s["unit_" + courseId]] || UNITS.level;
+async function unitOf(db, courseId) {
+  const r = await db.prepare("SELECT value FROM settings WHERE key = ?").bind("unit_" + courseId).first();
+  return UNITS[r && r.value] || UNITS.level;
+}
+
 function publicPlan(p) {
   const info = priceInfo(p);
   return {
@@ -81,7 +93,7 @@ function publicPlan(p) {
 
 // ---------- حالة المتدرب في كورس ----------
 async function courseState(db, userId, course, plan) {
-  const [{ results: levels }, { results: exams }, { results: materials }, { results: done }, { results: best }] = await Promise.all([
+  const [{ results: levels }, { results: exams }, { results: materials }, { results: done }, { results: best }, unit] = await Promise.all([
     db.prepare("SELECT id, num, title, topics, teaser FROM levels WHERE course_id = ? ORDER BY num").bind(course.id).all(),
     db.prepare(`SELECT e.id, e.kind, e.after_level, e.title, e.question_count, e.pass_pct, e.duration_min,
                 (SELECT COUNT(*) FROM questions q WHERE q.exam_id = e.id) AS bank
@@ -94,6 +106,7 @@ async function courseState(db, userId, course, plan) {
                 (SELECT a2.score FROM attempts a2 WHERE a2.exam_id = a.exam_id AND a2.user_id = a.user_id AND a2.submitted_at IS NOT NULL ORDER BY a2.id LIMIT 1) AS first
                 FROM attempts a JOIN exams e ON e.id = a.exam_id
                 WHERE a.user_id = ? AND e.course_id = ? AND a.submitted_at IS NOT NULL GROUP BY a.exam_id`).bind(userId, course.id).all(),
+    unitOf(db, course.id),
   ]);
   const doneSet = new Set(done.map((d) => d.material_id));
   const bestBy = Object.fromEntries(best.map((b) => [b.exam_id, b]));
@@ -114,11 +127,16 @@ async function courseState(db, userId, course, plan) {
   const outLevels = levels.map((l) => {
     const unlocked = l.num === 1 || (prevUnlocked && examPassed(levelExam(l.num - 1)) && cumBefore(l.num).every(examPassed));
     prevUnlocked = unlocked;
+    // الفصول بتفتح بالترتيب: الفصل مايفتحش غير لما المتدرب يخلص اللي قبله (اللي في باقته واترفع فعلاً)
+    let chainOpen = true;
     const mats = materials.filter((m) => m.level_id === l.id).map((m) => {
       const allowed = m.min_plan === "basic" || plan === "pro";
       const isDone = doneSet.has(m.id);
+      const ready = !(m.kind === "pdf" && !m.pages);
       if (allowed) { total++; if (isDone) doneCount++; }
-      return { id: m.id, kind: m.kind, title: m.title, min_plan: m.min_plan, pages: m.pages, allowed, done: isDone };
+      const open = allowed && chainOpen;
+      if (allowed && ready && !isDone) chainOpen = false;
+      return { id: m.id, kind: m.kind, title: m.title, min_plan: m.min_plan, pages: m.pages, allowed, open, done: isDone };
     });
     // امتحان المستوى بيفتح بعد ما المتدرب يخلص كل المادة الجاهزة اللي في باقته
     const matsDone = mats.every((m) => !m.allowed || m.done || (m.kind === "pdf" && !m.pages));
@@ -137,6 +155,7 @@ async function courseState(db, userId, course, plan) {
   const completed = levels.length > 0 && exams.length > 0 && exams.every(examPassed);
   const current = outLevels.filter((l) => l.unlocked).pop();
   return {
+    unit,
     levels: outLevels,
     progress: total ? Math.round((doneCount / total) * 100) : 0,
     completed,
@@ -161,14 +180,15 @@ function courseSummary(st) {
 
   let next = null;
   const cur = st.levels.find((l) => l.num === st.current_level);
+  const U = st.unit;
   if (st.completed) next = { type: "certificate", label: "خلصت الكورس، استلم شهادتك" };
   else if (cur) {
     const mat = cur.materials.find((m) => m.allowed && !m.done && !(m.kind === "pdf" && !m.pages));
     const cum = cur.cumulative && cur.cumulative.available && cur.cumulative.ready && !cur.cumulative.passed ? cur.cumulative : null;
-    if (mat) next = { type: "material", level_id: cur.id, material_id: mat.id, label: `كمل "${mat.title}" في المستوى ${cur.num}` };
-    else if (cur.exam && cur.exam.available && cur.exam.ready && !cur.exam.passed) next = { type: "exam", level_id: cur.id, exam_id: cur.exam.id, label: `ادخل امتحان المستوى ${cur.num}` };
+    if (mat) next = { type: "material", level_id: cur.id, material_id: mat.id, label: `كمل "${mat.title}" في ${U.the} ${cur.num}` };
+    else if (cur.exam && cur.exam.available && cur.exam.ready && !cur.exam.passed) next = { type: "exam", level_id: cur.id, exam_id: cur.exam.id, label: `ادخل امتحان ${U.the} ${cur.num}` };
     else if (cum) next = { type: "exam", level_id: cur.id, exam_id: cum.id, label: `ادخل ${cum.title}` };
-    else next = { type: "level", level_id: cur.id, label: cur.materials.length ? `كمل المستوى ${cur.num}: ${cur.title}` : `المستوى ${cur.num}: ${cur.title} (المادة بتتجهز وهتنزل قريب)` };
+    else next = { type: "level", level_id: cur.id, label: cur.materials.length ? `كمل ${U.the} ${cur.num}: ${cur.title}` : `${U.the} ${cur.num}: ${cur.title} (المادة بتتجهز وهتنزل قريب)` };
   }
   return {
     exams,
@@ -194,7 +214,7 @@ async function requireEnrollment(db, user, courseId) {
 async function levelWithCourse(db, levelId) {
   const l = await db.prepare(`SELECT l.*, c.slug, c.title AS course_title, c.id AS cid, c.status AS course_status
                               FROM levels l JOIN courses c ON c.id = l.course_id WHERE l.id = ?`).bind(levelId).first();
-  if (!l) fail(404, "المستوى ده مش موجود.");
+  if (!l) fail(404, "الصفحة دي مش موجودة.");
   return l;
 }
 
@@ -211,7 +231,7 @@ route("GET", "/public/site", async ({ db }) => {
     settings: Object.fromEntries(PUBLIC_SETTINGS.map((k) => [k, s[k] || ""])),
     has_cert_bg: !!s.cert_bg,
     courses: courses.map((c) => ({
-      slug: c.slug, title: c.title, subtitle: c.subtitle, status: c.status, levels: nBy[c.id] || 0,
+      slug: c.slug, title: c.title, subtitle: c.subtitle, status: c.status, levels: nBy[c.id] || 0, unit: unitFrom(s, c.id),
       plans: plans.filter((p) => p.course_id === c.id).map(publicPlan),
     })),
   });
@@ -224,7 +244,7 @@ route("GET", "/public/course/:slug", async ({ db, params }) => {
   const { results: plans } = await db.prepare("SELECT * FROM plans WHERE course_id = ? AND visible = 1 ORDER BY code").bind(c.id).all();
   const { results: exams } = await db.prepare("SELECT kind, after_level, title, pass_pct FROM exams WHERE course_id = ? ORDER BY after_level, kind DESC").bind(c.id).all();
   return json({
-    course: { slug: c.slug, title: c.title, subtitle: c.subtitle, intro: c.intro, audience: c.audience, status: c.status },
+    course: { slug: c.slug, title: c.title, subtitle: c.subtitle, intro: c.intro, audience: c.audience, status: c.status, unit: await unitOf(db, c.id) },
     levels, plans: plans.map(publicPlan), exams,
   });
 });
@@ -314,7 +334,7 @@ route("GET", "/student/dashboard", async ({ db, user }) => {
     courses.push({
       slug: e.slug, title: e.title, subtitle: e.subtitle, plan: e.plan_code, expires_at: e.expires_at,
       active: !e.expires_at || e.expires_at >= today(), progress: st.progress, completed: st.completed,
-      current_level: st.current_level, current_title: cur ? cur.title : "", levels: st.levels.length,
+      current_level: st.current_level, current_title: cur ? cur.title : "", levels: st.levels.length, unit: st.unit,
       ...courseSummary(st),
     });
   }
@@ -334,8 +354,8 @@ route("GET", "/student/level/:id", async ({ db, user, params }) => {
   const e = await requireEnrollment(db, user, l.cid);
   const st = await courseState(db, user.id, { id: l.cid }, e.plan_code);
   const lv = st.levels.find((x) => x.id === l.id);
-  if (!lv.unlocked && user.role !== "admin") fail(403, "المستوى ده لسه مقفول. اعدي امتحان المستوى اللي قبله الأول.");
-  return json({ course: { slug: l.slug, title: l.course_title }, plan: e.plan_code, level: lv, total_levels: st.levels.length });
+  if (!lv.unlocked && user.role !== "admin") fail(403, `${st.unit.this} لسه ${st.unit.closed}. اعدي امتحان ${st.unit.the} ${st.unit.before} الأول.`);
+  return json({ course: { slug: l.slug, title: l.course_title, unit: st.unit }, plan: e.plan_code, level: lv, total_levels: st.levels.length });
 }, "user");
 
 async function materialForUser(db, user, materialId) {
@@ -345,8 +365,11 @@ async function materialForUser(db, user, materialId) {
   const e = await requireEnrollment(db, user, l.cid);
   if (user.role !== "admin") {
     const st = await courseState(db, user.id, { id: l.cid }, e.plan_code);
-    if (!st.levels.find((x) => x.id === l.id).unlocked) fail(403, "المستوى ده لسه مقفول.");
+    const lv = st.levels.find((x) => x.id === l.id);
+    if (!lv.unlocked) fail(403, `${st.unit.this} لسه ${st.unit.closed}.`);
     if (m.min_plan === "pro" && e.plan_code !== "pro") fail(403, "المادة دي في باقة Pro.");
+    const sm = lv.materials.find((x) => x.id === m.id);
+    if (sm && !sm.open) fail(403, "الفصل ده هيفتح لما تخلص الفصل اللي قبله.");
   }
   return m;
 }
@@ -395,7 +418,7 @@ async function examForUser(db, user, examId) {
   if (!shaped.ready) fail(400, "أسئلة الامتحان ده لسه بتتجهز.");
   if (!shaped.available && user.role !== "admin") fail(403, "الامتحان ده لسه مقفول. خلص اللي قبله الأول.");
   const c = await db.prepare("SELECT slug, title FROM courses WHERE id = ?").bind(ex.course_id).first();
-  return { ex, shaped, course: c, level: lv };
+  return { ex, shaped, course: { ...c, unit: st.unit }, level: lv };
 }
 
 route("GET", "/student/exams/:id", async ({ db, user, params }) => {
@@ -592,7 +615,7 @@ route("GET", "/admin/inactive", async ({ db, url }) => {
     if (st.completed) continue;
     const cur = st.levels.find((l) => l.num === st.current_level);
     out.push({ id: r.id, name: r.name, phone: r.phone, email: r.email, seen: r.seen, created_at: r.created_at,
-      course: r.title, slug: r.slug, progress: st.progress, level: cur ? `المستوى ${cur.num} (${cur.title})` : "" });
+      course: r.title, slug: r.slug, progress: st.progress, level: cur ? `${st.unit.the} ${cur.num} (${cur.title})` : "" });
   }
   return json({ days, students: out });
 }, "admin");
@@ -601,7 +624,7 @@ route("GET", "/admin/export.csv", async ({ db }) => {
   const { results: rows } = await db.prepare(`SELECT u.id, u.name, u.email, u.phone, u.active, u.last_login, e.course_id, e.plan_code, e.expires_at, c.title
       FROM users u LEFT JOIN enrollments e ON e.user_id = u.id LEFT JOIN courses c ON c.id = e.course_id
       WHERE u.role = 'student' ORDER BY u.id`).all();
-  const head = ["الاسم", "الميل", "التليفون", "الحالة", "آخر دخول", "الكورس", "الباقة", "ينتهي في", "نسبة التقدم", "المستوى الحالي", "خلص الكورس"];
+  const head = ["الاسم", "الميل", "التليفون", "الحالة", "آخر دخول", "الكورس", "الباقة", "ينتهي في", "نسبة التقدم", "واقف عند", "خلص الكورس"];
   const lines = [head];
   for (const r of rows) {
     let st = null;
@@ -615,13 +638,15 @@ route("GET", "/admin/export.csv", async ({ db }) => {
 
 // ---------- الكورسات والأسعار والمستويات ----------
 route("GET", "/admin/courses", async ({ db }) => {
-  const [{ results: courses }, { results: plans }, { results: levels }] = await Promise.all([
+  const [{ results: courses }, { results: plans }, { results: levels }, s] = await Promise.all([
     db.prepare("SELECT * FROM courses ORDER BY sort, id").all(),
     db.prepare("SELECT * FROM plans ORDER BY code").all(),
     db.prepare("SELECT * FROM levels ORDER BY num").all(),
+    getSettings(db),
   ]);
   return json(courses.map((c) => ({
     ...c,
+    unit: unitFrom(s, c.id),
     plans: plans.filter((p) => p.course_id === c.id).map((p) => ({ ...p, features: parseJSON(p.features, []), ...priceInfo(p) })),
     levels: levels.filter((l) => l.course_id === c.id),
   })));
@@ -649,9 +674,19 @@ route("POST", "/admin/courses", async ({ db, request }) => {
 }, "admin");
 
 route("PATCH", "/admin/courses/:id", async ({ db, request, params }) => {
-  const f = pick(await body(request), ["title", "subtitle", "intro", "audience", "status", "sort"]);
+  const b = await body(request);
+  const f = pick(b, ["title", "subtitle", "intro", "audience", "status", "sort"]);
   if (f.status && !["open", "soon", "hidden"].includes(f.status)) fail(400, "حالة الكورس غلط.");
-  await update(db, "courses", params.id, f);
+  if (b.unit !== undefined) {
+    if (!UNITS[b.unit]) fail(400, "اسم التقسيم غلط.");
+    const old = await unitOf(db, params.id), neu = UNITS[b.unit];
+    // عناوين الامتحانات الافتراضية (امتحان المستوى 1 ...) بتتغير مع الاسم الجديد
+    await db.batch([
+      db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").bind("unit_" + params.id, neu.key),
+      db.prepare("UPDATE exams SET title = REPLACE(REPLACE(title, ?, ?), ?, ?) WHERE course_id = ?").bind(old.pl, neu.pl, old.the, neu.the, params.id),
+    ]);
+  }
+  if (Object.keys(f).length) await update(db, "courses", params.id, f);
   return json({ ok: true });
 }, "admin");
 
@@ -672,10 +707,11 @@ route("POST", "/admin/courses/:id/levels", async ({ db, request, params }) => {
   const b = await body(request);
   const last = await db.prepare("SELECT MAX(num) AS n FROM levels WHERE course_id = ?").bind(params.id).first();
   const num = (last.n || 0) + 1;
-  if (!String(b.title || "").trim()) fail(400, "اكتب عنوان المستوى.");
+  if (!String(b.title || "").trim()) fail(400, "اكتب العنوان.");
+  const U = await unitOf(db, params.id);
   await db.batch([
     db.prepare("INSERT INTO levels (course_id, num, title, topics, teaser) VALUES (?, ?, ?, ?, ?)").bind(params.id, num, b.title.trim(), b.topics || null, b.teaser || null),
-    db.prepare("INSERT OR IGNORE INTO exams (course_id, kind, after_level, title) VALUES (?, 'level', ?, ?)").bind(params.id, num, "امتحان المستوى " + num),
+    db.prepare("INSERT OR IGNORE INTO exams (course_id, kind, after_level, title) VALUES (?, 'level', ?, ?)").bind(params.id, num, "امتحان " + U.the + " " + num),
   ]);
   return json({ ok: true, num });
 }, "admin");
@@ -750,9 +786,10 @@ route("GET", "/admin/courses/:id/exams", async ({ db, params }) => {
 route("POST", "/admin/courses/:id/exams", async ({ db, request, params }) => {
   const b = await body(request);
   const after = parseInt(b.after_level, 10);
-  if (!(after >= 1)) fail(400, "اختار الامتحان بعد أنهي مستوى.");
+  if (!(after >= 1)) fail(400, "اختار الامتحان التراكمي هيبقى بعد رقم كام.");
+  const U = await unitOf(db, params.id);
   await db.prepare("INSERT INTO exams (course_id, kind, after_level, title, question_count, pass_pct, duration_min) VALUES (?, 'cumulative', ?, ?, ?, ?, ?)")
-    .bind(params.id, after, b.title || `امتحان تراكمي بعد المستوى ${after}`, Number(b.question_count) || 20, Number(b.pass_pct) || 50, Number(b.duration_min) || 40).run();
+    .bind(params.id, after, b.title || `امتحان تراكمي بعد ${U.the} ${after}`, Number(b.question_count) || 20, Number(b.pass_pct) || 50, Number(b.duration_min) || 40).run();
   return json({ ok: true });
 }, "admin");
 
@@ -768,7 +805,7 @@ route("PATCH", "/admin/exams/:id", async ({ db, request, params }) => {
 route("DELETE", "/admin/exams/:id", async ({ db, params }) => {
   const ex = await db.prepare("SELECT kind FROM exams WHERE id = ?").bind(params.id).first();
   if (!ex) fail(404, "الامتحان ده مش موجود.");
-  if (ex.kind !== "cumulative") fail(400, "امتحانات المستويات مش بتتمسح، تقدر تفضي أسئلتها بس.");
+  if (ex.kind !== "cumulative") fail(400, "الامتحان ده أساسي ومش بيتمسح، تقدر تفضي أسئلته بس.");
   await db.prepare("DELETE FROM exams WHERE id = ?").bind(params.id).run();
   return json({ ok: true });
 }, "admin");

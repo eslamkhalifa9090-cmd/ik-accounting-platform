@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>المستوى | Mr. Islam Khalifa</title>
+<title>Mr. Islam Khalifa</title>
 <link rel="icon" href="/assets/logo.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,35 +25,38 @@
   let d;
   try { d = await IK.api("/student/level/" + encodeURIComponent(IK.qs("id"))); }
   catch (e) { root.innerHTML = `<div class="card empty" style="margin-top:28px">${IK.esc(e.message)}</div>`; return; }
-  const l = d.level, c = d.course;
-  document.title = "المستوى " + l.num + " | " + c.title;
-  const follow = IK.wa(IK.contact(s, "lecturer"), IK.fill(s.follow_message, { name: me.name, course: c.title, level: "المستوى " + l.num + " (" + l.title + ")" }));
+  const l = d.level, c = d.course, U = IK.U(c.unit);
+  document.title = U.the + " " + l.num + " | " + c.title;
+  const follow = IK.wa(IK.contact(s, "lecturer"), IK.fill(s.follow_message, { name: me.name, course: c.title, level: U.the + " " + l.num + " (" + l.title + ")" }));
   const upgrade = IK.wa(IK.contact(s, "customer"), "السلام عليكم، عايز أرفع باقتي في كورس " + c.title + " لباقة Pro.");
   const examCard = (e) => {
     if (!e) return "";
     const state = e.passed ? `<span class="badge ok">عديته · أعلى درجة ${e.best}%</span>`
       : e.tries ? `<span class="badge bad">${e.tries} محاولة · أعلى درجة ${e.best}%</span>` : "";
     const action = !e.ready ? '<span class="badge lock">الأسئلة لسه بتتجهز</span>'
-      : !e.available ? `<span class="badge lock">${e.waiting === "materials" ? "هيفتح بعد ما تخلص المادة العلمية" : "هيفتح بعد امتحان المستوى"}</span>`
+      : !e.available ? `<span class="badge lock">${e.waiting === "materials" ? "هيفتح بعد ما تخلص الفصول" : "هيفتح بعد امتحان " + U.the + " " + U.before}</span>`
       : `<a class="btn ${e.passed ? "btn-ghost" : "btn-primary"}" href="/exam?id=${e.id}">${e.passed ? "حسّن درجتك" : e.tries ? "حاول تاني" : "ادخل الامتحان"}</a>`;
     return `<article class="card spread"><div><h3>${IK.esc(e.title)}</h3><p class="muted">${e.ready ? e.questions + " سؤال · النجاح بأكتر من " + e.pass_pct + "%" + (e.duration_min ? " · متوسط الحل " + e.duration_min + " دقيقة" : "") : ""}</p><div class="row" style="margin-top:6px">${state}</div></div>${action}</article>`;
   };
   root.innerHTML = `
     <div class="page-head">
       <a class="muted" href="/learn?c=${encodeURIComponent(c.slug)}">← ${IK.esc(c.title)}</a>
-      <h1>المستوى ${l.num}: ${IK.esc(l.title)}</h1>
-      ${l.topics ? `<p><b>محتوى المستوى:</b> ${IK.esc(l.topics)}</p>` : ""}
+      <h1>${U.the} ${l.num}: ${IK.esc(l.title)}</h1>
+      ${l.topics ? `<p><b>محتوى ${U.the}:</b> ${IK.esc(l.topics)}</p>` : ""}
       ${l.teaser ? `<p style="margin-top:10px">${IK.esc(l.teaser)}</p>` : ""}
     </div>
-    <h2 style="font-size:19px;margin-bottom:10px">المادة العلمية</h2>
-    <div class="stack" id="mats">${l.materials.length ? l.materials.map((m) => `
-      <article class="card spread">
-        <div><h3>${m.kind === "pdf" ? "📄" : "🎬"} ${IK.esc(m.title)}</h3>
-          <p class="muted">${m.kind === "pdf" ? (m.pages ? m.pages + " صفحة" : "لسه بيتجهز") : "فيديو"}${m.done ? " · ✓ خلصتها" : ""}</p></div>
-        ${m.allowed ? (m.kind === "pdf" && !m.pages ? "" : `<button class="btn btn-primary js-open" data-id="${m.id}" type="button">افتح</button>`)
-          : `<a class="btn btn-gold" target="_blank" rel="noopener" href="${upgrade}">متاح في باقة Pro</a>`}
-      </article>`).join("") : '<div class="card empty">المادة العلمية للمستوى ده بتتجهز وهتنزل قريب.</div>'}</div>
-    ${l.exam && !l.materials_done ? '<p class="muted" style="margin-top:8px">امتحان المستوى بيفتح لما تخلص المادة العلمية كلها. افتح كل ملف لحد آخر صفحة واضغط "خلصت المادة دي".</p>' : ""}
+    <h2 style="font-size:19px;margin-bottom:10px">فصول ${U.the}</h2>
+    <div class="stack" id="mats">${l.materials.length ? l.materials.map((m, i) => `
+      <article class="card spread chapter${m.done ? " is-done" : ""}${m.allowed && !m.open ? " is-locked" : ""}">
+        <div class="row" style="gap:12px;flex-wrap:nowrap;align-items:flex-start"><span class="ch-num num">${m.done ? "✓" : i + 1}</span>
+          <div><h3>${IK.esc(m.title)}</h3>
+          <p class="muted">${m.kind === "pdf" ? (m.pages ? m.pages + " صفحة" : "لسه بيتجهز") : "🎬 فيديو"}${m.done ? " · خلصته" : ""}</p></div></div>
+        ${!m.allowed ? `<a class="btn btn-gold" target="_blank" rel="noopener" href="${upgrade}">متاح في باقة Pro</a>`
+          : m.kind === "pdf" && !m.pages ? ""
+          : !m.open ? '<span class="badge lock">🔒 بيفتح بعد اللي قبله</span>'
+          : `<button class="btn ${m.done ? "btn-ghost" : "btn-primary"} js-open" data-id="${m.id}" type="button">${m.done ? "راجعه" : "افتح"}</button>`}
+      </article>`).join("") : `<div class="card empty">فصول ${U.this} بتتجهز وهتنزل قريب.</div>`}</div>
+    ${l.materials.length ? '<p class="muted" style="margin-top:8px">الفصول بتفتح بالترتيب: افتح الفصل لحد آخر صفحة واضغط "خلصت المادة دي" علشان اللي بعده يفتح.' + (l.exam && !l.materials_done ? " وامتحان " + U.the + " " + U.opens + " لما تخلص الفصول كلها." : "") + "</p>" : ""}
     <p class="muted" style="margin-top:8px">الملف مش بيفتح أو فيه مشكلة؟ <a target="_blank" rel="noopener" href="${IK.supportLink(s, me.name)}">كلم الدعم الفني</a></p>
     <section id="viewer-wrap" style="margin-top:20px" hidden></section>
     <h2 style="font-size:19px;margin:28px 0 10px">الامتحانات</h2>
@@ -228,7 +231,7 @@
   });
   // جاي من "كمل من حيث وقفت": افتح الملف على طول
   const auto = IK.qs("m");
-  if (auto && l.materials.some((x) => String(x.id) === auto && x.allowed)) openMaterial(auto).catch(() => {});
+  if (auto && l.materials.some((x) => String(x.id) === auto && x.allowed && x.open)) openMaterial(auto).catch(() => {});
 })();
 </script>
 </body>

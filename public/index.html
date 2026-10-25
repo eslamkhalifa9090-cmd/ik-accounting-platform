@@ -417,8 +417,8 @@ footer .slogan em{font-style:normal;color:var(--gold)}
   <div class="wrap">
     <div class="sec-head">
       <span class="eyebrow">المنصة التعليمية</span>
-      <h2 id="platform-h">مسارات المنصة: اتعلم بالقصة، واختبر نفسك مستوى بمستوى</h2>
-      <p>كل متدرب ليه حساب خاص يتابع منه تقدمه، ومادة علمية محمية، وامتحان بعد كل مستوى، وشهادة في آخر الكورس.</p>
+      <h2 id="platform-h">مسارات المنصة: اتعلم بالقصة، واختبر نفسك خطوة بخطوة</h2>
+      <p>كل متدرب ليه حساب خاص يتابع منه تقدمه، ومادة علمية محمية، وامتحان في آخر كل مرحلة، وشهادة في آخر الكورس.</p>
     </div>
     <div class="paths" id="path-list"><p class="muted">جاري التحميل...</p></div>
   </div>
@@ -902,7 +902,7 @@ var CONTENT = {
         ? '<a class="btn btn-primary" href="/course?c=' + encodeURIComponent(c.slug) + '">تفاصيل الكورس</a>'
         : '<a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/' + CONTENT.whatsapp + '?text=' + encodeURIComponent((st.notify_message || "").replace("{course}", c.title)) + '">' + chat + 'بلغني أول ما يفتح</a>';
       return '<article class="path ' + (open ? 'open' : 'soon') + '"><span class="st">' + (open ? 'متاح الآن' : 'قيد الافتتاح قريباً') + '</span><h3>' + esc(c.title) + '</h3>' +
-        (c.subtitle ? '<p>' + esc(c.subtitle) + '</p>' : '') + (open && c.levels ? '<p>' + c.levels + ' مستويات + امتحانات + شهادة</p>' : '') + price + btn + '</article>';
+        (c.subtitle ? '<p>' + esc(c.subtitle) + '</p>' : '') + (open && c.levels ? '<p>' + c.levels + ' ' + ((c.unit && c.unit.pl) || 'المستويات').replace(/^ال/, '') + ' + امتحانات + شهادة</p>' : '') + price + btn + '</article>';
     }).join("") || '<p class="muted">المسارات هتنزل قريب.</p>';
     document.querySelectorAll(".js-wa").forEach(function(a){ a.href = waLink(a.getAttribute("data-course")); });
     syncPick();

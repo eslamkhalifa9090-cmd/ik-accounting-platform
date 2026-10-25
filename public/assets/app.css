@@ -185,3 +185,7 @@ body.no-scroll{overflow:hidden}
 .stepper input{width:48px;border:0;text-align:center;font:inherit;font-family:var(--f-mono)}
 .stack>*,.card{min-width:0}
 main.wrap{width:100%}
+/* فصول الوحدة: رقم الفصل في دايرة، والمقفول باهت */
+.chapter .ch-num{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--paper);color:var(--navy);font-weight:700;font-size:14px;border:1px solid var(--line)}
+.chapter.is-done .ch-num{background:var(--gold);border-color:var(--gold);color:var(--navy)}
+.chapter.is-locked{opacity:.62}
