@@ -27,7 +27,7 @@
   catch (e) { root.innerHTML = `<div class="card empty" style="margin-top:28px">${IK.esc(e.message)}</div>`; return; }
   document.title = d.course.title + " | Mr. Islam Khalifa";
   const cur = d.levels.find((l) => l.num === d.current_level);
-  const follow = IK.wa(s.lecturer_whatsapp || s.whatsapp, IK.fill(s.follow_message, {
+  const follow = IK.wa(IK.contact(s, "lecturer"), IK.fill(s.follow_message, {
     name: me.name, course: d.course.title, level: cur ? "المستوى " + cur.num + " (" + cur.title + ")" : "",
   }));
   const examChip = (e) => !e ? "" : e.passed
@@ -44,13 +44,18 @@
       <p class="muted">${d.completed ? "خلصت الكورس كله. مبروك!" : "كل مستوى بيفتح لما تعدي امتحان المستوى اللي قبله."}</p>
       ${d.completed ? `<a class="btn btn-gold" href="/certificate?c=${encodeURIComponent(slug)}">استلم شهادتك</a>` : ""}
     </div>
-    <div class="levels" style="margin-top:20px">${d.levels.map((l) => {
-      const inner = `<span class="n">${l.status === "done" ? "✓" : l.num}</span>
+    <h2 style="font-size:19px;margin:24px 0 12px">خريطة المسار</h2>
+    <div class="road">${d.levels.map((l) => {
+      const here = !d.completed && l.num === d.current_level;
+      const inner = `${here ? '<span class="here-tag">إنت هنا</span>' : ""}<span class="n">${l.status === "done" ? "✓" : l.num}</span>
         <div><h3>المستوى ${l.num}: ${IK.esc(l.title)}</h3><p>${IK.esc(l.topics || "")}</p>
-        <div class="row" style="margin-top:6px">${examChip(l.exam)} ${examChip(l.cumulative)}
-        ${l.cumulative && !l.cumulative.passed && l.cumulative.available ? `<span class="badge gold">${IK.esc(l.cumulative.title)} مستنيك</span>` : ""}</div></div>
+        <div class="row" style="margin-top:6px">${examChip(l.exam)}</div></div>
         <span class="end">${l.status === "locked" ? '<span class="badge lock">مقفول</span>' : l.status === "done" ? '<span class="badge ok">مكتمل</span>' : '<span class="badge gold">متاح</span>'}</span>`;
-      return l.unlocked ? `<a class="level ${l.status}" href="/level?id=${l.id}">${inner}</a>` : `<div class="level locked">${inner}</div>`;
+      const level = l.unlocked ? `<a class="level ${l.status}${here ? " here" : ""}" href="/level?id=${l.id}">${inner}</a>` : `<div class="level locked">${inner}</div>`;
+      const c = l.cumulative;
+      const station = !c ? "" : `<div class="station ${c.passed ? "done" : c.available ? "" : "lock"}"><i></i>
+        <div><b>${IK.esc(c.title)}</b> ${c.passed ? `<span class="badge ok">عديته · ${c.best}%</span>` : c.available ? `<a class="btn btn-primary btn-sm" href="/exam?id=${c.id}">ادخل الامتحان</a>` : '<span class="badge lock">بيفتح بعد المستوى ' + l.num + "</span>"}</div></div>`;
+      return level + station;
     }).join("")}</div>`;
 })();
 </script>

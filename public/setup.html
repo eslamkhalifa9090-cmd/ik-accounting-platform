@@ -17,6 +17,7 @@
   <div class="page-head"><span class="eyebrow">أول تشغيل</span><h1>إنشاء حساب الأدمن</h1>
     <p>الصفحة دي بتشتغل مرة واحدة بس، لإنشاء حسابك كأدمن. بعد كده بتتقفل.</p></div>
   <div class="card">
+    <div id="db-err" class="status bad" hidden></div>
     <div id="done" class="status ok" hidden>حساب الأدمن معمول. <a href="/login">ادخل من هنا</a>.</div>
     <form id="f" class="form-grid" novalidate>
       <div class="field full"><label for="key">كود الإعداد <small>(SETUP_KEY اللي حطيته في Cloudflare)</small></label><input id="key" dir="ltr" required></div>
@@ -34,6 +35,11 @@
   await IK.chrome();
   const f = IK.$("#f"), st = IK.$("#st");
   const status = await fetch("/api/setup/status").then((r) => r.json()).catch(() => ({}));
+  if (status.needed === undefined) {
+    f.hidden = true;
+    IK.status(IK.$("#db-err"), "bad", "قاعدة البيانات لسه مش جاهزة. نفذ ملفي الجداول (0001_schema.sql ثم 0002_seed.sql) من D1 ← Console، وبعدين حدث الصفحة.");
+    return;
+  }
   if (!status.needed) { f.hidden = true; IK.$("#done").hidden = false; return; }
   f.addEventListener("submit", async (e) => {
     e.preventDefault();

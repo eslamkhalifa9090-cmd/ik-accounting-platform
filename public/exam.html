@@ -34,7 +34,8 @@
         <h1>${IK.esc(e.title)}</h1></div>
       <div class="card stack">
         <p>الامتحان فيه <b>${e.questions}</b> سؤال اختيار من متعدد، والنجاح بأكتر من <b>${e.pass_pct}%</b>.</p>
-        <p>المحاولات مفتوحة، والأسئلة بتتغير في كل محاولة. اقرا كل سؤال كويس قبل ما تختار.</p>
+        ${e.duration_min ? `<p>متوسط حل الامتحان <b>${e.duration_min} دقيقة</b>. هيظهرلك عداد تنازلي، ولما الوقت يخلص الامتحان بيتسلم لوحده باللي حليته.</p>` : ""}
+        <p>المحاولات مفتوحة، وكل محاولة بتجيبلك أسئلة ماشفتهاش قبل كده لحد ما بنك الأسئلة يخلص. اقرا كل سؤال كويس قبل ما تختار.</p>
         ${e.tries ? `<p class="muted">حاولت قبل كده ${e.tries} مرة، وأعلى درجة ليك ${e.best}%.</p>` : ""}
         <div><button class="btn btn-primary" id="start" type="button">ابدأ الامتحان</button></div>
       </div>`;
@@ -48,6 +49,7 @@
     catch (err) { root.innerHTML = `<div class="card empty">${IK.esc(err.message)}</div>`; return; }
     root.innerHTML = `
       <div class="page-head"><h1>${IK.esc(e.title)}</h1><p class="muted">جاوب على كل الأسئلة وبعدين اضغط "سلّم الامتحان".</p></div>
+      ${a.duration_min ? '<div class="timer" id="timer"><span>الوقت الباقي</span><b id="clock"></b></div>' : ""}
       <form id="f">${a.questions.map((q) => `
         <fieldset class="q" style="margin:0 0 12px">
           <h3>${q.n}. ${IK.esc(q.body)}</h3>
@@ -61,34 +63,65 @@
     const upd = () => { left.textContent = `جاوبت ${count()} من ${a.questions.length}`; };
     f.addEventListener("change", upd); upd();
     window.onbeforeunload = () => true;
-    f.addEventListener("submit", async (ev) => {
-      ev.preventDefault();
-      if (count() < a.questions.length && !confirm("لسه فيه أسئلة ما جاوبتش عليها. تسلم كده؟")) return;
+    let tick = null, sent = false;
+    async function send(auto) {
+      if (sent) return;
       const answers = {};
       for (const q of a.questions) { const c = f.querySelector(`input[name="q${q.id}"]:checked`); if (c) answers[q.id] = Number(c.value); }
+      sent = true;
       IK.$("#send").disabled = true;
       try {
         const r = await IK.api(`/student/attempts/${a.attempt}/submit`, { method: "POST", body: { answers } });
+        clearInterval(tick);
         window.onbeforeunload = null;
-        result(r);
-      } catch (err) { IK.status(IK.$("#st"), "bad", err.message); IK.$("#send").disabled = false; }
+        result(r, auto);
+      } catch (err) { sent = false; IK.status(IK.$("#st"), "bad", err.message); IK.$("#send").disabled = false; }
+    }
+    if (a.duration_min) {
+      // العداد بيتحسب من وقت البداية الفعلي، فلو التاب اتقفل أو النت وقف الوقت مش بيقف
+      const end = Date.now() + a.duration_min * 60000;
+      const clock = IK.$("#clock"), box = IK.$("#timer");
+      const draw = () => {
+        const left = Math.max(0, Math.round((end - Date.now()) / 1000));
+        clock.textContent = String(Math.floor(left / 60)).padStart(2, "0") + ":" + String(left % 60).padStart(2, "0");
+        box.classList.toggle("warn", left <= 60);
+        if (!left) { clearInterval(tick); send(true); }
+      };
+      draw();
+      tick = setInterval(draw, 1000);
+    }
+    f.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      if (count() < a.questions.length && !confirm("لسه فيه أسئلة ما جاوبتش عليها. تسلم كده؟")) return;
+      send(false);
     });
   }
 
-  function result(r) {
+  function result(r, auto) {
+    const wrong = r.review.filter((q) => q.chosen !== q.correct).length;
     root.innerHTML = `
-      <div class="page-head"><h1>${r.passed ? "مبروك، عديت الامتحان" : "قربت.. حاول تاني"}</h1></div>
+      <div class="page-head"><h1>${r.passed ? "مبروك، عديت الامتحان" : "قربت.. حاول تاني"}</h1>
+        ${auto ? '<p class="muted">الوقت خلص، والامتحان اتسلم لوحده باللي حليته.</p>' : ""}
+        ${r.late ? '<p class="status bad">الامتحان اتسلم بعد الوقت المسموح، فالإجابات ما اتحسبتش.</p>' : ""}</div>
       <div class="card stack" style="text-align:center">
         <p style="font-family:var(--f-display);font-size:48px;color:${r.passed ? "var(--ok)" : "var(--bad)"}" class="num">${r.score}%</p>
         <p>جاوبت صح على <b>${r.correct}</b> من <b>${r.total}</b> سؤال. النجاح بأكتر من ${r.pass_pct}%.</p>
-        <p class="muted">${r.passed ? "المرحلة الجاية اتفتحتلك." : "راجع المادة العلمية للمستوى، وادخل الامتحان تاني. الأسئلة هتتغير."}</p>
+        <p class="muted">${r.passed ? "المرحلة الجاية اتفتحتلك. وتقدر تتمرن بأسئلة جديدة وقت ما تحب." : "راجع أخطاءك تحت، وارجع للمادة العلمية، وادخل تاني. الأسئلة هتتغير."}</p>
         <div class="row" style="justify-content:center">
           <a class="btn btn-primary" href="${back}">ارجع للمستوى</a>
-          ${r.passed ? "" : '<button class="btn btn-ghost" id="again" type="button">حاول تاني</button>'}
+          <button class="btn btn-ghost" id="again" type="button">امتحان جديد بأسئلة مختلفة</button>
+          <a class="btn btn-ghost" href="/dashboard">جدول امتحاناتي</a>
         </div>
-      </div>`;
-    const again = IK.$("#again");
-    if (again) again.onclick = start;
+      </div>
+      <h2 style="font-size:19px;margin:24px 0 10px">مراجعة إجاباتك ${wrong ? `<span class="badge bad">${wrong} غلط</span>` : '<span class="badge ok">كله صح</span>'}</h2>
+      <div>${r.review.map((q) => {
+        const ok = q.chosen === q.correct;
+        return `<div class="rv${ok ? "" : " wrong"}"><h3>${q.n}. ${IK.esc(q.body)} ${ok ? '<span class="badge ok">صح</span>' : q.chosen === null ? '<span class="badge lock">ما جاوبتش</span>' : '<span class="badge bad">غلط</span>'}</h3>
+          <ol>${q.options.map((o, i) => `<li class="${i === q.correct ? "right" : i === q.chosen ? "picked" : ""}">${IK.esc(o)}${i === q.correct ? " ✓" : ""}</li>`).join("")}</ol>
+          ${!ok && q.explanation ? `<div class="why"><b>التوضيح:</b> ${IK.esc(q.explanation)}</div>` : ""}</div>`;
+      }).join("")}</div>`;
+    IK.$("#again").onclick = start;
+    scrollTo({ top: 0, behavior: "smooth" });
   }
 
   intro();

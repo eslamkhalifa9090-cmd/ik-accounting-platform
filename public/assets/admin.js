@@ -365,17 +365,18 @@
     panel.innerHTML = `
       <div class="row" style="margin-bottom:16px"><div class="field"><label>الكورس</label><select id="pc">${courseOptions(c.slug)}</select></div></div>
       <div class="card"><h2>امتحانات الكورس</h2>
-        <div class="table-wrap" style="margin-top:12px"><table class="t"><thead><tr><th>الامتحان</th><th>بعد مستوى</th><th>أسئلة في كل محاولة</th><th>النجاح بأكتر من %</th><th>بنك الأسئلة</th><th></th></tr></thead><tbody>
+        <div class="table-wrap" style="margin-top:12px"><table class="t"><thead><tr><th>الامتحان</th><th>بعد مستوى</th><th>أسئلة في كل محاولة</th><th>النجاح بأكتر من %</th><th>المدة (دقيقة)</th><th>بنك الأسئلة</th><th></th></tr></thead><tbody>
         ${exams.map((e) => `<tr data-ex="${e.id}"${String(e.id) === String(examPick) ? ' style="background:#FBF7EE"' : ""}>
           <td><input class="js-t" value="${esc(e.title)}" style="font:inherit;width:100%;border:1px solid var(--line);border-radius:6px;padding:4px 8px"></td>
           <td>${e.after_level}${e.kind === "cumulative" ? ' <span class="badge gold">تراكمي</span>' : ""}</td>
           <td><input class="js-c num" type="number" min="1" value="${e.question_count}" style="width:70px"></td>
           <td><input class="js-p num" type="number" min="0" max="99" value="${e.pass_pct}" style="width:70px"></td>
+          <td><span class="stepper"><button type="button" class="js-dm" aria-label="أقل">−</button><input class="js-d num" type="number" min="0" max="300" value="${e.duration_min ?? 15}"><button type="button" class="js-dp" aria-label="أكتر">+</button></span></td>
           <td>${e.bank ? `<span class="badge ok">${e.bank} سؤال</span>` : '<span class="badge bad">فاضي</span>'}</td>
           <td><div class="row"><button class="btn btn-ghost btn-sm js-save" type="button">حفظ</button><button class="btn btn-primary btn-sm js-open" type="button">الأسئلة</button>
           ${e.kind === "cumulative" ? '<button class="btn btn-danger btn-sm js-delx" type="button">مسح</button>' : ""}</div></td></tr>`).join("")}
         </tbody></table></div>
-        <p class="muted" style="margin-top:8px">لو بنك الأسئلة أكبر من عدد أسئلة المحاولة، كل محاولة بتسحب أسئلة مختلفة. يفضل يكون البنك ضعف العدد أو أكتر. المستوى الجاي مش بيفتح غير لما المتدرب يعدي الامتحان، فلازم كل امتحان يبقى فيه أسئلة.</p>
+        <p class="muted" style="margin-top:8px">لو بنك الأسئلة أكبر من عدد أسئلة المحاولة، كل محاولة بتسحب أسئلة مختلفة. يفضل يكون البنك ضعف العدد أو أكتر. المستوى الجاي مش بيفتح غير لما المتدرب يعدي الامتحان، فلازم كل امتحان يبقى فيه أسئلة. المدة هي متوسط الحل اللي بيظهر للمتدرب، ولما تخلص الامتحان بيتسلم لوحده (0 = من غير وقت). اضغط حفظ بعد أي تعديل.</p>
         <form id="addx" class="row" style="margin-top:12px"><span>إضافة امتحان تراكمي بعد المستوى</span><input name="after_level" type="number" min="1" style="width:70px" required><button class="btn btn-ghost btn-sm" type="submit">إضافة</button></form>
       </div>
       ${ex ? `<div class="card" id="qs"><div class="loading">جاري تحميل الأسئلة...</div></div>` : ""}`;
@@ -383,10 +384,13 @@
     panel.querySelectorAll("tr[data-ex]").forEach((tr) => {
       const id = tr.dataset.ex;
       tr.querySelector(".js-save").onclick = async () => {
-        try { await api("/admin/exams/" + id, { method: "PATCH", body: { title: tr.querySelector(".js-t").value, question_count: Number(tr.querySelector(".js-c").value), pass_pct: Number(tr.querySelector(".js-p").value) } }); examsTab(); }
+        try { await api("/admin/exams/" + id, { method: "PATCH", body: { title: tr.querySelector(".js-t").value, question_count: Number(tr.querySelector(".js-c").value), pass_pct: Number(tr.querySelector(".js-p").value), duration_min: Number(tr.querySelector(".js-d").value) } }); examsTab(); }
         catch (err) { alert(err.message); }
       };
       tr.querySelector(".js-open").onclick = () => { examPick = id; examsTab(); };
+      const d = tr.querySelector(".js-d");
+      tr.querySelector(".js-dm").onclick = () => { d.value = Math.max(0, (Number(d.value) || 0) - 1); };
+      tr.querySelector(".js-dp").onclick = () => { d.value = Math.min(300, (Number(d.value) || 0) + 1); };
       const dx = tr.querySelector(".js-delx");
       if (dx) dx.onclick = async () => { if (confirm("مسح الامتحان التراكمي ده وكل أسئلته؟")) { await api("/admin/exams/" + id, { method: "DELETE" }); examsTab(); } };
     });
@@ -414,11 +418,11 @@
           <div class="field"><label>السؤال</label><textarea name="body" rows="2" required></textarea></div>
           ${[1, 2, 3, 4].map((i) => `<div class="field"><label>اختيار ${i}${i > 2 ? " <small>(اختياري)</small>" : ""}</label><input name="o${i}"></div>`).join("")}
           <div class="field"><label>رقم الإجابة الصح</label><select name="answer">${[1, 2, 3, 4].map((i) => opt(i, i)).join("")}</select></div>
-          <div class="field"><label>شرح <small>(اختياري، ليك)</small></label><input name="explanation"></div>
+          <div class="field"><label>توضيح الإجابة <small>(اختياري، بيظهر للمتدرب لو غلط فيه)</small></label><input name="explanation"></div>
           <div class="row"><button class="btn btn-primary btn-sm" type="submit">إضافة السؤال</button><span class="status" hidden></span></div>
         </form>
         <form id="bulk" class="card stack" style="background:var(--paper)"><h3>لصق من Excel</h3>
-          <p class="muted">رتب الأعمدة كده: السؤال، الاختيارات (من 2 لـ 4 أعمدة)، رقم الإجابة الصح، الشرح (اختياري). علّم على الصفوف في Excel واعمل نسخ ولصق هنا.</p>
+          <p class="muted">رتب الأعمدة كده: السؤال، الاختيارات (من 2 لـ 4 أعمدة)، رقم الإجابة الصح، توضيح الإجابة (اختياري، بيظهر للمتدرب في مراجعة أخطاؤه). علّم على الصفوف في Excel واعمل نسخ ولصق هنا.</p>
           <div class="field"><textarea name="paste" rows="8" dir="auto" placeholder="الأصول = ؟	الخصوم + حقوق الملكية	الإيرادات - المصروفات	1"></textarea></div>
           <label class="check"><input type="checkbox" name="replace"> امسح الأسئلة القديمة واستبدلها</label>
           <div class="row"><button class="btn btn-primary btn-sm" type="submit">إضافة الأسئلة</button><span class="muted" id="bulk-n"></span></div>
@@ -457,7 +461,7 @@
         el.innerHTML = `<form class="stack"><div class="field"><label>السؤال</label><textarea name="body" rows="2">${esc(q.body)}</textarea></div>
           ${[0, 1, 2, 3].map((k) => `<div class="field"><label>اختيار ${k + 1}</label><input name="o${k}" value="${esc(q.options[k] || "")}"></div>`).join("")}
           <div class="field"><label>رقم الإجابة الصح</label><select name="answer">${[1, 2, 3, 4].map((i) => opt(i, i, q.answer + 1)).join("")}</select></div>
-          <div class="field"><label>شرح</label><input name="explanation" value="${esc(q.explanation || "")}"></div>
+          <div class="field"><label>توضيح الإجابة</label><input name="explanation" value="${esc(q.explanation || "")}"></div>
           <div class="row"><button class="btn btn-primary btn-sm" type="submit">حفظ</button><button class="btn btn-ghost btn-sm js-cancel" type="button">إلغاء</button><span class="status" hidden></span></div></form>`;
         const f = el.querySelector("form");
         f.querySelector(".js-cancel").onclick = () => questions(ex);
@@ -471,6 +475,27 @@
     });
   }
 
+  // ======================= المتدربين المنقطعين =======================
+  async function inactiveTab(days) {
+    const s = await api("/admin/settings");
+    const r = await api("/admin/inactive" + (days ? "?days=" + days : ""));
+    const link = location.origin + "/dashboard";
+    const remind = (u) => IK.wa(intlPhone(u.phone), IK.fill(s.reminder_message || "أهلاً يا {name}، كمل كورس {course} من هنا: {link}", { name: u.name.split(" ")[0], course: u.course, level: u.level, link }));
+    const ago = (t) => { if (!t) return "عمره ما دخل"; const d = Math.floor((Date.now() - Date.parse(t.replace(" ", "T") + "Z")) / 864e5); return d + " يوم"; };
+    panel.innerHTML = `
+      <div class="card stack">
+        <div class="spread"><h2>متدربين منقطعين</h2>
+          <form id="dd" class="row"><span>مدخلوش من</span><input name="days" type="number" min="1" max="365" value="${r.days}" style="width:70px"><span>يوم أو أكتر</span><button class="btn btn-ghost btn-sm" type="submit">عرض</button></form></div>
+        <p class="muted">دول المتدربين اللي اشتراكهم ساري ولسه ما خلصوش الكورس ومدخلوش المنصة في المدة دي. زرار التذكير بيفتح واتساب برسالة جاهزة باسمه والمستوى اللي واقف عنده، وتقدر تعدل الرسالة من الإعدادات.</p>
+        ${r.students.length ? `<div class="table-wrap"><table class="t"><thead><tr><th>الاسم</th><th>الكورس</th><th>واقف عند</th><th>التقدم</th><th>آخر نشاط</th><th></th></tr></thead><tbody>
+          ${r.students.map((u) => `<tr><td>${esc(u.name)}<br><span class="muted num">${esc(u.phone || u.email || "")}</span></td><td>${esc(u.course)}</td><td>${esc(u.level)}</td>
+            <td class="num">${u.progress}%</td><td>${esc(ago(u.seen))}</td>
+            <td>${u.phone ? `<a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="${remind(u)}">${IK.chatIcon}تذكير</a>` : '<span class="muted">مفيش رقم</span>'}</td></tr>`).join("")}
+          </tbody></table></div>` : '<div class="empty">مفيش متدربين منقطعين في المدة دي. 👌</div>'}
+      </div>`;
+    $("#dd").onsubmit = (e) => { e.preventDefault(); inactiveTab(e.target.days.value); };
+  }
+
   // ======================= الإعدادات =======================
   async function settingsTab() {
     const s = await api("/admin/settings");
@@ -481,15 +506,21 @@
         <h2 class="full">بيانات المنصة</h2>
         ${field("brand_name", "اسم المنصة", "بيظهر في الهيدر والشهادة")}
         ${field("cert_signature", "التوقيع على الشهادة")}
+        ${field("cert_issuer", "الجهة المصدرة للشهادة", "بتظهر تحت اللوجو. فاضي = اسم المنصة", true)}
         ${field("footer_line1", "الفوتر: السطر الأول")}
         ${field("footer_line2", "الفوتر: السطر التاني")}
-        ${field("whatsapp", "واتساب الاشتراك والدفع", "مثلاً 01500069190", true)}
-        ${field("whatsapp_display", "الرقم زي ما يظهر للزوار", "", true)}
-        ${field("lecturer_whatsapp", "واتساب متابعة المحاضر", "", true)}
+        <h2 class="full" style="margin-top:10px">أرقام التواصل</h2>
+        ${field("whatsapp", "واتساب خدمة العملاء", "الاشتراك، الاستفسار عن الكورسات، التجديد", true)}
+        ${field("whatsapp_display", "رقم خدمة العملاء زي ما يظهر للزوار", "", true)}
+        ${field("support_whatsapp", "واتساب الدعم الفني", "نسيت الباسورد، مشاكل الدخول والملفات. فاضي = رقم خدمة العملاء", true)}
+        ${field("lecturer_whatsapp", "واتساب المحاضر", "أسئلة الشرح جوه المستويات. فاضي = رقم خدمة العملاء", true)}
         <h2 class="full" style="margin-top:10px">رسايل الواتساب الجاهزة</h2>
-        ${field("subscribe_message", "رسالة الاشتراك", "{course} اسم الكورس، {plan} الباقة", false, true)}
-        ${field("follow_message", "رسالة متابعة المحاضر", "{name} الاسم، {course} الكورس، {level} المستوى", false, true)}
-        ${field("notify_message", "رسالة بلغني لما يفتح", "{course} اسم الكورس", false, true)}
+        ${field("subscribe_message", "رسالة الاشتراك (خدمة العملاء)", "{course} اسم الكورس، {plan} الباقة", false, true)}
+        ${field("notify_message", "رسالة بلغني لما يفتح (خدمة العملاء)", "{course} اسم الكورس", false, true)}
+        ${field("support_message", "رسالة الدعم الفني", "{name} اسم المتدرب", false, true)}
+        ${field("follow_message", "رسالة المحاضر", "{name} الاسم، {course} الكورس، {level} المستوى", false, true)}
+        ${field("reminder_message", "رسالة تذكير المتدرب المنقطع", "{name} الاسم، {course} الكورس، {level} المستوى، {link} رابط المنصة", false, true)}
+        ${field("inactive_days", "يعتبر منقطع بعد كام يوم من غير دخول", "", true)}
         <div class="full row"><button class="btn btn-primary" type="submit">حفظ الإعدادات</button><span class="status" hidden></span></div>
       </form>
       <div class="card stack">
@@ -515,7 +546,7 @@
   }
 
   // ======================= التابات =======================
-  const tabs = { students: studentsTab, courses: coursesTab, content: contentTab, exams: examsTab, settings: settingsTab };
+  const tabs = { students: studentsTab, inactive: () => inactiveTab(), courses: coursesTab, content: contentTab, exams: examsTab, settings: settingsTab };
   const tabBtns = document.querySelectorAll(".tabs button");
   function go(name) {
     tabBtns.forEach((b) => b.classList.toggle("on", b.dataset.tab === name));

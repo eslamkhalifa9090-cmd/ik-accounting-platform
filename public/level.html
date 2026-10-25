@@ -27,16 +27,16 @@
   catch (e) { root.innerHTML = `<div class="card empty" style="margin-top:28px">${IK.esc(e.message)}</div>`; return; }
   const l = d.level, c = d.course;
   document.title = "المستوى " + l.num + " | " + c.title;
-  const follow = IK.wa(s.lecturer_whatsapp || s.whatsapp, IK.fill(s.follow_message, { name: me.name, course: c.title, level: "المستوى " + l.num + " (" + l.title + ")" }));
-  const upgrade = IK.wa(s.whatsapp, "السلام عليكم، عايز أرفع باقتي في كورس " + c.title + " لباقة Pro.");
+  const follow = IK.wa(IK.contact(s, "lecturer"), IK.fill(s.follow_message, { name: me.name, course: c.title, level: "المستوى " + l.num + " (" + l.title + ")" }));
+  const upgrade = IK.wa(IK.contact(s, "customer"), "السلام عليكم، عايز أرفع باقتي في كورس " + c.title + " لباقة Pro.");
   const examCard = (e) => {
     if (!e) return "";
     const state = e.passed ? `<span class="badge ok">عديته · أعلى درجة ${e.best}%</span>`
       : e.tries ? `<span class="badge bad">${e.tries} محاولة · أعلى درجة ${e.best}%</span>` : "";
     const action = !e.ready ? '<span class="badge lock">الأسئلة لسه بتتجهز</span>'
-      : !e.available ? '<span class="badge lock">هيفتح بعد امتحان المستوى</span>'
+      : !e.available ? `<span class="badge lock">${e.waiting === "materials" ? "هيفتح بعد ما تخلص المادة العلمية" : "هيفتح بعد امتحان المستوى"}</span>`
       : `<a class="btn ${e.passed ? "btn-ghost" : "btn-primary"}" href="/exam?id=${e.id}">${e.passed ? "حسّن درجتك" : e.tries ? "حاول تاني" : "ادخل الامتحان"}</a>`;
-    return `<article class="card spread"><div><h3>${IK.esc(e.title)}</h3><p class="muted">${e.ready ? e.questions + " سؤال · النجاح بأكتر من " + e.pass_pct + "%" : ""}</p><div class="row" style="margin-top:6px">${state}</div></div>${action}</article>`;
+    return `<article class="card spread"><div><h3>${IK.esc(e.title)}</h3><p class="muted">${e.ready ? e.questions + " سؤال · النجاح بأكتر من " + e.pass_pct + "%" + (e.duration_min ? " · متوسط الحل " + e.duration_min + " دقيقة" : "") : ""}</p><div class="row" style="margin-top:6px">${state}</div></div>${action}</article>`;
   };
   root.innerHTML = `
     <div class="page-head">
@@ -53,6 +53,8 @@
         ${m.allowed ? (m.kind === "pdf" && !m.pages ? "" : `<button class="btn btn-primary js-open" data-id="${m.id}" type="button">افتح</button>`)
           : `<a class="btn btn-gold" target="_blank" rel="noopener" href="${upgrade}">متاح في باقة Pro</a>`}
       </article>`).join("") : '<div class="card empty">المادة العلمية للمستوى ده بتتجهز وهتنزل قريب.</div>'}</div>
+    ${l.exam && !l.materials_done ? '<p class="muted" style="margin-top:8px">امتحان المستوى بيفتح لما تخلص المادة العلمية كلها. افتح كل ملف لحد آخر صفحة واضغط "خلصت المادة دي".</p>' : ""}
+    <p class="muted" style="margin-top:8px">الملف مش بيفتح أو فيه مشكلة؟ <a target="_blank" rel="noopener" href="${IK.supportLink(s, me.name)}">كلم الدعم الفني</a></p>
     <section id="viewer-wrap" style="margin-top:20px" hidden></section>
     <h2 style="font-size:19px;margin:28px 0 10px">الامتحانات</h2>
     <div class="stack">${examCard(l.exam)}${examCard(l.cumulative)}</div>
@@ -60,6 +62,7 @@
 
   // ===== عارض المادة المحمي =====
   const wrap = IK.$("#viewer-wrap");
+  const brand = [s.footer_line1 || s.brand_name || "Mr. Islam Khalifa | Accounting", s.footer_line2].filter(Boolean).join("  —  ");
   const mark = [me.name, me.phone || me.email || "", new Date().toLocaleDateString("ar-EG")].filter(Boolean).join(" · ");
   wrap.addEventListener("contextmenu", (e) => e.preventDefault());
   wrap.addEventListener("dragstart", (e) => e.preventDefault());
@@ -75,10 +78,21 @@
     const stepY = w / 6, stepX = w / 1.6;
     for (let y = -h; y < h; y += stepY) for (let x = -w; x < w; x += stepX) ctx.fillText(mark, x + ((y / stepY) % 2) * stepX / 2, y);
     ctx.restore();
+    // اسم المنصة في فوتر كل صفحة
+    const fh = Math.round(w / 40);
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,.88)";
+    ctx.fillRect(0, h - fh * 1.9, w, fh * 1.9);
+    ctx.fillStyle = "#102B4E";
+    ctx.font = `600 ${Math.round(fh * 0.72)}px "IBM Plex Sans Arabic", Tahoma, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(brand, w / 2, h - fh * 0.95);
+    ctx.restore();
   }
 
   async function openPdf(m) {
-    let page = 1;
+    let page = 1, saveT = null;
     const cache = new Map();
     wrap.hidden = false;
     wrap.innerHTML = `<div class="spread" style="margin-bottom:10px"><h2 style="font-size:19px">${IK.esc(m.title)}</h2>
@@ -112,13 +126,25 @@
       }
       if (page < m.pages) load(page + 1);
       IK.$("#v-done").hidden = page !== m.pages;
+      // نحفظ آخر صفحة على السيرفر، علشان الملف يفتح عليها المرة الجاية
+      clearTimeout(saveT);
+      const p = page;
+      saveT = setTimeout(() => IK.api(`/student/materials/${m.id}/position`, { method: "PUT", body: { page: p } }).catch(() => {}), 1200);
     }
     IK.$("#v-next").onclick = () => show(page + 1);
     IK.$("#v-prev").onclick = () => show(page - 1);
     IK.$("#v-close").onclick = () => { wrap.hidden = true; wrap.innerHTML = ""; };
     IK.$("#v-done").onclick = async () => { await IK.api(`/student/materials/${m.id}/done`, { method: "POST" }); location.reload(); };
     document.onkeydown = (e) => { if (wrap.hidden) return; if (e.key === "ArrowLeft") show(page + 1); if (e.key === "ArrowRight") show(page - 1); };
-    await show(1);
+    await show(m.last_page || 1);
+    if (m.last_page > 1) {
+      const note = document.createElement("p");
+      note.className = "muted";
+      note.style.marginBottom = "8px";
+      note.innerHTML = `كملنا من صفحة ${m.last_page} اللي وقفت عندها. <a href="#" id="v-first">ابدأ من الأول</a>`;
+      wrap.querySelector(".viewer").before(note);
+      IK.$("#v-first").onclick = (e) => { e.preventDefault(); show(1); note.remove(); };
+    }
     wrap.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -141,16 +167,20 @@
     wrap.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  async function openMaterial(id) {
+    const m = await IK.api("/student/materials/" + id);
+    if (m.kind === "pdf") await openPdf(m); else openVideo(m);
+  }
   root.addEventListener("click", async (ev) => {
     const b = ev.target.closest(".js-open");
     if (!b) return;
     b.disabled = true;
-    try {
-      const m = await IK.api("/student/materials/" + b.dataset.id);
-      if (m.kind === "pdf") await openPdf(m); else openVideo(m);
-    } catch (e) { alert(e.message); }
+    try { await openMaterial(b.dataset.id); } catch (e) { alert(e.message); }
     b.disabled = false;
   });
+  // جاي من "كمل من حيث وقفت": افتح الملف على طول
+  const auto = IK.qs("m");
+  if (auto && l.materials.some((x) => String(x.id) === auto && x.allowed)) openMaterial(auto).catch(() => {});
 })();
 </script>
 </body>

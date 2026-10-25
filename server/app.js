@@ -7,6 +7,7 @@ import {
 
 const today = () => new Date().toISOString().slice(0, 10);
 const parseJSON = (s, d) => { try { return JSON.parse(s); } catch { return d; } };
+const sqlTime = (s) => Date.parse(String(s).replace(" ", "T") + "Z"); // datetime('now') في SQLite بتوقيت UTC
 
 // ---------- راوتر بسيط ----------
 const routes = [];
@@ -31,6 +32,10 @@ export async function handle(context) {
         ctx.user = await currentUser(env.DB, request);
         if (!ctx.user) fail(401, "لازم تسجل دخول الأول.");
         if (r.guard === "admin" && ctx.user.role !== "admin") fail(403, "الصفحة دي للأدمن بس.");
+        // آخر نشاط: بيتحدث مرة كل ساعة بالكتير، علشان قايمة المتدربين المنقطعين
+        if (!ctx.user.last_seen || Date.now() - sqlTime(ctx.user.last_seen) > 3600e3) {
+          await env.DB.prepare("UPDATE users SET last_seen = datetime('now') WHERE id = ?").bind(ctx.user.id).run();
+        }
       }
       return await r.handler(ctx);
     }
@@ -60,8 +65,11 @@ async function getSettings(db) {
   const { results } = await db.prepare("SELECT key, value FROM settings").all();
   return Object.fromEntries(results.map((r) => [r.key, r.value]));
 }
-const PUBLIC_SETTINGS = ["whatsapp", "whatsapp_display", "lecturer_whatsapp", "brand_name", "footer_line1", "footer_line2",
-  "subscribe_message", "follow_message", "notify_message", "cert_signature"];
+// whatsapp = خدمة العملاء، support_whatsapp = الدعم الفني، lecturer_whatsapp = المحاضر
+const PUBLIC_SETTINGS = ["whatsapp", "whatsapp_display", "support_whatsapp", "lecturer_whatsapp", "brand_name", "footer_line1", "footer_line2",
+  "subscribe_message", "support_message", "follow_message", "notify_message", "cert_signature"];
+const ADMIN_SETTINGS = [...PUBLIC_SETTINGS, "reminder_message", "inactive_days", "cert_issuer"];
+const WHATSAPP_KEYS = ["whatsapp", "support_whatsapp", "lecturer_whatsapp"];
 
 function publicPlan(p) {
   const info = priceInfo(p);
@@ -75,7 +83,7 @@ function publicPlan(p) {
 async function courseState(db, userId, course, plan) {
   const [{ results: levels }, { results: exams }, { results: materials }, { results: done }, { results: best }] = await Promise.all([
     db.prepare("SELECT id, num, title, topics, teaser FROM levels WHERE course_id = ? ORDER BY num").bind(course.id).all(),
-    db.prepare(`SELECT e.id, e.kind, e.after_level, e.title, e.question_count, e.pass_pct,
+    db.prepare(`SELECT e.id, e.kind, e.after_level, e.title, e.question_count, e.pass_pct, e.duration_min,
                 (SELECT COUNT(*) FROM questions q WHERE q.exam_id = e.id) AS bank
                 FROM exams e WHERE e.course_id = ? ORDER BY e.after_level, e.kind DESC`).bind(course.id).all(),
     db.prepare(`SELECT m.id, m.level_id, m.kind, m.title, m.min_plan, m.pages, m.sort FROM materials m
@@ -94,8 +102,9 @@ async function courseState(db, userId, course, plan) {
   const levelExam = (n) => exams.find((e) => e.kind === "level" && e.after_level === n);
   const cumBefore = (n) => exams.filter((e) => e.kind === "cumulative" && e.after_level < n);
 
-  const shapeExam = (e, available) => e && ({
-    id: e.id, kind: e.kind, title: e.title, after_level: e.after_level, pass_pct: e.pass_pct,
+  const shapeExam = (e, available, waiting = null) => e && ({
+    id: e.id, kind: e.kind, title: e.title, after_level: e.after_level, pass_pct: e.pass_pct, duration_min: e.duration_min,
+    waiting, // ليه الامتحان لسه مقفول: materials = لسه ما خلصش المادة العلمية
     questions: Math.min(e.question_count, e.bank), ready: e.bank > 0, available,
     passed: !!(bestBy[e.id] && bestBy[e.id].passed), best: bestBy[e.id] ? bestBy[e.id].best : null,
     first: bestBy[e.id] ? bestBy[e.id].first : null, tries: bestBy[e.id] ? bestBy[e.id].tries : 0,
@@ -111,6 +120,8 @@ async function courseState(db, userId, course, plan) {
       if (allowed) { total++; if (isDone) doneCount++; }
       return { id: m.id, kind: m.kind, title: m.title, min_plan: m.min_plan, pages: m.pages, allowed, done: isDone };
     });
+    // امتحان المستوى بيفتح بعد ما المتدرب يخلص كل المادة الجاهزة اللي في باقته
+    const matsDone = mats.every((m) => !m.allowed || m.done || (m.kind === "pdf" && !m.pages));
     const ex = levelExam(l.num);
     if (ex) { total++; if (examPassed(ex)) doneCount++; }
     const cum = exams.find((e) => e.kind === "cumulative" && e.after_level === l.num);
@@ -118,7 +129,8 @@ async function courseState(db, userId, course, plan) {
     const status = !unlocked ? "locked" : (ex && examPassed(ex) ? "done" : "open");
     return {
       ...l, unlocked, status, materials: mats,
-      exam: shapeExam(ex, unlocked),
+      materials_done: matsDone,
+      exam: shapeExam(ex, unlocked && matsDone, unlocked && !matsDone ? "materials" : null),
       cumulative: shapeExam(cum, unlocked && examPassed(ex) && cumBefore(l.num).every(examPassed)),
     };
   });
@@ -132,6 +144,39 @@ async function courseState(db, userId, course, plan) {
   };
 }
 
+// جدول الامتحانات بالترتيب + الخطوة الجاية للمتدرب (للداشبورد)
+function courseSummary(st) {
+  const exams = [];
+  for (const l of st.levels) {
+    for (const e of [l.exam, l.cumulative]) {
+      if (!e) continue;
+      const status = e.passed ? "passed" : !e.ready ? "not_ready" : e.available ? (e.tries ? "failed" : "ready")
+        : e.waiting === "materials" ? "materials" : "locked";
+      exams.push({ n: exams.length + 1, id: e.id, title: e.title, kind: e.kind, level_id: l.id, level_num: l.num,
+        tries: e.tries, first: e.first, best: e.best, status });
+    }
+  }
+  const tried = exams.filter((e) => e.tries);
+  const avg = tried.length ? Math.round((tried.reduce((a, e) => a + e.best, 0) / tried.length) * 10) / 10 : null;
+
+  let next = null;
+  const cur = st.levels.find((l) => l.num === st.current_level);
+  if (st.completed) next = { type: "certificate", label: "خلصت الكورس، استلم شهادتك" };
+  else if (cur) {
+    const mat = cur.materials.find((m) => m.allowed && !m.done && !(m.kind === "pdf" && !m.pages));
+    const cum = cur.cumulative && cur.cumulative.available && cur.cumulative.ready && !cur.cumulative.passed ? cur.cumulative : null;
+    if (mat) next = { type: "material", level_id: cur.id, material_id: mat.id, label: `كمل "${mat.title}" في المستوى ${cur.num}` };
+    else if (cur.exam && cur.exam.available && cur.exam.ready && !cur.exam.passed) next = { type: "exam", level_id: cur.id, exam_id: cur.exam.id, label: `ادخل امتحان المستوى ${cur.num}` };
+    else if (cum) next = { type: "exam", level_id: cur.id, exam_id: cum.id, label: `ادخل ${cum.title}` };
+    else next = { type: "level", level_id: cur.id, label: cur.materials.length ? `كمل المستوى ${cur.num}: ${cur.title}` : `المستوى ${cur.num}: ${cur.title} (المادة بتتجهز وهتنزل قريب)` };
+  }
+  return {
+    exams,
+    summary: { total: exams.length, passed: exams.filter((e) => e.status === "passed").length, tried: tried.length, avg_best: avg },
+    next,
+  };
+}
+
 async function enrollmentFor(db, userId, courseId) {
   const e = await db.prepare("SELECT * FROM enrollments WHERE user_id = ? AND course_id = ?").bind(userId, courseId).first();
   if (!e) return null;
@@ -142,7 +187,7 @@ async function requireEnrollment(db, user, courseId) {
   if (user.role === "admin") return { plan_code: "pro", active: true, admin: true };
   const e = await enrollmentFor(db, user.id, courseId);
   if (!e) fail(403, "إنت مش مشترك في الكورس ده.");
-  if (!e.active) fail(403, "اشتراكك في الكورس ده انتهى. كلم المحاضر على واتساب علشان تجدده.");
+  if (!e.active) fail(403, "اشتراكك في الكورس ده انتهى. كلم خدمة العملاء على واتساب علشان تجدده.");
   return e;
 }
 
@@ -189,7 +234,8 @@ route("GET", "/public/verify/:code", async ({ db, params }) => {
                               JOIN users u ON u.id = c.user_id JOIN courses co ON co.id = c.course_id WHERE c.code = ?`)
     .bind(params.code.toUpperCase()).first();
   if (!r) fail(404, "مفيش شهادة بالكود ده.");
-  return json(r);
+  const s = await getSettings(db);
+  return json({ ...r, issuer: s.cert_issuer || s.brand_name || "" });
 });
 
 route("GET", "/public/cert-bg", async ({ db }) => {
@@ -230,7 +276,7 @@ route("POST", "/auth/login", async ({ db, request }) => {
   if (!email && !phone) fail(400, "اكتب الميل أو رقم التليفون صح.");
   const u = await db.prepare(email ? "SELECT * FROM users WHERE email = ?" : "SELECT * FROM users WHERE phone = ?").bind(email || phone).first();
   if (!u || !(await verifyPassword(String(b.password || ""), u.pass_hash))) fail(401, "البيانات دي مش صحيحة. اتأكد من الميل أو الرقم والباسورد.");
-  if (!u.active) fail(403, "الحساب ده موقوف. كلم المحاضر على واتساب.");
+  if (!u.active) fail(403, "الحساب ده موقوف. كلم الدعم الفني على واتساب.");
   const token = await createSession(db, u.id, request);
   await db.prepare("UPDATE users SET last_login = datetime('now') WHERE id = ?").bind(u.id).run();
   return json({ ok: true, role: u.role, must_change: !!u.must_change }, 200, { "set-cookie": sessionCookie(token, request) });
@@ -269,6 +315,7 @@ route("GET", "/student/dashboard", async ({ db, user }) => {
       slug: e.slug, title: e.title, subtitle: e.subtitle, plan: e.plan_code, expires_at: e.expires_at,
       active: !e.expires_at || e.expires_at >= today(), progress: st.progress, completed: st.completed,
       current_level: st.current_level, current_title: cur ? cur.title : "", levels: st.levels.length,
+      ...courseSummary(st),
     });
   }
   return json({ user: { name: user.name, must_change: !!user.must_change }, courses });
@@ -306,7 +353,20 @@ async function materialForUser(db, user, materialId) {
 
 route("GET", "/student/materials/:id", async ({ db, user, params }) => {
   const m = await materialForUser(db, user, params.id);
-  return json({ id: m.id, kind: m.kind, title: m.title, pages: m.pages, version: m.version, video_url: m.kind === "video" ? m.video_url : null });
+  const r = await db.prepare("SELECT page FROM reading WHERE user_id = ? AND material_id = ?").bind(user.id, m.id).first();
+  const last = r ? Math.min(Math.max(1, r.page), Math.max(1, m.pages)) : 1;
+  return json({ id: m.id, kind: m.kind, title: m.title, pages: m.pages, version: m.version, last_page: last,
+    video_url: m.kind === "video" ? m.video_url : null });
+}, "user");
+
+// آخر صفحة المتدرب وقف عندها، علشان الملف يفتح عليها المرة الجاية من أي جهاز
+route("PUT", "/student/materials/:id/position", async ({ db, user, request, params }) => {
+  const m = await materialForUser(db, user, params.id);
+  const page = parseInt((await body(request)).page, 10);
+  if (!(page >= 1 && page <= m.pages)) fail(400, "رقم الصفحة غلط.");
+  await db.prepare(`INSERT INTO reading (user_id, material_id, page) VALUES (?, ?, ?)
+                    ON CONFLICT (user_id, material_id) DO UPDATE SET page = excluded.page, updated_at = datetime('now')`).bind(user.id, m.id, page).run();
+  return json({ ok: true });
 }, "user");
 
 route("GET", "/student/materials/:id/pages/:n", async ({ db, user, params }) => {
@@ -345,14 +405,21 @@ route("GET", "/student/exams/:id", async ({ db, user, params }) => {
 
 route("POST", "/student/exams/:id/start", async ({ db, user, params }) => {
   const { ex, shaped } = await examForUser(db, user, params.id);
-  const { results: bank } = await db.prepare("SELECT id, body, options FROM questions WHERE exam_id = ?").bind(ex.id).all();
-  const picked = shuffle(bank).slice(0, shaped.questions);
+  const [{ results: bank }, { results: prev }] = await Promise.all([
+    db.prepare("SELECT id, body, options FROM questions WHERE exam_id = ?").bind(ex.id).all(),
+    db.prepare("SELECT question_ids FROM attempts WHERE user_id = ? AND exam_id = ?").bind(user.id, ex.id).all(),
+  ]);
+  // تدوير الأسئلة: اللي ظهر للمتدرب أقل عدد مرات بييجي الأول، وبعد ما البنك كله يخلص الدور بيبدأ من جديد
+  const seen = {};
+  for (const a of prev) for (const p of parseJSON(a.question_ids, [])) seen[p.id] = (seen[p.id] || 0) + 1;
+  const picked = shuffle(bank).sort((a, b) => (seen[a.id] || 0) - (seen[b.id] || 0)).slice(0, shaped.questions);
   const plan = picked.map((q) => ({ id: q.id, order: shuffle(parseJSON(q.options, []).map((_, i) => i)) }));
   const r = await db.prepare("INSERT INTO attempts (user_id, exam_id, question_ids) VALUES (?, ?, ?) RETURNING id")
     .bind(user.id, ex.id, JSON.stringify(plan)).first();
   const byId = Object.fromEntries(picked.map((q) => [q.id, q]));
   return json({
     attempt: r.id,
+    duration_min: ex.duration_min || 0,
     questions: plan.map((p, i) => {
       const opts = parseJSON(byId[p.id].options, []);
       return { n: i + 1, id: p.id, body: byId[p.id].body, options: p.order.map((k) => opts[k]) };
@@ -369,21 +436,29 @@ route("POST", "/student/attempts/:id/submit", async ({ db, user, request, params
   const plan = parseJSON(a.question_ids, []);
   const ids = plan.map((p) => p.id);
   const { results: qs } = ids.length
-    ? await db.prepare(`SELECT id, answer FROM questions WHERE id IN (${ids.map(() => "?").join(",")})`).bind(...ids).all()
+    ? await db.prepare(`SELECT id, body, options, answer, explanation FROM questions WHERE id IN (${ids.map(() => "?").join(",")})`).bind(...ids).all()
     : { results: [] };
-  const correctBy = Object.fromEntries(qs.map((q) => [q.id, q.answer]));
+  const qBy = Object.fromEntries(qs.map((q) => [q.id, q]));
+  const ex = await db.prepare("SELECT pass_pct, duration_min FROM exams WHERE id = ?").bind(a.exam_id).first();
+  // الوقت بيتحسب من السيرفر كمان. دقيقة ونص سماح للنت البطيء، وبعدها الإجابات مش بتتحسب
+  const late = ex.duration_min > 0 && Date.now() - sqlTime(a.started_at) > (ex.duration_min * 60 + 90) * 1000;
   let correct = 0;
-  for (const p of plan) {
-    const chosen = answers[p.id];
-    if (chosen === undefined || chosen === null) continue;
-    if (p.order[Number(chosen)] === correctBy[p.id]) correct++;
+  const review = [];
+  for (const [i, p] of plan.entries()) {
+    const q = qBy[p.id];
+    if (!q) continue; // سؤال اتمسح من البنك بعد ما المحاولة بدأت
+    const raw = late ? undefined : answers[p.id];
+    const chosen = raw === undefined || raw === null || raw === "" ? null : Number(raw);
+    const right = p.order.indexOf(q.answer);
+    if (chosen !== null && chosen === right) correct++;
+    const opts = parseJSON(q.options, []);
+    review.push({ n: i + 1, body: q.body, options: p.order.map((k) => opts[k]), chosen, correct: right, explanation: q.explanation || "" });
   }
   const total = plan.length;
   const score = total ? Math.round((correct / total) * 1000) / 10 : 0;
-  const ex = await db.prepare("SELECT pass_pct FROM exams WHERE id = ?").bind(a.exam_id).first();
   const passed = score > ex.pass_pct ? 1 : 0; // النجاح = أكتر من نسبة النجاح
   await db.prepare("UPDATE attempts SET score = ?, passed = ?, submitted_at = datetime('now') WHERE id = ?").bind(score, passed, a.id).run();
-  return json({ score, passed: !!passed, correct, total, pass_pct: ex.pass_pct });
+  return json({ score, passed: !!passed, correct, total, pass_pct: ex.pass_pct, late, review });
 }, "user");
 
 route("GET", "/student/certificate/:slug", async ({ db, user, params }) => {
@@ -399,7 +474,7 @@ route("GET", "/student/certificate/:slug", async ({ db, user, params }) => {
     cert = { code, issued_at: today() };
   }
   const s = await getSettings(db);
-  return json({ code: cert.code, issued_at: cert.issued_at, name: user.name, course: c.title, signature: s.cert_signature || "", has_bg: !!s.cert_bg });
+  return json({ code: cert.code, issued_at: cert.issued_at, name: user.name, course: c.title, signature: s.cert_signature || "", issuer: s.cert_issuer || s.brand_name || "", has_bg: !!s.cert_bg });
 }, "user");
 
 // =====================================================================
@@ -499,6 +574,27 @@ route("GET", "/admin/students/:id/report", async ({ db, params }) => {
   const courses = [];
   for (const e of enr) courses.push({ title: e.title, slug: e.slug, plan: e.plan_code, ...(await courseState(db, u.id, { id: e.course_id }, e.plan_code)) });
   return json({ user: u, courses });
+}, "admin");
+
+// المتدربين اللي اشتراكهم ساري ومدخلوش المنصة من كام يوم
+route("GET", "/admin/inactive", async ({ db, url }) => {
+  const s = await getSettings(db);
+  const days = parseInt(url.searchParams.get("days"), 10) || parseInt(s.inactive_days, 10) || 7;
+  const { results: rows } = await db.prepare(`SELECT u.id, u.name, u.phone, u.email, COALESCE(u.last_seen, u.last_login) AS seen, u.created_at,
+        e.course_id, e.plan_code, c.title, c.slug
+      FROM users u JOIN enrollments e ON e.user_id = u.id JOIN courses c ON c.id = e.course_id
+      WHERE u.role = 'student' AND u.active = 1 AND (e.expires_at IS NULL OR e.expires_at >= date('now'))
+        AND COALESCE(u.last_seen, u.last_login, u.created_at) < datetime('now', ?)
+      ORDER BY COALESCE(u.last_seen, u.last_login, u.created_at)`).bind(`-${days} days`).all();
+  const out = [];
+  for (const r of rows) {
+    const st = await courseState(db, r.id, { id: r.course_id }, r.plan_code);
+    if (st.completed) continue;
+    const cur = st.levels.find((l) => l.num === st.current_level);
+    out.push({ id: r.id, name: r.name, phone: r.phone, email: r.email, seen: r.seen, created_at: r.created_at,
+      course: r.title, slug: r.slug, progress: st.progress, level: cur ? `المستوى ${cur.num} (${cur.title})` : "" });
+  }
+  return json({ days, students: out });
 }, "admin");
 
 route("GET", "/admin/export.csv", async ({ db }) => {
@@ -655,15 +751,16 @@ route("POST", "/admin/courses/:id/exams", async ({ db, request, params }) => {
   const b = await body(request);
   const after = parseInt(b.after_level, 10);
   if (!(after >= 1)) fail(400, "اختار الامتحان بعد أنهي مستوى.");
-  await db.prepare("INSERT INTO exams (course_id, kind, after_level, title, question_count, pass_pct) VALUES (?, 'cumulative', ?, ?, ?, ?)")
-    .bind(params.id, after, b.title || `امتحان تراكمي بعد المستوى ${after}`, Number(b.question_count) || 20, Number(b.pass_pct) || 50).run();
+  await db.prepare("INSERT INTO exams (course_id, kind, after_level, title, question_count, pass_pct, duration_min) VALUES (?, 'cumulative', ?, ?, ?, ?, ?)")
+    .bind(params.id, after, b.title || `امتحان تراكمي بعد المستوى ${after}`, Number(b.question_count) || 20, Number(b.pass_pct) || 50, Number(b.duration_min) || 40).run();
   return json({ ok: true });
 }, "admin");
 
 route("PATCH", "/admin/exams/:id", async ({ db, request, params }) => {
-  const f = pick(await body(request), ["title", "question_count", "pass_pct"]);
+  const f = pick(await body(request), ["title", "question_count", "pass_pct", "duration_min"]);
   if (f.question_count !== undefined && !(Number(f.question_count) >= 1)) fail(400, "عدد الأسئلة لازم يكون 1 أو أكتر.");
   if (f.pass_pct !== undefined && !(Number(f.pass_pct) >= 0 && Number(f.pass_pct) < 100)) fail(400, "نسبة النجاح لازم تكون بين 0 و 99.");
+  if (f.duration_min !== undefined && !(Number.isInteger(Number(f.duration_min)) && Number(f.duration_min) >= 0 && Number(f.duration_min) <= 300)) fail(400, "مدة الامتحان لازم تكون من 0 لـ 300 دقيقة (0 = من غير وقت).");
   await update(db, "exams", params.id, f);
   return json({ ok: true });
 }, "admin");
@@ -721,13 +818,17 @@ route("GET", "/admin/settings", async ({ db }) => json(await getSettings(db)), "
 route("PUT", "/admin/settings", async ({ db, request }) => {
   const b = await body(request);
   const stmts = [];
-  for (const k of PUBLIC_SETTINGS) {
+  for (const k of ADMIN_SETTINGS) {
     if (b[k] === undefined) continue;
     let v = String(b[k]).trim();
-    if (k === "whatsapp" || k === "lecturer_whatsapp") {
+    if (WHATSAPP_KEYS.includes(k)) {
       v = toLatinDigits(v).replace(/\D/g, "");
       if (v.startsWith("0")) v = "20" + v.slice(1);
       if (v && !/^\d{10,15}$/.test(v)) fail(400, "رقم الواتساب مكتوب غلط.");
+    }
+    if (k === "inactive_days") {
+      v = String(parseInt(toLatinDigits(v), 10) || 0);
+      if (!(Number(v) >= 1 && Number(v) <= 365)) fail(400, "عدد أيام الانقطاع لازم يكون من 1 لـ 365.");
     }
     stmts.push(db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").bind(k, v));
   }

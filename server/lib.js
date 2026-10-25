@@ -124,7 +124,7 @@ export async function currentUser(db, request) {
   if (!token) return null;
   const row = await db
     .prepare(
-      `SELECT u.id, u.name, u.email, u.phone, u.role, u.active, u.must_change, s.token_hash
+      `SELECT u.id, u.name, u.email, u.phone, u.role, u.active, u.must_change, u.last_seen, s.token_hash
        FROM sessions s JOIN users u ON u.id = s.user_id
        WHERE s.token_hash = ? AND s.expires_at > ?`
     )

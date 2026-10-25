@@ -25,14 +25,16 @@
       <div class="field"><label for="nw">الباسورد الجديد <small>(6 حروف أو أرقام على الأقل)</small></label><input id="nw" type="password" autocomplete="new-password" dir="ltr" required minlength="6"></div>
       <div class="field"><label for="nw2">اكتب الباسورد الجديد تاني</label><input id="nw2" type="password" autocomplete="new-password" dir="ltr" required></div>
       <div class="status" id="st" role="status" aria-live="polite" hidden></div>
-      <button class="btn btn-primary" id="go" type="submit">حفظ الباسورد</button>
+      <div class="spread"><button class="btn btn-primary" id="go" type="submit">حفظ الباسورد</button>
+        <a class="muted" id="help" href="#" target="_blank" rel="noopener">مش فاكر الباسورد الحالي؟ كلم الدعم الفني</a></div>
     </form>
   </div>
 </main>
 <script>
 (async function () {
   const me = await IK.requireUser();
-  await IK.chrome({ user: me });
+  const site = await IK.chrome({ user: me });
+  IK.$("#help").href = IK.supportLink(site.settings, me.name);
   if (IK.qs("first")) IK.$("#first-note").hidden = false;
   const st = IK.$("#st"), go = IK.$("#go");
   IK.$("#f").addEventListener("submit", async (ev) => {
