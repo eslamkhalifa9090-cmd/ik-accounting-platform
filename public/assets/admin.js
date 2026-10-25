@@ -509,6 +509,14 @@
         ${field("cert_issuer", "الجهة المصدرة للشهادة", "بتظهر تحت اللوجو. فاضي = اسم المنصة", true)}
         ${field("footer_line1", "الفوتر: السطر الأول")}
         ${field("footer_line2", "الفوتر: السطر التاني")}
+        <h2 class="full" style="margin-top:10px">العلامة المائية على المادة العلمية</h2>
+        <div class="field"><label>بيانات المتدرب (الاسم والرقم والتاريخ) <small>(بننصح تفضل ظاهرة، علشان لو حد صوّر الشاشة ونشرها يبان هو مين)</small></label>
+          <select name="wm_student"><option value="1">تظهر</option><option value="0"${s.wm_student === "0" ? " selected" : ""}>متظهرش</option></select></div>
+        <div class="field"><label>درجة الوضوح</label>
+          <select name="wm_level">${[["light", "خفيفة"], ["medium", "متوسطة"], ["strong", "واضحة"]].map(([v, t]) => `<option value="${v}"${(s.wm_level || "medium") === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+        ${field("wm_text", "نص إضافي في العلامة المائية", "زي Mr. Islam Khalifa | Accounting. فاضي = من غير نص إضافي", true)}
+        <div class="field full"><label>معاينة <small>(بتتغير وانت بتعدل، وبتتحفظ لما تدوس حفظ الإعدادات)</small></label>
+          <canvas id="wm-prev" width="800" height="1000" style="width:100%;max-width:340px;border:1px solid var(--line);border-radius:8px;background:#fff"></canvas></div>
         <h2 class="full" style="margin-top:10px">أرقام التواصل</h2>
         ${field("whatsapp", "واتساب خدمة العملاء", "الاشتراك، الاستفسار عن الكورسات، التجديد", true)}
         ${field("whatsapp_display", "رقم خدمة العملاء زي ما يظهر للزوار", "", true)}
@@ -532,6 +540,17 @@
       </div>
       <div class="card stack"><h2>حسابي</h2><a class="btn btn-ghost" href="/account">تغيير باسورد الأدمن</a></div>`;
     const sf = $("#sf");
+    const prev = () => {
+      const cv = $("#wm-prev"), ctx = cv.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.fillStyle = "#102B4E"; ctx.font = '700 38px "IBM Plex Sans Arabic", Tahoma'; ctx.textAlign = "center"; ctx.fillText("المستوى الأول: نموذج صفحة", 400, 110);
+      ctx.fillStyle = "#d9dee5";
+      for (let y = 180; y < 880; y += 46) ctx.fillRect(80 + ((y / 46) % 3) * 30, y, 640 - ((y / 46) % 3) * 30, 14);
+      IK.drawPageMarks(ctx, cv.width, cv.height, { ...s, ...Object.fromEntries(new FormData(sf)) }, { name: "أحمد محمد", phone: "01012345678" });
+    };
+    sf.addEventListener("input", prev);
+    sf.addEventListener("change", prev);
+    prev();
     sf.onsubmit = async (e) => {
       e.preventDefault();
       try { await api("/admin/settings", { method: "PUT", body: Object.fromEntries(new FormData(sf)) }); IK.status(sf.querySelector(".status"), "ok", "اتحفظ"); }

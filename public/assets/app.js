@@ -62,6 +62,40 @@
     return site;
   };
 
+  // العلامة المائية وفوتر صفحات المادة، من الإعدادات:
+  // wm_student (1 = اسم المتدرب ورقمه والتاريخ، 0 = لأ)، wm_text نص إضافي، wm_level درجة الوضوح
+  IK.WM_ALPHA = { light: 0.07, medium: 0.13, strong: 0.22 };
+  IK.drawPageMarks = (ctx, w, h, s, who) => {
+    const parts = [];
+    if (s.wm_student !== "0" && who) parts.push(who.name, who.phone || who.email || "", new Date().toLocaleDateString("ar-EG"));
+    if (s.wm_text) parts.push(s.wm_text);
+    const mark = parts.filter(Boolean).join(" · ");
+    if (mark) {
+      ctx.save();
+      ctx.globalAlpha = IK.WM_ALPHA[s.wm_level] || IK.WM_ALPHA.medium;
+      ctx.fillStyle = "#102B4E";
+      ctx.font = `600 ${Math.round(w / 34)}px "IBM Plex Sans Arabic", Tahoma, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.translate(w / 2, h / 2);
+      ctx.rotate(-Math.PI / 6);
+      const stepY = w / 6, stepX = Math.max(w / 1.6, ctx.measureText(mark).width * 1.25);
+      for (let y = -h; y < h; y += stepY) for (let x = -w; x < w; x += stepX) ctx.fillText(mark, x + ((y / stepY) % 2) * stepX / 2, y);
+      ctx.restore();
+    }
+    // اسم المنصة في فوتر كل صفحة
+    const brand = [s.footer_line1 || s.brand_name || "Mr. Islam Khalifa | Accounting", s.footer_line2].filter(Boolean).join("  —  ");
+    const fh = Math.round(w / 40);
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,.88)";
+    ctx.fillRect(0, h - fh * 1.9, w, fh * 1.9);
+    ctx.fillStyle = "#102B4E";
+    ctx.font = `600 ${Math.round(fh * 0.72)}px "IBM Plex Sans Arabic", Tahoma, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(brand, w / 2, h - fh * 0.95);
+    ctx.restore();
+  };
+
   IK.me = () => IK.api("/auth/me");
 
   // صفحة لازم دخول: بترجع بيانات المتدرب، وتحوله لتغيير الباسورد لو أول مرة

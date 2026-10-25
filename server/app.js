@@ -67,7 +67,7 @@ async function getSettings(db) {
 }
 // whatsapp = خدمة العملاء، support_whatsapp = الدعم الفني، lecturer_whatsapp = المحاضر
 const PUBLIC_SETTINGS = ["whatsapp", "whatsapp_display", "support_whatsapp", "lecturer_whatsapp", "brand_name", "footer_line1", "footer_line2",
-  "subscribe_message", "support_message", "follow_message", "notify_message", "cert_signature"];
+  "subscribe_message", "support_message", "follow_message", "notify_message", "cert_signature", "wm_text", "wm_student", "wm_level"];
 const ADMIN_SETTINGS = [...PUBLIC_SETTINGS, "reminder_message", "inactive_days", "cert_issuer"];
 const WHATSAPP_KEYS = ["whatsapp", "support_whatsapp", "lecturer_whatsapp"];
 
@@ -830,6 +830,9 @@ route("PUT", "/admin/settings", async ({ db, request }) => {
       v = String(parseInt(toLatinDigits(v), 10) || 0);
       if (!(Number(v) >= 1 && Number(v) <= 365)) fail(400, "عدد أيام الانقطاع لازم يكون من 1 لـ 365.");
     }
+    if (k === "wm_student") v = v === "0" ? "0" : "1";
+    if (k === "wm_level" && !["light", "medium", "strong"].includes(v)) v = "medium";
+    if (k === "wm_text" && v.length > 60) fail(400, "نص العلامة المائية لازم يكون أقل من 60 حرف.");
     stmts.push(db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").bind(k, v));
   }
   if (stmts.length) await db.batch(stmts);
