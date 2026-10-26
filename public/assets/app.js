@@ -99,6 +99,13 @@
   // اسم التقسيم في الكورس (مستوى / وحدة / موديول)، بييجي من السيرفر مع كل كورس
   IK.U = (u) => u || { key: "level", the: "المستوى", a: "مستوى", pl: "المستويات", li: "للمستوى", this: "المستوى ده", closed: "مقفول", opens: "بيفتح", will: "هيفتح", before: "اللي قبله" };
 
+  // عداد الإحصائيات (زيارة أو ضغطة)، بيتبعت في الخلفية ومش بيأخر الصفحة
+  IK.track = (kind, ref = "") => {
+    const data = new Blob([JSON.stringify({ kind, ref })], { type: "application/json" });
+    try { if (navigator.sendBeacon && navigator.sendBeacon("/api/public/track", data)) return; } catch (e) {}
+    fetch("/api/public/track", { method: "POST", body: data, headers: { "content-type": "application/json" }, keepalive: true }).catch(() => {});
+  };
+
   IK.me = () => IK.api("/auth/me");
 
   // صفحة لازم دخول: بترجع بيانات المتدرب، وتحوله لتغيير الباسورد لو أول مرة

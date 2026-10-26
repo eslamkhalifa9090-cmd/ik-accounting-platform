@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="/assets/app.css">
 <script src="/assets/app.js"></script>
+<script src="/assets/viewer.js"></script>
 </head>
 <body>
 <main class="wrap">
@@ -30,6 +31,14 @@
   .cum{border-style:dashed;border-color:var(--gold);background:#FBF7EE}
   .sec{margin-top:36px}
   .sec>h2{font-size:22px;margin-bottom:14px}
+  .chs{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
+  .chs li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:var(--r-s,10px);background:var(--paper,#F7F5F0);font-size:15px}
+  .chs li .t{min-width:0;line-height:1.7}
+  .chs li .t small{color:var(--ink-3);white-space:nowrap;margin-inline-start:6px}
+  .chs li .btn{flex:none}
+  @media (max-width:560px){.lv{grid-template-columns:1fr;gap:10px}.lv .n{width:38px;height:38px}.chs li{padding:8px 10px}}
+  .chs li.free{background:#FBF7EE;outline:1px dashed var(--gold)}
+  .chs .ic{flex:none}
 </style>
 <script>
 (async function () {
@@ -49,6 +58,20 @@
   const sub = (p) => IK.wa(s.whatsapp, IK.fill(s.subscribe_message, { course: c.title, plan: p.name }));
   const cumAfter = (n) => d.exams.filter((e) => e.kind === "cumulative" && e.after_level === n);
   const soon = c.status === "soon";
+  const U = IK.U(c.unit);
+  IK.track("course_view", slug);
+  const notifyUrl = IK.wa(s.whatsapp, IK.fill(s.notify_message, { course: c.title }));
+  const plan0 = d.plans[0];
+  const subAny = plan0 ? sub(plan0) : IK.wa(s.whatsapp, IK.fill(s.subscribe_message, { course: c.title, plan: "" }));
+  const freeN = d.levels.reduce((a, l) => a + l.materials.filter((m) => m.free).length, 0);
+  // كل فصل: المشترك يشوف الاسم بس (ويدخل من "ادخل الكورس")، والزائر يشوف 🔒 أو 🎁 للمجاني
+  const chapter = (m, i) => {
+    const meta = m.kind === "video" ? "🎬 فيديو" : m.pages ? m.pages + " صفحة" : "بيتجهز";
+    const right = enrolled ? ""
+      : m.free ? `<button class="btn btn-gold btn-sm js-free" data-id="${m.id}" type="button">🎁 جرّبه مجاناً</button>`
+      : `<span class="ic" title="للمشتركين">🔒${m.min_plan === "pro" ? ' <span class="badge gold">Pro</span>' : ""}</span>`;
+    return `<li class="${m.free && !enrolled ? "free" : ""}"><span class="t"><b class="num">${i + 1}.</b> ${IK.esc(m.title)} <small>${meta}</small></span>${right}</li>`;
+  };
   root.innerHTML = `
     <section class="hero-c">
       <span class="eyebrow">${soon ? "قيد الافتتاح قريباً" : "كورس متاح الآن"}</span>
@@ -58,22 +81,29 @@
       ${c.audience ? `<p><b style="color:var(--gold)">الكورس ده لمين؟</b> ${IK.esc(c.audience)}</p>` : ""}
       <div class="row" style="margin-top:22px">
         ${enrolled ? `<a class="btn btn-gold" href="/learn?c=${encodeURIComponent(slug)}">ادخل الكورس</a>` :
-          soon ? `<a class="btn btn-wa" target="_blank" rel="noopener" href="${IK.wa(s.whatsapp, IK.fill(s.notify_message, { course: c.title }))}">${IK.chatIcon}بلغني أول ما يفتح</a>` :
+          soon ? `<a class="btn btn-wa js-notify" target="_blank" rel="noopener" href="${notifyUrl}">${IK.chatIcon}بلغني أول ما يفتح</a>` :
           `<a class="btn btn-wa" href="#plans">${IK.chatIcon}اشترك دلوقتي</a>`}
         ${me ? "" : '<a class="btn btn-ghost" href="/login">مشترك بالفعل؟ ادخل</a>'}
       </div>
     </section>
     ${d.levels.length ? `<section class="sec">
-      <h2>${IK.U(d.course.unit).pl} (${d.levels.length})</h2>
+      <h2>${U.pl} (${d.levels.length})</h2>
+      ${!enrolled && freeN ? `<p class="muted" style="margin:-6px 0 12px">🎁 فيه ${freeN === 1 ? "فصل مجاني تقدر تجربه" : freeN + " فصول مجانية تقدر تجربها"} من غير اشتراك. باقي الفصول 🔒 للمشتركين.</p>` : ""}
+      <section id="free-viewer" style="margin-bottom:20px" hidden></section>
       <div class="levels">${d.levels.map((l) => `
         <article class="lv"><span class="n">${l.num}</span><div>
-          <h3>${IK.U(d.course.unit).the} ${l.num}: ${IK.esc(l.title)}</h3>
+          <h3>${U.the} ${l.num}: ${IK.esc(l.title)}</h3>
           ${l.topics ? `<p class="topics">${IK.esc(l.topics)}</p>` : ""}
           ${l.teaser ? `<p class="teaser">${IK.esc(l.teaser)}</p>` : ""}
-          <p class="topics" style="margin-top:8px">+ امتحان ${IK.U(d.course.unit).the} ${l.num}</p>
+          ${l.materials.length ? `<ul class="chs">${l.materials.map(chapter).join("")}</ul>` : `<p class="topics" style="margin-top:8px">الفصول بتتجهز وهتنزل قريب.</p>`}
+          <p class="topics" style="margin-top:8px">+ امتحان ${U.the} ${l.num}${enrolled ? "" : " (للمشتركين)"}</p>
         </div></article>
         ${cumAfter(l.num).map((e) => `<article class="lv cum"><span class="n">★</span><div><h3>${IK.esc(e.title)}</h3><p class="topics">امتحان تراكمي على كل اللي فات، ولازم تعديه علشان تكمل.</p></div></article>`).join("")}`).join("")}
-      </div></section>` : ""}
+      </div>
+      ${enrolled ? `<div class="row" style="margin-top:14px"><a class="btn btn-gold" href="/learn?c=${encodeURIComponent(slug)}">ادخل الكورس</a></div>`
+        : `<div class="row" style="margin-top:14px">${soon ? `<a class="btn btn-wa js-notify" target="_blank" rel="noopener" href="${notifyUrl}">${IK.chatIcon}بلغني أول ما يفتح</a>`
+          : `<a class="btn btn-wa js-sub" target="_blank" rel="noopener" href="${subAny}">${IK.chatIcon}اشترك على واتساب وافتح كل الفصول</a>`}</div>`}
+      </section>` : ""}
     <section class="sec">
       <h2>نظام الامتحانات والشهادة</h2>
       <div class="card stack">
@@ -88,10 +118,32 @@
           <div class="spread"><h3>${IK.esc(p.name)}</h3>${p.code === "pro" ? '<span class="badge gold">Pro</span>' : ""}</div>
           <div>${IK.priceHTML(p)}</div>
           ${p.features.length ? `<ul>${p.features.map((f) => `<li>${IK.esc(f)}</li>`).join("")}</ul>` : ""}
-          <a class="btn btn-wa" target="_blank" rel="noopener" href="${sub(p)}">${IK.chatIcon}اشترك على واتساب</a>
+          <a class="btn btn-wa js-sub" target="_blank" rel="noopener" href="${sub(p)}">${IK.chatIcon}اشترك على واتساب</a>
         </article>`).join("")}</div>
       <p class="muted" style="margin-top:10px">الدفع بيتم مع خدمة العملاء على واتساب، وبعدها بيتعملك حساب على المنصة.</p>
     </section>` : ""}`;
+
+  root.addEventListener("click", async (ev) => {
+    if (ev.target.closest(".js-sub")) IK.track("wa_subscribe", slug);
+    if (ev.target.closest(".js-notify")) IK.track("wa_notify", slug);
+    const b = ev.target.closest(".js-free");
+    if (!b) return;
+    b.disabled = true;
+    try {
+      const m = await fetch("/api/public/materials/" + b.dataset.id).then(async (r) => r.ok ? r.json() : Promise.reject(new Error((await r.json()).error)));
+      const wrap = IK.$("#free-viewer");
+      // العلامة المائية "نسخة تجريبية" بتظهر دايماً على الفصول المجانية
+      await IK.openPdf(wrap, m, { s: { ...s, wm_student: "1" }, who: { name: "نسخة تجريبية" },
+        src: (n) => `/api/public/materials/${m.id}/pages/${n}` });
+      const cta = document.createElement("div");
+      cta.className = "card spread";
+      cta.style.marginTop = "12px";
+      cta.innerHTML = soon ? `<p>عجبك؟ الكورس هيفتح قريب.</p><a class="btn btn-wa js-notify" target="_blank" rel="noopener" href="${notifyUrl}">${IK.chatIcon}بلغني أول ما يفتح</a>`
+        : `<p>عجبك؟ اشترك وكمل باقي الفصول والامتحانات والشهادة.</p><a class="btn btn-wa js-sub" target="_blank" rel="noopener" href="${subAny}">${IK.chatIcon}اشترك على واتساب</a>`;
+      wrap.append(cta);
+    } catch (e) { alert(e.message || "الفصل ده مش متاح دلوقتي."); }
+    b.disabled = false;
+  });
 })();
 </script>
 </body>

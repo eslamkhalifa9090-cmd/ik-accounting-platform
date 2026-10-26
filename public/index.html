@@ -887,6 +887,18 @@ var CONTENT = {
     } catch(e){ selectIt(); }
   });
 
+  // عداد الزيارات في تاب الإحصائيات بلوحة الأدمن
+  function count(kind, ref){
+    var data = new Blob([JSON.stringify({ kind: kind, ref: ref || "" })], { type: "application/json" });
+    try { if (navigator.sendBeacon && navigator.sendBeacon("/api/public/track", data)) return; } catch(e){}
+    fetch("/api/public/track", { method: "POST", body: data, headers: { "content-type": "application/json" }, keepalive: true }).catch(function(){});
+  }
+  count("home_view");
+  document.getElementById("path-list").addEventListener("click", function(e){
+    var a = e.target.closest(".js-notify");
+    if (a) count("wa_notify", a.getAttribute("data-slug"));
+  });
+
   // ===== مسارات المنصة (من لوحة الأدمن) =====
   fetch("/api/public/site").then(function(r){ return r.json(); }).then(function(d){
     var st = d.settings || {};
@@ -898,9 +910,9 @@ var CONTENT = {
       var open = c.status === "open";
       var p = (c.plans || []).filter(function(x){ return x.code === "basic"; })[0] || (c.plans || [])[0];
       var price = open && p && p.show_price ? '<p class="pr">' + (p.discounted ? '<s>' + money(p.price) + '</s>' : '') + '<b>' + money(p.final) + '</b></p>' : '';
-      var btn = open
-        ? '<a class="btn btn-primary" href="/course?c=' + encodeURIComponent(c.slug) + '">تفاصيل الكورس</a>'
-        : '<a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/' + CONTENT.whatsapp + '?text=' + encodeURIComponent((st.notify_message || "").replace("{course}", c.title)) + '">' + chat + 'بلغني أول ما يفتح</a>';
+      var more = '<a class="btn ' + (open ? 'btn-primary' : 'btn-ghost') + '" href="/course?c=' + encodeURIComponent(c.slug) + '">' + (open ? 'تفاصيل الكورس' : 'شوف المحتوى') + '</a>';
+      var btn = open ? more
+        : more + '<a class="btn btn-ghost js-notify" data-slug="' + esc(c.slug) + '" target="_blank" rel="noopener" href="https://wa.me/' + CONTENT.whatsapp + '?text=' + encodeURIComponent((st.notify_message || "").replace("{course}", c.title)) + '">' + chat + 'بلغني أول ما يفتح</a>';
       return '<article class="path ' + (open ? 'open' : 'soon') + '"><span class="st">' + (open ? 'متاح الآن' : 'قيد الافتتاح قريباً') + '</span><h3>' + esc(c.title) + '</h3>' +
         (c.subtitle ? '<p>' + esc(c.subtitle) + '</p>' : '') + (open && c.levels ? '<p>' + c.levels + ' ' + ((c.unit && c.unit.pl) || 'المستويات').replace(/^ال/, '') + ' + امتحانات + شهادة</p>' : '') + price + btn + '</article>';
     }).join("") || '<p class="muted">المسارات هتنزل قريب.</p>';
