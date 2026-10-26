@@ -101,7 +101,8 @@
 
   function editStudent(u) {
     const box = $("#edit");
-    const enr = u.enrollments[0] || {};
+    const today = new Date().toISOString().slice(0, 10);
+    const free = courses.filter((c) => !u.enrollments.some((e) => e.slug === c.slug));
     box.innerHTML = `<div class="card" style="border-color:var(--gold)">
       <div class="spread"><h2>تعديل: ${esc(u.name)}</h2><button class="btn btn-ghost btn-sm" type="button" id="x">قفل</button></div>
       <form id="ef" class="form-grid" style="margin-top:12px">
@@ -113,14 +114,25 @@
         <label class="check"><input type="checkbox" name="active" ${u.active ? "checked" : ""}> الحساب نشط</label>
         <div class="full row"><button class="btn btn-primary" type="submit">حفظ البيانات</button></div>
       </form>
-      <h3 style="margin-top:20px">الاشتراك</h3>
-      <form id="en" class="form-grid" style="margin-top:10px">
-        <div class="field"><label>الكورس</label><select name="course_slug">${courseOptions(enr.slug || "financial")}</select></div>
-        <div class="field"><label>الباقة</label><select name="plan_code">${opt("basic", "الأساسية", enr.plan_code)}${opt("pro", "Pro", enr.plan_code)}</select></div>
-        <div class="field"><label>ينتهي في</label><input name="expires_at" type="date" value="${esc(enr.expires_at || "")}"></div>
-        <div class="full row"><button class="btn btn-primary" type="submit">تفعيل / تحديث الاشتراك</button>
-          ${u.enrollments.map((e) => `<button class="btn btn-danger btn-sm" type="button" data-unenroll="${esc(e.slug)}">إلغاء ${esc(e.title)}</button>`).join("")}</div>
-      </form>
+      <h3 style="margin-top:20px">الكورسات المشترك فيها (${u.enrollments.length})</h3>
+      <p class="muted">نفس اليوزر والباسورد بيدخل بيهم على كل الكورسات، وكل كورس ليه باقته وتاريخ انتهائه لوحده.</p>
+      ${u.enrollments.length ? `<div class="table-wrap" style="margin-top:8px"><table class="t" id="enr-t"><thead><tr><th>الكورس</th><th>الباقة</th><th>ينتهي في</th><th>الحالة</th><th></th></tr></thead><tbody>
+        ${u.enrollments.map((e) => `<tr data-enr="${esc(e.slug)}">
+          <td><b>${esc(e.title)}</b></td>
+          <td><select class="js-plan" disabled>${opt("basic", "الأساسية", e.plan_code)}${opt("pro", "Pro", e.plan_code)}</select></td>
+          <td><input class="js-exp" type="date" value="${esc(e.expires_at || "")}" disabled><br><small class="muted js-exp-note">${e.expires_at ? "" : "مفتوح من غير تاريخ"}</small></td>
+          <td>${!e.expires_at || e.expires_at >= today ? '<span class="badge ok">ساري</span>' : '<span class="badge bad">منتهي</span>'}</td>
+          <td><div class="row"><button class="btn btn-ghost btn-sm js-edit-enr" type="button">تعديل</button>
+            <button class="btn btn-primary btn-sm js-save-enr" type="button" hidden>حفظ</button>
+            <button class="btn btn-danger btn-sm js-unenroll" type="button">إلغاء</button></div></td></tr>`).join("")}
+      </tbody></table></div>` : '<p class="muted" style="margin-top:6px">مش مشترك في أي كورس لسه.</p>'}
+      ${free.length ? `<button class="btn btn-gold btn-sm" type="button" id="add-enr" style="margin-top:10px">+ إضافة كورس</button>
+      <form id="en" class="form-grid card" style="margin-top:10px;background:var(--paper)" hidden>
+        <div class="field"><label>الكورس</label><select name="course_slug">${free.map((c) => opt(c.slug, c.title + (c.status === "open" ? "" : " (قيد الافتتاح)"))).join("")}</select></div>
+        <div class="field"><label>الباقة</label><select name="plan_code">${opt("basic", "الأساسية")}${opt("pro", "Pro")}</select></div>
+        <div class="field"><label>ينتهي في <small>(فاضي = مفتوح)</small></label><input name="expires_at" type="date"></div>
+        <div class="full row"><button class="btn btn-primary" type="submit">إضافة الكورس للمتدرب</button><button class="btn btn-ghost" type="button" id="en-x">إلغاء</button></div>
+      </form>` : '<p class="muted" style="margin-top:10px">مشترك في كل الكورسات الموجودة.</p>'}
       <div class="status" id="e-st" hidden style="margin-top:12px"></div>
       <div class="row" style="margin-top:20px"><button class="btn btn-danger btn-sm" type="button" id="del">مسح المتدرب نهائياً</button></div>
     </div>`;
@@ -139,16 +151,41 @@
         load();
       } catch (err) { toast(st, "bad", err.message); }
     };
-    $("#en").onsubmit = async (e) => {
-      e.preventDefault();
-      try { await api(`/admin/students/${u.id}/enrollment`, { method: "PUT", body: Object.fromEntries(new FormData(e.target)) }); toast(st, "ok", "الاشتراك اتحدث."); load(); stats(); }
-      catch (err) { toast(st, "bad", err.message); }
+    // بعد أي تغيير في الاشتراكات: نجيب بيانات المتدرب من جديد ونرسم الكارت تاني
+    const reopen = async (msg) => {
+      load(); stats();
+      const list = await api("/admin/students?q=" + encodeURIComponent(u.phone || u.email || u.name));
+      const fresh = list.find((x) => x.id === u.id);
+      if (fresh) { editStudent(fresh); toast($("#e-st"), "ok", msg); }
     };
-    box.querySelectorAll("[data-unenroll]").forEach((b) => (b.onclick = async () => {
-      if (!confirm("متأكد إنك عايز تلغي الاشتراك ده؟ تقدم المتدرب هيفضل محفوظ لو فعلته تاني.")) return;
-      await api(`/admin/students/${u.id}/enrollment/${encodeURIComponent(b.dataset.unenroll)}`, { method: "DELETE" });
-      toast(st, "ok", "الاشتراك اتلغى."); load(); stats();
-    }));
+    if ($("#add-enr")) {
+      $("#add-enr").onclick = () => { $("#en").hidden = false; $("#add-enr").hidden = true; };
+      $("#en-x").onclick = () => { $("#en").hidden = true; $("#add-enr").hidden = false; };
+      $("#en").onsubmit = async (e) => {
+        e.preventDefault();
+        try { await api(`/admin/students/${u.id}/enrollment`, { method: "PUT", body: Object.fromEntries(new FormData(e.target)) }); await reopen("الكورس اتضاف للمتدرب."); }
+        catch (err) { toast(st, "bad", err.message); }
+      };
+    }
+    box.querySelectorAll("tr[data-enr]").forEach((tr) => {
+      const slug = tr.dataset.enr;
+      tr.querySelector(".js-edit-enr").onclick = () => {
+        tr.querySelectorAll("select, input").forEach((x) => (x.disabled = false));
+        tr.querySelector(".js-edit-enr").hidden = true;
+        tr.querySelector(".js-save-enr").hidden = false;
+      };
+      tr.querySelector(".js-save-enr").onclick = async () => {
+        try {
+          await api(`/admin/students/${u.id}/enrollment`, { method: "PUT", body: { course_slug: slug, plan_code: tr.querySelector(".js-plan").value, expires_at: tr.querySelector(".js-exp").value } });
+          await reopen("الاشتراك اتحدث.");
+        } catch (err) { toast(st, "bad", err.message); }
+      };
+      tr.querySelector(".js-unenroll").onclick = async () => {
+        if (!confirm("متأكد إنك عايز تلغي الاشتراك ده؟ تقدم المتدرب هيفضل محفوظ لو فعلته تاني.")) return;
+        await api(`/admin/students/${u.id}/enrollment/${encodeURIComponent(slug)}`, { method: "DELETE" });
+        await reopen("الاشتراك اتلغى.");
+      };
+    });
     $("#del").onclick = async () => {
       if (!confirm("مسح المتدرب هيمسح كل تقدمه ودرجاته ومش هينفع ترجعهم. متأكد؟")) return;
       await api("/admin/students/" + u.id, { method: "DELETE" });
