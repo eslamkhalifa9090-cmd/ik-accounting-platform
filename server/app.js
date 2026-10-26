@@ -243,10 +243,58 @@ route("GET", "/public/course/:slug", async ({ db, params }) => {
   const { results: levels } = await db.prepare("SELECT num, title, topics, teaser FROM levels WHERE course_id = ? ORDER BY num").bind(c.id).all();
   const { results: plans } = await db.prepare("SELECT * FROM plans WHERE course_id = ? AND visible = 1 ORDER BY code").bind(c.id).all();
   const { results: exams } = await db.prepare("SELECT kind, after_level, title, pass_pct FROM exams WHERE course_id = ? ORDER BY after_level, kind DESC").bind(c.id).all();
+  // أسامي الفصول بس (من غير محتوى) علشان الزائر يشوف الكورس فيه إيه، والمجاني منها يتفتح للتجربة
+  const { results: mats } = await db.prepare(`SELECT m.id, l.num, m.kind, m.title, m.pages, m.min_plan, m.free FROM materials m
+                                              JOIN levels l ON l.id = m.level_id WHERE l.course_id = ? ORDER BY m.sort, m.id`).bind(c.id).all();
   return json({
     course: { slug: c.slug, title: c.title, subtitle: c.subtitle, intro: c.intro, audience: c.audience, status: c.status, unit: await unitOf(db, c.id) },
-    levels, plans: plans.map(publicPlan), exams,
+    levels: levels.map((l) => ({
+      ...l,
+      materials: mats.filter((m) => m.num === l.num).map((m) => ({
+        id: m.id, kind: m.kind, title: m.title, pages: m.pages, min_plan: m.min_plan,
+        free: !!(m.free && m.kind === "pdf" && m.pages),
+      })),
+    })),
+    plans: plans.map(publicPlan), exams,
   });
+});
+
+// الفصول المجانية للتجربة: بتتفتح من غير دخول، والسيرفر بيرفض أي فصل مش متعلّم عليه "مجاني"
+async function freeMaterial(db, id) {
+  const m = await db.prepare(`SELECT m.id, m.title, m.pages, m.version, c.slug FROM materials m JOIN levels l ON l.id = m.level_id
+                              JOIN courses c ON c.id = l.course_id
+                              WHERE m.id = ? AND m.free = 1 AND m.kind = 'pdf' AND m.pages > 0 AND c.status != 'hidden'`).bind(id).first();
+  if (!m) fail(403, "الفصل ده للمشتركين بس. اشترك علشان تفتحه.");
+  return m;
+}
+
+route("GET", "/public/materials/:id", async ({ db, params }) => {
+  const m = await freeMaterial(db, params.id);
+  await bump(db, "free_open", String(m.id));
+  return json({ id: m.id, title: m.title, pages: m.pages, course: m.slug });
+});
+
+route("GET", "/public/materials/:id/pages/:n", async ({ db, params }) => {
+  const m = await freeMaterial(db, params.id);
+  const n = parseInt(params.n, 10);
+  if (!(n >= 1 && n <= m.pages)) fail(404, "الصفحة دي مش موجودة.");
+  const f = await getFile(db, `m/${m.id}/v${m.version}/${n}.webp`);
+  if (!f) fail(404, "الصفحة دي مش موجودة.");
+  return new Response(f.data, { headers: { "content-type": "image/webp", "cache-control": "private, no-store", "content-disposition": "inline" } });
+});
+
+// ---------- الإحصائيات: عداد واحد لكل (يوم، نوع، كورس) من غير أي خدمة خارجية ----------
+const TRACK_KINDS = ["home_view", "course_view", "wa_subscribe", "wa_notify"];
+const bump = (db, kind, ref = "") => db.prepare(`INSERT INTO stats (day, kind, ref, n) VALUES (?, ?, ?, 1)
+                                                 ON CONFLICT (day, kind, ref) DO UPDATE SET n = n + 1`).bind(today(), kind, ref).run();
+
+route("POST", "/public/track", async ({ db, request }) => {
+  const b = await body(request);
+  const ref = String(b.ref || "");
+  if (!TRACK_KINDS.includes(b.kind) || !/^[a-z0-9-]{0,60}$/.test(ref)) fail(400, "بيانات غلط.");
+  const u = await currentUser(db, request);
+  if (!u || u.role !== "admin") await bump(db, b.kind, ref); // زيارات الأدمن مش بتتحسب
+  return json({ ok: true });
 });
 
 route("GET", "/public/verify/:code", async ({ db, params }) => {
@@ -737,12 +785,33 @@ route("POST", "/admin/levels/:id/materials", async ({ db, request, params }) => 
 }, "admin");
 
 route("PATCH", "/admin/materials/:id", async ({ db, request, params }) => {
-  const f = pick(await body(request), ["title", "min_plan", "video_url", "sort"]);
+  const f = pick(await body(request), ["title", "min_plan", "video_url", "sort", "free"]);
   if (f.min_plan && !["basic", "pro"].includes(f.min_plan)) fail(400, "الباقة غلط.");
+  if (f.free !== undefined) f.free = f.free ? 1 : 0;
   await update(db, "materials", params.id, { ...f, updated_at: new Date().toISOString() });
   return json({ ok: true });
 }, "admin");
 
+
+// الوحدة كلها مجانية (أو ترجع مقفولة) بضغطة واحدة
+route("PUT", "/admin/levels/:id/free", async ({ db, request, params }) => {
+  const free = (await body(request)).free ? 1 : 0;
+  await db.prepare("UPDATE materials SET free = ? WHERE level_id = ?").bind(free, params.id).run();
+  return json({ ok: true });
+}, "admin");
+
+route("GET", "/admin/stats", async ({ db }) => {
+  const d = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+  const [{ results: rows }, { results: daily }, { results: courses }, { results: mats }] = await Promise.all([
+    db.prepare(`SELECT kind, ref, SUM(CASE WHEN day = ? THEN n ELSE 0 END) AS today, SUM(CASE WHEN day >= ? THEN n ELSE 0 END) AS d7,
+                SUM(n) AS d30 FROM stats WHERE day >= ? GROUP BY kind, ref`).bind(today(), d(6), d(29)).all(),
+    db.prepare("SELECT day, kind, SUM(n) AS n FROM stats WHERE day >= ? GROUP BY day, kind ORDER BY day").bind(d(29)).all(),
+    db.prepare("SELECT slug, title, status FROM courses ORDER BY sort, id").all(),
+    db.prepare(`SELECT m.id, m.title, l.num, c.slug FROM materials m JOIN levels l ON l.id = m.level_id
+                JOIN courses c ON c.id = l.course_id WHERE m.free = 1`).all(),
+  ]);
+  return json({ rows, daily, courses, free: mats, since: d(29) });
+}, "admin");
 
 route("DELETE", "/admin/materials/:id", async ({ db, params }) => {
   await deletePrefix(db, `m/${params.id}/`);

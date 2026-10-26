@@ -322,13 +322,17 @@
     const mats = await api(`/admin/levels/${pick.level}/materials`);
     panel.innerHTML = p.html + `
       <div class="card">
-        <h2>فصول ${U.the}</h2>
+        <div class="spread"><h2>فصول ${U.the}</h2>
+          ${mats.length ? `<div class="row"><button class="btn btn-ghost btn-sm" id="lv-free" type="button">🎁 ${U.the} ${U.key === "unit" ? "كلها مجانية" : "كله مجاني"}</button>
+            <button class="btn btn-ghost btn-sm" id="lv-lock" type="button">🔒 اقفل ${U.the} ${U.key === "unit" ? "كلها" : "كله"}</button></div>` : ""}</div>
         <p class="muted" style="margin-top:4px">كل فصل ملف لوحده، والمتدرب بيفتحهم بالترتيب ده: الفصل مايفتحش غير لما يخلص اللي قبله. رتبهم بالأسهم. ملف الـ PDF بيتحول لصفحات صور محمية عليها اسم المتدرب، ولو رفعت نسخة جديدة بتحل مكان القديمة على طول.</p>
+        <p class="muted" style="margin-top:4px">🎁 <b>مجاني للتجربة:</b> علّم على أي فصل وأي زائر يقدر يفتحه من صفحة الكورس من غير اشتراك، وعليه علامة مائية "نسخة تجريبية". <a href="/course?c=${encodeURIComponent(p.course.slug)}" target="_blank" rel="noopener">شوف صفحة الكورس زي الزائر</a></p>
         <div class="stack" style="margin-top:14px">${mats.map((m, i) => `
           <div class="card" style="background:var(--paper)" data-mat="${m.id}">
             <div class="spread"><div class="row" style="gap:10px;flex-wrap:nowrap"><span class="badge num">${i + 1}</span><div><b>${m.kind === "pdf" ? "📄" : "🎬"} ${esc(m.title)}</b>
               <p class="muted">${m.kind === "pdf" ? (m.pages ? m.pages + " صفحة · نسخة " + m.version : "لسه ما اترفعش ملف") : esc(m.video_url || "من غير رابط")} · ${m.min_plan === "pro" ? "باقة Pro" : "كل الباقات"}</p></div></div>
               <div class="row">
+                ${m.kind === "pdf" ? `<label class="badge${m.free ? " gold" : ""}" style="cursor:pointer;gap:6px"><input type="checkbox" class="js-free"${m.free ? " checked" : ""}> 🎁 مجاني للتجربة</label>` : ""}
                 <button class="btn btn-ghost btn-sm js-up" type="button" aria-label="لفوق"${i === 0 ? " disabled" : ""}>▲</button>
                 <button class="btn btn-ghost btn-sm js-down" type="button" aria-label="لتحت"${i === mats.length - 1 ? " disabled" : ""}>▼</button>
                 ${m.kind === "pdf" ? `<label class="btn btn-primary btn-sm">${m.pages ? "رفع نسخة جديدة" : "رفع PDF"}<input type="file" accept="application/pdf" hidden class="js-file"></label>` : ""}
@@ -374,6 +378,11 @@
       const m = mats[i];
       const file = box.querySelector(".js-file");
       if (file) file.onchange = () => file.files[0] && uploadPdf(m, file.files[0], box);
+      const fr = box.querySelector(".js-free");
+      if (fr) fr.onchange = async () => {
+        try { await api("/admin/materials/" + m.id, { method: "PATCH", body: { free: fr.checked ? 1 : 0 } }); m.free = fr.checked ? 1 : 0; fr.parentElement.classList.toggle("gold", fr.checked); }
+        catch (err) { fr.checked = !fr.checked; alert(err.message); }
+      };
       box.querySelector(".js-up").onclick = () => move(i, -1);
       box.querySelector(".js-down").onclick = () => move(i, 1);
       box.querySelector(".js-del").onclick = async () => {
@@ -388,6 +397,12 @@
         await api("/admin/materials/" + m.id, { method: "PATCH", body }); contentTab();
       };
     });
+
+    const setLevelFree = async (free) => {
+      if (!confirm(free ? `كل فصول ${U.the} هتبقى مجانية للزوار. متأكد؟` : `كل فصول ${U.the} هترجع للمشتركين بس. متأكد؟`)) return;
+      await api(`/admin/levels/${pick.level}/free`, { method: "PUT", body: { free } }); contentTab();
+    };
+    if ($("#lv-free")) { $("#lv-free").onclick = () => setLevelFree(1); $("#lv-lock").onclick = () => setLevelFree(0); }
 
     // تقسيم ملف كامل لفصول
     let spPdf = null;
@@ -681,8 +696,47 @@
     };
   }
 
+  // ======================= الإحصائيات =======================
+  async function statsTab() {
+    const d = await api("/admin/stats");
+    const get = (kind, ref) => d.rows.find((r) => r.kind === kind && r.ref === (ref || "")) || { today: 0, d7: 0, d30: 0 };
+    const sum = (kind) => d.rows.filter((r) => r.kind === kind).reduce((a, r) => ({ today: a.today + r.today, d7: a.d7 + r.d7, d30: a.d30 + r.d30 }), { today: 0, d7: 0, d30: 0 });
+    const cells = (x) => `<td class="num">${x.today}</td><td class="num">${x.d7}</td><td class="num">${x.d30}</td>`;
+    const head = (first) => `<thead><tr><th>${first}</th><th>النهارده</th><th>آخر 7 أيام</th><th>آخر 30 يوم</th></tr></thead>`;
+    const tile = (label, x, hint) => `<div class="card" style="background:var(--paper)"><p class="muted">${label}</p><b class="num" style="font-size:28px;color:var(--navy)">${x.d30}</b><p class="muted" style="font-size:13px">آخر 30 يوم · النهارده ${x.today}${hint ? " · " + hint : ""}</p></div>`;
+    const home = get("home_view"), cv = sum("course_view"), subs = sum("wa_subscribe"), notify = sum("wa_notify"), free = sum("free_open");
+    const pct = (a, b) => (b ? Math.round((a / b) * 1000) / 10 + "%" : "—");
+    // آخر 30 يوم: زيارات الصفحة الرئيسية + صفحات الكورسات في كل يوم
+    const days = [];
+    for (let k = 29; k >= 0; k--) days.push(new Date(Date.now() - k * 864e5).toISOString().slice(0, 10));
+    const perDay = days.map((day) => d.daily.filter((x) => x.day === day && (x.kind === "home_view" || x.kind === "course_view")).reduce((a, x) => a + x.n, 0));
+    const max = Math.max(1, ...perDay);
+    const freeRows = d.rows.filter((r) => r.kind === "free_open").map((r) => ({ ...r, m: d.free.find((m) => String(m.id) === r.ref) }));
+    panel.innerHTML = `
+      <div class="card"><div class="spread"><h2>الإحصائيات</h2><button class="btn btn-ghost btn-sm" id="st-re" type="button">تحديث</button></div>
+        <p class="muted" style="margin-top:4px">بتتحسب من المنصة نفسها ومن غير أي خدمة خارجية. زياراتك إنت كأدمن مش بتتحسب. الأرقام بتبدأ من يوم تشغيل التحديث ده.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:14px">
+          ${tile("زيارات الصفحة الرئيسية", home)}${tile("زيارات صفحات الكورسات", cv)}${tile("ضغطات اشترك على واتساب", subs, "من زيارات الكورسات " + pct(subs.d30, cv.d30))}
+          ${tile("ضغطات بلغني أول ما يفتح", notify)}${tile("فتح الفصول المجانية", free)}</div>
+        <h3 style="margin-top:18px">الزيارات في آخر 30 يوم</h3>
+        <div style="display:flex;align-items:flex-end;gap:3px;height:110px;margin-top:8px;direction:ltr" aria-label="الزيارات اليومية">${perDay.map((n, k) =>
+          `<div title="${days[k]}: ${n} زيارة" style="flex:1;min-width:0;height:${Math.max(2, Math.round((n / max) * 100))}%;background:${n ? "var(--navy)" : "var(--line)"};border-radius:3px 3px 0 0"></div>`).join("")}</div>
+        <div class="spread muted" style="font-size:12px;direction:ltr"><span>${days[0]}</span><span>${days[29]}</span></div>
+      </div>
+      <div class="card"><h2>لكل كورس</h2>
+        <div class="table-wrap" style="margin-top:10px"><table style="width:100%"><thead><tr><th>الكورس</th><th>زيارات (7 أيام)</th><th>زيارات (30 يوم)</th><th>اشترك (30 يوم)</th><th>بلغني (30 يوم)</th><th>نسبة الاشتراك</th></tr></thead><tbody>
+        ${d.courses.map((c) => { const v = get("course_view", c.slug), w = get("wa_subscribe", c.slug), n = get("wa_notify", c.slug);
+          return `<tr><td>${esc(c.title)}${c.status === "soon" ? ' <span class="badge">قريباً</span>' : c.status === "hidden" ? ' <span class="badge">مخفي</span>' : ""}</td><td class="num">${v.d7}</td><td class="num">${v.d30}</td><td class="num">${w.d30}</td><td class="num">${n.d30}</td><td class="num">${pct(w.d30, v.d30)}</td></tr>`; }).join("")}
+        </tbody></table></div>
+        <p class="muted" style="margin-top:8px">نسبة الاشتراك = ضغطات "اشترك على واتساب" ÷ زيارات صفحة الكورس. دي ضغطات على الزرار، مش اشتراكات مدفوعة.</p></div>
+      <div class="card"><h2>الفصول المجانية</h2>
+        ${freeRows.length ? `<div class="table-wrap" style="margin-top:10px"><table style="width:100%">${head("الفصل")}<tbody>${freeRows.map((r) => `<tr><td>${r.m ? esc(r.m.title) : "فصل اتشال من المجاني أو اتمسح"}</td>${cells(r)}</tr>`).join("")}</tbody></table></div>`
+          : `<p class="muted" style="margin-top:6px">${d.free.length ? "لسه محدش فتح الفصول المجانية." : 'مفيش فصول مجانية لسه. علّم على "مجاني للتجربة" من تاب المادة العلمية.'}</p>`}</div>`;
+    $("#st-re").onclick = statsTab;
+  }
+
   // ======================= التابات =======================
-  const tabs = { students: studentsTab, inactive: () => inactiveTab(), courses: coursesTab, content: contentTab, exams: examsTab, settings: settingsTab };
+  const tabs = { students: studentsTab, inactive: () => inactiveTab(), courses: coursesTab, content: contentTab, exams: examsTab, stats: statsTab, settings: settingsTab };
   const tabBtns = document.querySelectorAll(".tabs button");
   function go(name) {
     tabBtns.forEach((b) => b.classList.toggle("on", b.dataset.tab === name));
