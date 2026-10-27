@@ -24,8 +24,14 @@ def one_line(*names):
 
 (mig / "console").mkdir(exist_ok=True)
 # أول تشغيل على قاعدة فاضية
-(mig / "console" / "setup_once.sql").write_text(one_line("0001_schema.sql", "0002_seed.sql", "0003_phase1.sql", "0004_contracting.sql", "0005_catalog_stats.sql"), encoding="utf-8")
+(mig / "console" / "setup_once.sql").write_text(one_line("0001_schema.sql", "0002_seed.sql", "0003_phase1.sql", "0004_contracting.sql", "0005_catalog_stats.sql", "0006_tax.sql"), encoding="utf-8")
 # تحديث قاعدة شغالة فعلاً
 (mig / "console" / "0003_phase1.sql").write_text(one_line("0003_phase1.sql"), encoding="utf-8")
 (mig / "console" / "0004_contracting.sql").write_text(one_line("0004_contracting.sql", "0005_catalog_stats.sql"), encoding="utf-8")
 (mig / "console" / "0005_catalog_stats.sql").write_text(one_line("0005_catalog_stats.sql"), encoding="utf-8")
+# كورس الضرايب على 3 أجزاء صغيرة، لأن الـ Console رفض الملف كله مرة واحدة
+tax = one_line("0006_tax.sql").split("; ")
+questions = [i for i, st in enumerate(tax) if st.startswith("INSERT INTO questions")]
+first, mid = questions[0], questions[0] + len(questions) // 2
+for n, part in enumerate([tax[:first], tax[first:mid], tax[mid:]], 1):
+    (mig / "console" / f"0006_tax_{n}.sql").write_text("; ".join(part).rstrip().rstrip(";") + ";\n", encoding="utf-8")
