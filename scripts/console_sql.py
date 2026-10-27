@@ -24,8 +24,9 @@ def one_line(*names):
 
 (mig / "console").mkdir(exist_ok=True)
 # أول تشغيل على قاعدة فاضية
-(mig / "console" / "setup_once.sql").write_text(one_line("0001_schema.sql", "0002_seed.sql", "0003_phase1.sql", "0004_contracting.sql", "0005_catalog_stats.sql"), encoding="utf-8")
+(mig / "console" / "setup_once.sql").write_text(one_line("0001_schema.sql", "0002_seed.sql", "0003_phase1.sql", "0004_contracting.sql", "0005_catalog_stats.sql", "0006_tax.sql"), encoding="utf-8")
 # تحديث قاعدة شغالة فعلاً
 (mig / "console" / "0003_phase1.sql").write_text(one_line("0003_phase1.sql"), encoding="utf-8")
 (mig / "console" / "0004_contracting.sql").write_text(one_line("0004_contracting.sql", "0005_catalog_stats.sql"), encoding="utf-8")
 (mig / "console" / "0005_catalog_stats.sql").write_text(one_line("0005_catalog_stats.sql"), encoding="utf-8")
+(mig / "console" / "0006_tax.sql").write_text(one_line("0006_tax.sql"), encoding="utf-8")
