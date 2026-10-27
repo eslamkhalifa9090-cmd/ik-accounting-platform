@@ -682,12 +682,14 @@
         ${field("whatsapp", "واتساب خدمة العملاء", "الاشتراك، الاستفسار عن الكورسات، التجديد", true)}
         ${field("whatsapp_display", "رقم خدمة العملاء زي ما يظهر للزوار", "", true)}
         ${field("support_whatsapp", "واتساب الدعم الفني", "نسيت الباسورد، مشاكل الدخول والملفات. فاضي = رقم خدمة العملاء", true)}
-        ${field("lecturer_whatsapp", "واتساب المحاضر", "أسئلة الشرح جوه الكورس. فاضي = رقم خدمة العملاء", true)}
+        ${field("lecturer_whatsapp", "واتساب المحاضر الاحتياطي", "لو الكورس ملوش محاضر برقم في تبويب المحاضرين. فاضي = رقم خدمة العملاء", true)}
+        <div class="field"><label>زرار "كلّم المحاضر" جوه الكورس <small>(أرقام المحاضرين بتتظبط من تبويب المحاضرين)</small></label>
+          <select name="follow_mode">${[["lecturer", "يروح لمحاضر الكورس"], ["service", "يروح لخدمة العملاء (\"كلّمنا\")"], ["hidden", "يستخبى خالص"]].map(([v, t]) => `<option value="${v}"${(s.follow_mode || "lecturer") === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
         <h2 class="full" style="margin-top:10px">رسايل الواتساب الجاهزة</h2>
         ${field("subscribe_message", "رسالة الاشتراك (خدمة العملاء)", "{course} اسم الكورس، {plan} الباقة", false, true)}
         ${field("notify_message", "رسالة بلغني لما يفتح (خدمة العملاء)", "{course} اسم الكورس", false, true)}
         ${field("support_message", "رسالة الدعم الفني", "{name} اسم المتدرب", false, true)}
-        ${field("follow_message", "رسالة المحاضر", "{name} الاسم، {course} الكورس، {level} واقف عند فين", false, true)}
+        ${field("follow_message", "رسالة المحاضر", "{name} الاسم، {course} الكورس، {level} واقف عند فين، {lecturer} اسم محاضر الكورس", false, true)}
         ${field("reminder_message", "رسالة تذكير المتدرب المنقطع", "{name} الاسم، {course} الكورس، {level} واقف عند فين، {link} رابط المنصة", false, true)}
         ${field("activation_message", "رسالة التفعيل للمتدرب الجديد", "{name} الاسم، {course} الكورس، {link} رابط التفعيل، {login} رابط الدخول، {id} بيدخل بإيه. فاضي = الرسالة الافتراضية", false, true)}
         ${field("inactive_days", "يعتبر منقطع بعد كام يوم من غير دخول", "", true)}
@@ -879,6 +881,44 @@
     });
   }
 
+  // ======================= المحاضرين =======================
+  async function lecturersTab() {
+    let list = await api("/admin/lecturers");
+    const form = (l = {}) => `
+      <div class="field"><label>اسم المحاضر <small>(زي ما يظهر للطلبة، مثلاً: Mr. Islam Khalifa)</small></label><input name="name" required value="${esc(l.name || "")}"></div>
+      <div class="field"><label>سطر تعريفي <small>(اختياري)</small></label><input name="role" value="${esc(l.role || "")}" placeholder="مثلاً: محاسب قانوني وخبرة 10 سنين في الضرايب"></div>
+      <div class="field full"><label>نبذة <small>(بتظهر في صفحة الكورس تحت "مين هيشرحلك؟")</small></label><textarea name="bio" rows="3">${esc(l.bio || "")}</textarea></div>
+      <div class="field"><label>واتساب المحاضر <small>(مش بيظهر للزوار، بس للمشتركين في زرار كلّم المحاضر)</small></label><input name="whatsapp" dir="ltr" value="${esc(l.whatsapp || "")}" placeholder="01xxxxxxxxx"></div>
+      <div class="field"><label>توقيع الشهادة <small>(فاضي = التوقيع العام من الإعدادات)</small></label><input name="signature" value="${esc(l.signature || "")}"></div>
+      <div class="field full"><label>الكورسات اللي بيديها</label><div style="display:flex;flex-wrap:wrap;gap:8px 20px">${courses.map((c) => `<label class="check" style="white-space:nowrap"><input type="checkbox" name="courses" value="${c.id}"${(l.courses || []).includes(c.id) ? " checked" : ""}> ${esc(c.title)}</label>`).join("") || '<span class="muted">مفيش كورسات لسه.</span>'}</div></div>
+      <label class="check"><input type="checkbox" name="visible"${l.visible === false ? "" : " checked"}> اسمه ونبذته يظهروا في صفحة الكورس</label>`;
+    const read = (fm, base = {}) => { const fd = new FormData(fm); return { ...base, ...Object.fromEntries(fd), courses: fd.getAll("courses").map(Number), visible: fm.visible.checked }; };
+    const save = async (next, st) => { try { list = await api("/admin/lecturers", { method: "PUT", body: { lecturers: next } }); lecturersTab(); } catch (err) { toast(st, "bad", err.message); } };
+    const mode = adminSettings.follow_mode || "lecturer";
+    const courseTitles = (ids) => courses.filter((c) => (ids || []).includes(c.id)).map((c) => c.title).join("، ") || "مش مربوط بكورس";
+    panel.innerHTML = `
+      <div class="card"><h2>إضافة محاضر</h2>
+        <p class="muted" style="margin-top:4px">كل محاضر بتربطه بالكورسات اللي بيديها. زرار "كلّم المحاضر" جوه الكورس بيروح لرقمه، وتوقيعه بيطلع على شهادة الكورس.
+        الزرار دلوقتي: <b>${mode === "hidden" ? "مستخبي" : mode === "service" ? "بيروح لخدمة العملاء" : "بيروح لمحاضر الكورس"}</b> (بيتغير من الإعدادات).</p>
+        <form id="lcf" class="form-grid" style="margin-top:12px">${form()}<div class="full row"><button class="btn btn-primary" type="submit">إضافة المحاضر</button><span class="status" hidden></span></div></form></div>
+      <div class="card"><h2>المحاضرين (${list.length})</h2>
+        <div class="stack" style="margin-top:12px">${list.map((l) => `
+          <div class="card" style="background:var(--paper)" data-lec="${l.id}">
+            <div class="spread"><div><b>🎓 ${esc(l.name)}</b>${l.visible === false ? ' <span class="badge">مخفي من صفحة الكورس</span>' : ""}
+              <p class="muted">${esc(courseTitles(l.courses))} · ${l.whatsapp ? '<span dir="ltr">' + esc(l.whatsapp) + "</span>" : "من غير رقم (الزرار هيروح للرقم الاحتياطي)"}</p></div>
+              <div class="row"><button class="btn btn-ghost btn-sm js-e" type="button">تعديل</button><button class="btn btn-danger btn-sm js-d" type="button">مسح</button></div></div>
+            <form class="form-grid js-f" style="margin-top:12px" hidden>${form(l)}<div class="full row"><button class="btn btn-primary btn-sm" type="submit">حفظ</button><span class="status" hidden></span></div></form>
+          </div>`).join("") || '<p class="muted">لسه مفيش محاضرين. لحد ما تضيف، الزرار بيروح للرقم الاحتياطي من الإعدادات.</p>'}</div></div>`;
+    $("#lcf").onsubmit = (e) => { e.preventDefault(); save([...list, read(e.target)], e.target.querySelector(".status")); };
+    panel.querySelectorAll("[data-lec]").forEach((box) => {
+      const l = list.find((x) => String(x.id) === box.dataset.lec);
+      const fm = box.querySelector(".js-f");
+      box.querySelector(".js-e").onclick = () => (fm.hidden = !fm.hidden);
+      fm.onsubmit = (e) => { e.preventDefault(); save(list.map((x) => (x.id === l.id ? read(fm, { id: l.id }) : x)), fm.querySelector(".status")); };
+      box.querySelector(".js-d").onclick = () => { if (confirm("مسح " + l.name + " من المحاضرين؟")) save(list.filter((x) => x.id !== l.id), fm.querySelector(".status")); };
+    });
+  }
+
   // ======================= الزوار السريعين =======================
   async function visitorsTab(q = "") {
     const [list, files] = await Promise.all([api("/admin/visitors?q=" + encodeURIComponent(q)), api("/admin/library")]);
@@ -910,7 +950,7 @@
   }
 
   // ======================= التابات =======================
-  const tabs = { students: studentsTab, inactive: () => inactiveTab(), courses: coursesTab, content: contentTab, exams: examsTab, library: libraryTab, visitors: visitorsTab, stats: statsTab, settings: settingsTab };
+  const tabs = { students: studentsTab, inactive: () => inactiveTab(), courses: coursesTab, content: contentTab, exams: examsTab, lecturers: lecturersTab, library: libraryTab, visitors: visitorsTab, stats: statsTab, settings: settingsTab };
   const tabBtns = document.querySelectorAll(".tabs button");
   function go(name) {
     tabBtns.forEach((b) => b.classList.toggle("on", b.dataset.tab === name));

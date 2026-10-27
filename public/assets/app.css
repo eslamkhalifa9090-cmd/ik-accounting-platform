@@ -82,6 +82,7 @@ p{margin:0}
 .field label{font-size:14px;font-weight:600;color:var(--navy)}
 .field small{color:var(--ink-3);font-weight:400}
 .field input,.field select,.field textarea{width:100%;font:inherit;font-size:15px;padding:10px 12px;border-radius:var(--r-m);border:1px solid var(--line);background:var(--white);color:var(--navy)}
+.field input[type=checkbox],.field input[type=radio]{width:auto;padding:0}
 .field textarea{min-height:90px;resize:vertical}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(121,211,242,.35)}
 .check{display:flex;gap:8px;align-items:center;font-size:14px}

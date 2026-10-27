@@ -67,7 +67,7 @@ async function getSettings(db) {
 }
 // whatsapp = خدمة العملاء، support_whatsapp = الدعم الفني، lecturer_whatsapp = المحاضر
 const PUBLIC_SETTINGS = ["whatsapp", "whatsapp_display", "support_whatsapp", "lecturer_whatsapp", "brand_name", "brand_by", "footer_line1", "footer_line2",
-  "subscribe_message", "support_message", "follow_message", "notify_message", "cert_signature", "wm_text", "wm_student", "wm_level", "tracks", "lib_subcats"];
+  "subscribe_message", "support_message", "follow_message", "notify_message", "cert_signature", "wm_text", "wm_student", "wm_level", "tracks", "lib_subcats", "follow_mode"];
 const ADMIN_SETTINGS = [...PUBLIC_SETTINGS, "reminder_message", "inactive_days", "cert_issuer", "activation_message"];
 
 // الأقسام بتتكتب في الإعدادات سطر لكل قسم: المفتاح | الاسم | سطر تعريفي
@@ -83,6 +83,27 @@ const splitList = (v) => String(v || "").split(",").map((x) => x.trim()).filter(
 // مصدر الزيارة بيتسجل حروف إنجليزي صغيرة وأرقام وشرطة بس (facebook، whatsapp، google ...)
 const cleanSource = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40);
 const WHATSAPP_KEYS = ["whatsapp", "support_whatsapp", "lecturer_whatsapp"];
+const cleanWhatsapp = (raw) => {
+  let v = toLatinDigits(String(raw || "")).replace(/\D/g, "");
+  if (v.startsWith("0")) v = "20" + v.slice(1);
+  if (v && !/^\d{10,15}$/.test(v)) fail(400, "رقم الواتساب مكتوب غلط.");
+  return v;
+};
+
+// المحاضرين: بيتحفظوا في الإعدادات تحت lecturers (JSON)، وكل محاضر ليه الكورسات اللي بيديها
+// follow_mode بيحدد زرار المتابعة جوه الكورس: lecturer = محاضر الكورس، service = خدمة العملاء، hidden = مستخبي
+const FOLLOW_MODES = ["lecturer", "service", "hidden"];
+const lecturersOf = (s) => (Array.isArray(parseJSON(s.lecturers, [])) ? parseJSON(s.lecturers, []) : []);
+const courseLecturers = (s, courseId) => lecturersOf(s).filter((l) => (l.courses || []).includes(Number(courseId)));
+// اللي بيظهر للزوار: الاسم والسطر التعريفي والنبذة بس، من غير أرقام
+const publicLecturers = (s, courseId) => courseLecturers(s, courseId).filter((l) => l.visible !== false).map((l) => ({ name: l.name, role: l.role || "", bio: l.bio || "" }));
+function followFor(s, courseId) {
+  const mode = FOLLOW_MODES.includes(s.follow_mode) ? s.follow_mode : "lecturer";
+  if (mode === "hidden") return { mode };
+  if (mode === "service") return { mode, whatsapp: s.whatsapp || "" };
+  const l = courseLecturers(s, courseId).find((x) => x.whatsapp);
+  return { mode, name: l ? l.name : "", whatsapp: (l && l.whatsapp) || s.lecturer_whatsapp || s.whatsapp || "" };
+}
 
 // اسم التقسيم في كل كورس (مستوى / وحدة / موديول)، بيتحفظ في الإعدادات تحت unit_<id>
 const UNITS = {
@@ -255,7 +276,7 @@ route("GET", "/public/site", async ({ db }) => {
     audiences: AUDIENCES,
     courses: courses.map((c) => ({
       slug: c.slug, title: c.title, subtitle: c.subtitle, status: c.status, levels: nBy[c.id] || 0, unit: unitFrom(s, c.id),
-      ...courseCard(c),
+      ...courseCard(c), lecturers: publicLecturers(s, c.id),
       plans: plans.filter((p) => p.course_id === c.id).map(publicPlan),
     })),
     free,
@@ -275,7 +296,7 @@ route("GET", "/public/course/:slug", async ({ db, params }) => {
   const track = parseTracks(s).find((t) => t.key === c.track);
   return json({
     course: { slug: c.slug, title: c.title, subtitle: c.subtitle, intro: c.intro, audience: c.audience, status: c.status, unit: unitFrom(s, c.id),
-      ...courseCard(c), track_name: track ? track.name : "" },
+      ...courseCard(c), track_name: track ? track.name : "", lecturers: publicLecturers(s, c.id) },
     levels: levels.map((l) => ({
       ...l,
       materials: mats.filter((m) => m.num === l.num).map((m) => ({
@@ -602,7 +623,8 @@ route("GET", "/student/course/:slug", async ({ db, user, params }) => {
   if (!c) fail(404, "الكورس ده مش موجود.");
   const e = await requireEnrollment(db, user, c.id);
   const st = await courseState(db, user.id, c, e.plan_code);
-  return json({ course: { slug: c.slug, title: c.title, subtitle: c.subtitle }, plan: e.plan_code, expires_at: e.expires_at || null, ...st });
+  const follow = followFor(await getSettings(db), c.id);
+  return json({ course: { slug: c.slug, title: c.title, subtitle: c.subtitle }, plan: e.plan_code, expires_at: e.expires_at || null, follow, ...st });
 }, "user");
 
 route("GET", "/student/level/:id", async ({ db, user, params }) => {
@@ -611,7 +633,8 @@ route("GET", "/student/level/:id", async ({ db, user, params }) => {
   const st = await courseState(db, user.id, { id: l.cid }, e.plan_code);
   const lv = st.levels.find((x) => x.id === l.id);
   if (!lv.unlocked && user.role !== "admin") fail(403, `${st.unit.this} لسه ${st.unit.closed}. اعدي امتحان ${st.unit.the} ${st.unit.before} الأول.`);
-  return json({ course: { slug: l.slug, title: l.course_title, unit: st.unit }, plan: e.plan_code, level: lv, total_levels: st.levels.length });
+  const follow = followFor(await getSettings(db), l.cid);
+  return json({ course: { slug: l.slug, title: l.course_title, unit: st.unit }, plan: e.plan_code, level: lv, total_levels: st.levels.length, follow });
 }, "user");
 
 async function materialForUser(db, user, materialId) {
@@ -753,7 +776,9 @@ route("GET", "/student/certificate/:slug", async ({ db, user, params }) => {
     cert = { code, issued_at: today() };
   }
   const s = await getSettings(db);
-  return json({ code: cert.code, issued_at: cert.issued_at, name: user.name, course: c.title, signature: s.cert_signature || "", issuer: s.cert_issuer || s.brand_name || "", has_bg: !!s.cert_bg });
+  // توقيع الشهادة: توقيع محاضر الكورس لو متسجل، وإلا التوقيع العام
+  const lec = courseLecturers(s, c.id).find((x) => x.signature);
+  return json({ code: cert.code, issued_at: cert.issued_at, name: user.name, course: c.title, signature: (lec && lec.signature) || s.cert_signature || "", issuer: s.cert_issuer || s.brand_name || "", has_bg: !!s.cert_bg });
 }, "user");
 
 // ملفاتي: الملفات المدفوعة المتفعلة على الحساب + ملفات الكورسات المشترك فيها
@@ -1191,11 +1216,8 @@ route("PUT", "/admin/settings", async ({ db, request }) => {
   for (const k of ADMIN_SETTINGS) {
     if (b[k] === undefined) continue;
     let v = String(b[k]).trim();
-    if (WHATSAPP_KEYS.includes(k)) {
-      v = toLatinDigits(v).replace(/\D/g, "");
-      if (v.startsWith("0")) v = "20" + v.slice(1);
-      if (v && !/^\d{10,15}$/.test(v)) fail(400, "رقم الواتساب مكتوب غلط.");
-    }
+    if (WHATSAPP_KEYS.includes(k)) v = cleanWhatsapp(v);
+    if (k === "follow_mode" && !FOLLOW_MODES.includes(v)) v = "lecturer";
     if (k === "inactive_days") {
       v = String(parseInt(toLatinDigits(v), 10) || 0);
       if (!(Number(v) >= 1 && Number(v) <= 365)) fail(400, "عدد أيام الانقطاع لازم يكون من 1 لـ 365.");
@@ -1214,6 +1236,29 @@ route("PUT", "/admin/settings", async ({ db, request }) => {
   }
   if (stmts.length) await db.batch(stmts);
   return json({ ok: true });
+}, "admin");
+
+route("GET", "/admin/lecturers", async ({ db }) => json(lecturersOf(await getSettings(db))), "admin");
+
+// القايمة كلها بتتبعت مرة واحدة (إضافة / تعديل / مسح)
+route("PUT", "/admin/lecturers", async ({ db, request }) => {
+  const b = await body(request);
+  if (!Array.isArray(b.lecturers) || b.lecturers.length > 50) fail(400, "بيانات المحاضرين مش مظبوطة.");
+  const { results } = await db.prepare("SELECT id FROM courses").all();
+  const ids = new Set(results.map((r) => r.id));
+  const txt = (v, max) => String(v || "").trim().slice(0, max);
+  let next = b.lecturers.reduce((m, l) => Math.max(m, Number(l.id) || 0), 0);
+  const list = b.lecturers.map((l) => {
+    const name = txt(l.name, 80);
+    if (!name) fail(400, "اسم المحاضر مطلوب.");
+    return {
+      id: Number(l.id) || ++next, name, role: txt(l.role, 120), bio: txt(l.bio, 600), signature: txt(l.signature, 80),
+      whatsapp: cleanWhatsapp(l.whatsapp), visible: l.visible !== false,
+      courses: [...new Set((Array.isArray(l.courses) ? l.courses : []).map(Number).filter((id) => ids.has(id)))],
+    };
+  });
+  await db.prepare("INSERT INTO settings (key, value) VALUES ('lecturers', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").bind(JSON.stringify(list)).run();
+  return json(list);
 }, "admin");
 
 route("PUT", "/admin/cert-bg", async ({ db, request }) => {
