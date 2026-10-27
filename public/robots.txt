@@ -1,0 +1,14 @@
+User-agent: *
+Disallow: /api/
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /learn
+Disallow: /level
+Disallow: /exam
+Disallow: /certificate
+Disallow: /account
+Disallow: /activate
+Disallow: /login
+Disallow: /setup
+
+Sitemap: https://ik-accounting-platform.pages.dev/sitemap.xml
