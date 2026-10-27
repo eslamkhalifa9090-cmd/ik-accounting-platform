@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>الامتحان | Mr. Islam Khalifa</title>
+<title>الامتحان | IK Academy</title>
+<meta name="robots" content="noindex">
 <link rel="icon" href="/assets/logo.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +35,7 @@
       <div class="page-head"><a class="muted" href="${back}">← ${U.the} ${info.level.num}: ${IK.esc(info.level.title)}</a>
         <h1>${IK.esc(e.title)}</h1></div>
       <div class="card stack">
-        <p>الامتحان فيه <b>${e.questions}</b> سؤال اختيار من متعدد، والنجاح بأكتر من <b>${e.pass_pct}%</b>.</p>
+        <p>الامتحان فيه <b>${e.questions}</b> سؤال اختيار من متعدد، والنجاح من <b>${e.pass_pct}%</b> أو أكتر.</p>
         ${e.duration_min ? `<p>متوسط حل الامتحان <b>${e.duration_min} دقيقة</b>. هيظهرلك عداد تنازلي، ولما الوقت يخلص الامتحان بيتسلم لوحده باللي حليته.</p>` : ""}
         <p>المحاولات مفتوحة، وكل محاولة بتجيبلك أسئلة ماشفتهاش قبل كده لحد ما بنك الأسئلة يخلص. اقرا كل سؤال كويس قبل ما تختار.</p>
         ${e.tries ? `<p class="muted">حاولت قبل كده ${e.tries} مرة، وأعلى درجة ليك ${e.best}%.</p>` : ""}
@@ -106,7 +107,7 @@
         ${r.late ? '<p class="status bad">الامتحان اتسلم بعد الوقت المسموح، فالإجابات ما اتحسبتش.</p>' : ""}</div>
       <div class="card stack" style="text-align:center">
         <p style="font-family:var(--f-display);font-size:48px;color:${r.passed ? "var(--ok)" : "var(--bad)"}" class="num">${r.score}%</p>
-        <p>جاوبت صح على <b>${r.correct}</b> من <b>${r.total}</b> سؤال. النجاح بأكتر من ${r.pass_pct}%.</p>
+        <p>جاوبت صح على <b>${r.correct}</b> من <b>${r.total}</b> سؤال. النجاح من ${r.pass_pct}% أو أكتر.</p>
         <p class="muted">${r.passed ? "المرحلة الجاية اتفتحتلك. وتقدر تتمرن بأسئلة جديدة وقت ما تحب." : "راجع أخطاءك تحت، وارجع للمادة العلمية، وادخل تاني. الأسئلة هتتغير."}</p>
         <div class="row" style="justify-content:center">
           <a class="btn btn-primary" href="${back}">ارجع ${U.li}</a>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تفعيل الحساب | IK Academy</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js"></script>
+</head>
+<body>
+<main class="wrap narrow">
+  <div class="page-head">
+    <span class="eyebrow">أهلاً بيك في IK Academy</span>
+    <h1 id="hello">فعّل حسابك</h1>
+    <p>آخر خطوة: اختار باسورد ليك إنت بس، وبعدها تدخل على كورسك على طول.</p>
+  </div>
+  <div class="card" id="box"><div class="loading">ثانية واحدة...</div></div>
+</main>
+<script>
+(async function () {
+  const site = await IK.chrome();
+  const s = site.settings || {};
+  const box = IK.$("#box");
+  const token = IK.qs("t") || "";
+  // نشيل الكود من شريط العنوان علشان مايتحفظش في السجل أو يتبعت لحد
+  try { history.replaceState(null, "", "/activate"); } catch (e) {}
+  const help = `<a target="_blank" rel="noopener" href="${IK.supportLink(s, "")}">كلم الدعم الفني على واتساب</a>`;
+  let info;
+  try { info = await IK.api("/public/activate/" + encodeURIComponent(token), { noRedirect: true }); }
+  catch (e) { box.innerHTML = `<div class="status bad">${IK.esc(e.message)}</div><p style="margin-top:12px">${help}</p>`; return; }
+  IK.$("#hello").textContent = "أهلاً يا " + info.name.split(" ")[0] + "، فعّل حسابك";
+  box.innerHTML = `<form id="f" class="stack" novalidate>
+      <p>هتدخل بعد كده بـ: <b dir="ltr">${IK.esc(info.login || "")}</b></p>
+      <div class="field"><label for="pw">الباسورد الجديد <small>(6 حروف أو أرقام على الأقل)</small></label><input id="pw" type="password" autocomplete="new-password" dir="ltr" required></div>
+      <div class="field"><label for="pw2">اكتبه تاني للتأكيد</label><input id="pw2" type="password" autocomplete="new-password" dir="ltr" required></div>
+      <div class="status" id="st" role="status" aria-live="polite" hidden></div>
+      <button class="btn btn-primary" id="go" type="submit">فعّل وادخل</button>
+      <p class="muted" style="font-size:14px">الرابط ده بيشتغل مرة واحدة بس، ولمدة 48 ساعة. لو عندك مشكلة ${help}.</p>
+    </form>`;
+  IK.$("#f").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const st = IK.$("#st"), go = IK.$("#go");
+    if (IK.$("#pw").value !== IK.$("#pw2").value) { IK.status(st, "bad", "الباسوردين مش زي بعض. اكتبهم تاني."); return; }
+    go.disabled = true;
+    try {
+      await IK.api("/public/activate", { method: "POST", noRedirect: true, body: { token, password: IK.$("#pw").value } });
+      IK.status(st, "ok", "تمام، حسابك اتفعل. يلا بينا...");
+      setTimeout(() => { location.href = "/dashboard"; }, 900);
+    } catch (e) { IK.status(st, "bad", e.message); go.disabled = false; }
+  });
+})();
+</script>
+</body>
+</html>

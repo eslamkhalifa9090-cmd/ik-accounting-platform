@@ -2,7 +2,7 @@
 import {
   HttpError, json, fail, body, normalizePhone, normalizeEmail, toLatinDigits,
   hashPassword, verifyPassword, validatePassword, createSession, currentUser,
-  sessionCookie, priceInfo, shuffle, randomToken,
+  sessionCookie, priceInfo, shuffle, randomToken, sha256, readCookie,
 } from "./lib.js";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -66,9 +66,22 @@ async function getSettings(db) {
   return Object.fromEntries(results.map((r) => [r.key, r.value]));
 }
 // whatsapp = خدمة العملاء، support_whatsapp = الدعم الفني، lecturer_whatsapp = المحاضر
-const PUBLIC_SETTINGS = ["whatsapp", "whatsapp_display", "support_whatsapp", "lecturer_whatsapp", "brand_name", "footer_line1", "footer_line2",
-  "subscribe_message", "support_message", "follow_message", "notify_message", "cert_signature", "wm_text", "wm_student", "wm_level"];
-const ADMIN_SETTINGS = [...PUBLIC_SETTINGS, "reminder_message", "inactive_days", "cert_issuer"];
+const PUBLIC_SETTINGS = ["whatsapp", "whatsapp_display", "support_whatsapp", "lecturer_whatsapp", "brand_name", "brand_by", "footer_line1", "footer_line2",
+  "subscribe_message", "support_message", "follow_message", "notify_message", "cert_signature", "wm_text", "wm_student", "wm_level", "tracks", "lib_subcats"];
+const ADMIN_SETTINGS = [...PUBLIC_SETTINGS, "reminder_message", "inactive_days", "cert_issuer", "activation_message"];
+
+// الأقسام بتتكتب في الإعدادات سطر لكل قسم: المفتاح | الاسم | سطر تعريفي
+const parseLines = (txt, n) => String(txt || "").split("\n").map((l) => l.split("|").map((x) => x.trim())).filter((p) => p[0] && p.length >= n);
+const parseTracks = (s) => parseLines(s.tracks, 2).map(([key, name, desc]) => ({ key, name, desc: desc || "" }));
+// مناسب لمين: مفاتيح ثابتة، والكورس أو الملف ممكن ياخد أكتر من واحد
+const AUDIENCES = { accountant: "محاسب / خريج", business: "صاحب بيزنس", hr: "HR" };
+const cleanAudiences = (v) => {
+  const list = (Array.isArray(v) ? v : String(v || "").split(",")).map((x) => String(x).trim()).filter((x) => AUDIENCES[x]);
+  return [...new Set(list)].join(",") || "accountant";
+};
+const splitList = (v) => String(v || "").split(",").map((x) => x.trim()).filter(Boolean);
+// مصدر الزيارة بيتسجل حروف إنجليزي صغيرة وأرقام وشرطة بس (facebook، whatsapp، google ...)
+const cleanSource = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40);
 const WHATSAPP_KEYS = ["whatsapp", "support_whatsapp", "lecturer_whatsapp"];
 
 // اسم التقسيم في كل كورس (مستوى / وحدة / موديول)، بيتحفظ في الإعدادات تحت unit_<id>
@@ -221,19 +234,31 @@ async function levelWithCourse(db, levelId) {
 // =====================================================================
 // عام (من غير دخول)
 // =====================================================================
+const courseCard = (c) => ({
+  track: c.track || "accounting", audiences: splitList(c.audiences), tools: splitList(c.tools), outcome: c.outcome || "",
+});
+
 route("GET", "/public/site", async ({ db }) => {
   const s = await getSettings(db);
-  const { results: courses } = await db.prepare("SELECT id, slug, title, subtitle, status, sort FROM courses WHERE status != 'hidden' ORDER BY sort, id").all();
+  const { results: courses } = await db.prepare("SELECT * FROM courses WHERE status != 'hidden' ORDER BY sort, id").all();
   const { results: plans } = await db.prepare("SELECT * FROM plans WHERE visible = 1 ORDER BY code").all();
   const { results: counts } = await db.prepare("SELECT course_id, COUNT(*) AS n FROM levels GROUP BY course_id").all();
+  // الفصول المجانية في كل الكورسات، علشان قسم "جرّب قبل ما تشترك" في الصفحة الرئيسية
+  const { results: free } = await db.prepare(`SELECT m.id, m.title, m.pages, l.num, c.slug, c.title AS course FROM materials m
+      JOIN levels l ON l.id = m.level_id JOIN courses c ON c.id = l.course_id
+      WHERE m.free = 1 AND m.kind = 'pdf' AND m.pages > 0 AND c.status != 'hidden' ORDER BY c.sort, l.num, m.sort, m.id`).all();
   const nBy = Object.fromEntries(counts.map((c) => [c.course_id, c.n]));
   return json({
     settings: Object.fromEntries(PUBLIC_SETTINGS.map((k) => [k, s[k] || ""])),
     has_cert_bg: !!s.cert_bg,
+    tracks: parseTracks(s),
+    audiences: AUDIENCES,
     courses: courses.map((c) => ({
       slug: c.slug, title: c.title, subtitle: c.subtitle, status: c.status, levels: nBy[c.id] || 0, unit: unitFrom(s, c.id),
+      ...courseCard(c),
       plans: plans.filter((p) => p.course_id === c.id).map(publicPlan),
     })),
+    free,
   });
 });
 
@@ -246,8 +271,11 @@ route("GET", "/public/course/:slug", async ({ db, params }) => {
   // أسامي الفصول بس (من غير محتوى) علشان الزائر يشوف الكورس فيه إيه، والمجاني منها يتفتح للتجربة
   const { results: mats } = await db.prepare(`SELECT m.id, l.num, m.kind, m.title, m.pages, m.min_plan, m.free FROM materials m
                                               JOIN levels l ON l.id = m.level_id WHERE l.course_id = ? ORDER BY m.sort, m.id`).bind(c.id).all();
+  const s = await getSettings(db);
+  const track = parseTracks(s).find((t) => t.key === c.track);
   return json({
-    course: { slug: c.slug, title: c.title, subtitle: c.subtitle, intro: c.intro, audience: c.audience, status: c.status, unit: await unitOf(db, c.id) },
+    course: { slug: c.slug, title: c.title, subtitle: c.subtitle, intro: c.intro, audience: c.audience, status: c.status, unit: unitFrom(s, c.id),
+      ...courseCard(c), track_name: track ? track.name : "" },
     levels: levels.map((l) => ({
       ...l,
       materials: mats.filter((m) => m.num === l.num).map((m) => ({
@@ -259,7 +287,84 @@ route("GET", "/public/course/:slug", async ({ db, params }) => {
   });
 });
 
-// الفصول المجانية للتجربة: بتتفتح من غير دخول، والسيرفر بيرفض أي فصل مش متعلّم عليه "مجاني"
+// =====================================================================
+// الزائر السريع: اسم ورقم واتساب من غير باسورد، والجهاز بيفتكره بكوكي
+// =====================================================================
+const VISITOR_COOKIE = "ik_visitor";
+function visitorCookie(token, request) {
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
+  return `${VISITOR_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${365 * 86400}${secure}`;
+}
+async function currentVisitor(db, request) {
+  const token = readCookie(request, VISITOR_COOKIE);
+  if (!token) return null;
+  return db.prepare(`SELECT v.* FROM visitor_sessions s JOIN visitors v ON v.id = s.visitor_id WHERE s.token_hash = ?`).bind(await sha256(token)).first();
+}
+// حدث واحد لكل (زائر، نوع، حاجة): فتح فصل، تحميل ملف، بلغني، تواصل
+async function visitorEvent(db, v, kind, ref) {
+  const seen = await db.prepare("SELECT 1 FROM visitor_events WHERE visitor_id = ? AND kind = ? AND IFNULL(ref, '') = ?").bind(v.id, kind, ref || "").first();
+  if (!seen) await db.prepare("INSERT INTO visitor_events (visitor_id, kind, ref, source) VALUES (?, ?, ?, ?)").bind(v.id, kind, ref || null, v.source || null).run();
+  await db.prepare("UPDATE visitors SET last_seen = datetime('now') WHERE id = ?").bind(v.id).run();
+}
+// مين اللي بيطلب: متدرب/أدمن داخل، أو زائر سريع، أو حد مش معروف
+async function whoIs(db, request) {
+  const [user, visitor] = await Promise.all([currentUser(db, request), currentVisitor(db, request)]);
+  return { user, visitor };
+}
+const needVisitor = () => fail(403, "سجّل دخول سريع كزائر الأول، ده مجاني ومن غير باسورد.");
+const EVENT_KINDS = ["contact", "notify", "file", "chapter"];
+
+route("GET", "/public/visitor", async ({ db, request }) => {
+  const { user, visitor } = await whoIs(db, request);
+  return json({
+    visitor: visitor ? { name: visitor.name, phone: visitor.phone, marketing: !!visitor.consent_marketing } : null,
+    user: user ? { name: user.name, phone: user.phone, role: user.role } : null,
+  });
+});
+
+route("POST", "/public/visitor", async ({ db, request }) => {
+  const b = await body(request);
+  const name = String(b.name || "").trim().slice(0, 80);
+  const phone = normalizePhone(b.phone);
+  if (name.length < 2) fail(400, "اكتب اسمك علشان نعرف نكلمك.");
+  if (!phone) fail(400, "اكتب رقم واتساب صحيح، مثلاً 01012345678.");
+  if (!b.service) fail(400, "علّم على الموافقة علشان نقدر نفتحلك الملفات.");
+  const marketing = b.marketing ? 1 : 0;
+  const source = cleanSource(b.source) || "direct";
+  const utm = b.utm && typeof b.utm === "object" ? JSON.stringify(b.utm).slice(0, 500) : null;
+  const landing = String(b.landing || "").slice(0, 200) || null;
+  let v = await db.prepare("SELECT * FROM visitors WHERE phone = ?").bind(phone).first();
+  if (v) {
+    // الموافقة التسويقية = آخر اختيار ليه، والمصدر = أول مرة جه فيها
+    await db.prepare(`UPDATE visitors SET name = ?, consent_service = 1, consent_marketing = ?, consent_at = datetime('now'), last_seen = datetime('now'),
+                      source = COALESCE(source, ?), utm = COALESCE(utm, ?), landing = COALESCE(landing, ?) WHERE id = ?`)
+      .bind(name, marketing, source, utm, landing, v.id).run();
+    v = { ...v, name, source: v.source || source };
+  } else {
+    v = await db.prepare(`INSERT INTO visitors (name, phone, consent_service, consent_marketing, consent_at, source, utm, landing, last_seen)
+                          VALUES (?, ?, 1, ?, datetime('now'), ?, ?, ?, datetime('now')) RETURNING *`).bind(name, phone, marketing, source, utm, landing).first();
+    await bump(db, "visitor_new", source);
+  }
+  const token = randomToken();
+  await db.prepare("INSERT INTO visitor_sessions (token_hash, visitor_id) VALUES (?, ?)").bind(await sha256(token), v.id).run();
+  const item = b.item || {};
+  if (EVENT_KINDS.includes(item.kind)) await visitorEvent(db, v, item.kind, String(item.ref || "").slice(0, 120));
+  return json({ ok: true, visitor: { name: v.name, phone, marketing: !!marketing } }, 200, { "set-cookie": visitorCookie(token, request) });
+});
+
+// "بلغني أول ما يفتح": بيتسجل باسم الزائر ورقمه، والأدمن بيشوف القايمة لكل كورس
+route("POST", "/public/notify", async ({ db, request }) => {
+  const b = await body(request);
+  const c = await db.prepare("SELECT slug FROM courses WHERE slug = ? AND status != 'hidden'").bind(String(b.slug || "")).first();
+  if (!c) fail(404, "الكورس ده مش موجود.");
+  const v = await currentVisitor(db, request);
+  if (!v) needVisitor();
+  await visitorEvent(db, v, "notify", c.slug);
+  await bump(db, "wa_notify", c.slug);
+  return json({ ok: true });
+});
+
+// الفصول المجانية للتجربة: بتتفتح للزائر السريع أو المتدرب، والسيرفر بيرفض أي فصل مش متعلّم عليه "مجاني"
 async function freeMaterial(db, id) {
   const m = await db.prepare(`SELECT m.id, m.title, m.pages, m.version, c.slug FROM materials m JOIN levels l ON l.id = m.level_id
                               JOIN courses c ON c.id = l.course_id
@@ -268,14 +373,19 @@ async function freeMaterial(db, id) {
   return m;
 }
 
-route("GET", "/public/materials/:id", async ({ db, params }) => {
+route("GET", "/public/materials/:id", async ({ db, params, request }) => {
   const m = await freeMaterial(db, params.id);
-  await bump(db, "free_open", String(m.id));
+  const { user, visitor } = await whoIs(db, request);
+  if (!user && !visitor) needVisitor();
+  if (visitor) await visitorEvent(db, visitor, "chapter", String(m.id));
+  if (!user || user.role !== "admin") await bump(db, "free_open", String(m.id));
   return json({ id: m.id, title: m.title, pages: m.pages, course: m.slug });
 });
 
-route("GET", "/public/materials/:id/pages/:n", async ({ db, params }) => {
+route("GET", "/public/materials/:id/pages/:n", async ({ db, params, request }) => {
   const m = await freeMaterial(db, params.id);
+  const { user, visitor } = await whoIs(db, request);
+  if (!user && !visitor) needVisitor();
   const n = parseInt(params.n, 10);
   if (!(n >= 1 && n <= m.pages)) fail(404, "الصفحة دي مش موجودة.");
   const f = await getFile(db, `m/${m.id}/v${m.version}/${n}.webp`);
@@ -283,8 +393,79 @@ route("GET", "/public/materials/:id/pages/:n", async ({ db, params }) => {
   return new Response(f.data, { headers: { "content-type": "image/webp", "cache-control": "private, no-store", "content-disposition": "inline" } });
 });
 
+// =====================================================================
+// مكتبة IK: ملفات مجانية للزوار، ومدفوعة بتتفعل للمتدرب، وملفات ضمن كورس للمشتركين
+// =====================================================================
+const LIB_FIELDS = "f.id, f.title, f.description, f.track, f.subcat, f.audiences, f.access, f.price, f.course_id, f.related_course_id, f.file_name, f.mime, f.size, f.sort";
+const publicFile = (f, courses) => {
+  const cBy = Object.fromEntries(courses.map((c) => [c.id, c]));
+  const course = cBy[f.course_id], related = cBy[f.related_course_id];
+  return {
+    id: f.id, title: f.title, description: f.description || "", track: f.track, subcat: f.subcat || "", audiences: splitList(f.audiences),
+    access: f.access, price: f.access === "paid" ? f.price : 0, size: f.size, ext: (String(f.file_name || "").match(/\.([a-z0-9]+)$/i) || [])[1] || "",
+    course: course && course.status !== "hidden" ? { slug: course.slug, title: course.title } : null,
+    related: related && related.status !== "hidden" ? { slug: related.slug, title: related.title } : null,
+  };
+};
+
+async function canDownload(db, f, user, visitor) {
+  if (user && user.role === "admin") return true;
+  if (f.access === "free") return !!(user || visitor);
+  if (!user) return false;
+  if (f.access === "paid") return !!(await db.prepare("SELECT 1 FROM library_grants WHERE user_id = ? AND file_id = ?").bind(user.id, f.id).first());
+  const e = f.course_id && (await enrollmentFor(db, user.id, f.course_id));
+  return !!(e && e.active);
+}
+
+route("GET", "/public/library", async ({ db, request }) => {
+  const [{ results: files }, { results: courses }, who] = await Promise.all([
+    db.prepare(`SELECT ${LIB_FIELDS} FROM library_files f WHERE f.visible = 1 AND f.chunks > 0 ORDER BY f.sort, f.id DESC`).all(),
+    db.prepare("SELECT id, slug, title, status FROM courses").all(),
+    whoIs(db, request),
+  ]);
+  const out = [];
+  for (const f of files) {
+    // الملف اللي ضمن كورس مخفي مايظهرش للزوار خالص
+    if (f.access === "course" && !(courses.find((c) => c.id === f.course_id && c.status !== "hidden"))) continue;
+    out.push({ ...publicFile(f, courses), can: await canDownload(db, f, who.user, who.visitor) });
+  }
+  return json({ files: out, known: !!(who.user || who.visitor) });
+});
+
+route("GET", "/public/library/:id/download", async ({ db, request, params }) => {
+  const f = await db.prepare("SELECT * FROM library_files WHERE id = ? AND chunks > 0").bind(params.id).first();
+  if (!f || (!f.visible)) fail(404, "الملف ده مش موجود.");
+  const { user, visitor } = await whoIs(db, request);
+  if (!(await canDownload(db, f, user, visitor))) {
+    if (f.access === "free") needVisitor();
+    if (f.access === "paid") fail(403, user ? "الملف ده مدفوع ولسه ما اتفعلش على حسابك. كلم خدمة العملاء على واتساب." : "الملف ده مدفوع. بعد الدفع بيتفعل على حسابك في المنصة وتحمله من هنا.");
+    fail(403, "الملف ده للمشتركين في الكورس بتاعه بس.");
+  }
+  const parts = [];
+  let total = 0;
+  for (let n = 1; n <= f.chunks; n++) {
+    const part = await getFile(db, `lib/${f.id}/v${f.version}/${n}`);
+    if (!part) fail(500, "الملف ناقص. كلم الدعم الفني.");
+    parts.push(part.data); total += part.data.byteLength;
+  }
+  const data = new Uint8Array(total);
+  let at = 0;
+  for (const p of parts) { data.set(p, at); at += p.byteLength; }
+  // اسم اللي حمّل بيتحط في اسم الملف
+  const who = (user && user.role !== "admin" ? user.name : visitor ? visitor.name : "").replace(/[\\/:*?"<>|]/g, "").trim();
+  const m = String(f.file_name || "file").match(/^(.*?)(\.[a-z0-9]+)?$/i);
+  const name = (m[1] || "file") + (who ? " - " + who : "") + (m[2] || "");
+  if (visitor && !(user && user.role === "admin")) await visitorEvent(db, visitor, "file", String(f.id));
+  if (!user || user.role !== "admin") await bump(db, "file_dl", String(f.id));
+  return new Response(data, { headers: {
+    "content-type": f.mime || "application/octet-stream", "cache-control": "private, no-store",
+    "content-disposition": `attachment; filename="file${m[2] || ""}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+  } });
+});
+
 // ---------- الإحصائيات: عداد واحد لكل (يوم، نوع، كورس) من غير أي خدمة خارجية ----------
-const TRACK_KINDS = ["home_view", "course_view", "wa_subscribe", "wa_notify"];
+// visit_src = زيارة من مصدر (فيسبوك ...)، sub_src = ضغطة اشترك من مصدر
+const TRACK_KINDS = ["home_view", "course_view", "wa_subscribe", "wa_notify", "visit_src", "sub_src", "library_view"];
 const bump = (db, kind, ref = "") => db.prepare(`INSERT INTO stats (day, kind, ref, n) VALUES (?, ?, ?, 1)
                                                  ON CONFLICT (day, kind, ref) DO UPDATE SET n = n + 1`).bind(today(), kind, ref).run();
 
@@ -295,6 +476,33 @@ route("POST", "/public/track", async ({ db, request }) => {
   const u = await currentUser(db, request);
   if (!u || u.role !== "admin") await bump(db, b.kind, ref); // زيارات الأدمن مش بتتحسب
   return json({ ok: true });
+});
+
+// ---------- رابط التفعيل: المتدرب بيختار الباسورد بنفسه، والرابط صالح 48 ساعة ولمرة واحدة ----------
+async function activationToken(db, token) {
+  const t = await db.prepare(`SELECT a.*, u.name, u.phone, u.email, u.active FROM activation_tokens a JOIN users u ON u.id = a.user_id
+                              WHERE a.token_hash = ?`).bind(await sha256(String(token || ""))).first();
+  if (!t || t.used_at || t.expires_at < Date.now() || !t.active) fail(400, "الرابط ده انتهى أو اتستخدم قبل كده. كلم الدعم الفني على واتساب وهيبعتلك رابط جديد.");
+  return t;
+}
+
+route("GET", "/public/activate/:token", async ({ db, params }) => {
+  const t = await activationToken(db, params.token);
+  return json({ name: t.name, login: t.phone || t.email });
+});
+
+route("POST", "/public/activate", async ({ db, request }) => {
+  const b = await body(request);
+  const t = await activationToken(db, b.token);
+  validatePassword(b.password);
+  await db.batch([
+    db.prepare("UPDATE users SET pass_hash = ?, must_change = 0 WHERE id = ?").bind(await hashPassword(b.password), t.user_id),
+    db.prepare("UPDATE activation_tokens SET used_at = datetime('now') WHERE token_hash = ?").bind(t.token_hash),
+    db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(t.user_id),
+  ]);
+  const token = await createSession(db, t.user_id, request);
+  await db.prepare("UPDATE users SET last_login = datetime('now') WHERE id = ?").bind(t.user_id).run();
+  return json({ ok: true }, 200, { "set-cookie": sessionCookie(token, request) });
 });
 
 route("GET", "/public/verify/:code", async ({ db, params }) => {
@@ -527,7 +735,7 @@ route("POST", "/student/attempts/:id/submit", async ({ db, user, request, params
   }
   const total = plan.length;
   const score = total ? Math.round((correct / total) * 1000) / 10 : 0;
-  const passed = score > ex.pass_pct ? 1 : 0; // النجاح = أكتر من نسبة النجاح
+  const passed = score >= ex.pass_pct ? 1 : 0; // النجاح = نسبة النجاح أو أكتر
   await db.prepare("UPDATE attempts SET score = ?, passed = ?, submitted_at = datetime('now') WHERE id = ?").bind(score, passed, a.id).run();
   return json({ score, passed: !!passed, correct, total, pass_pct: ex.pass_pct, late, review });
 }, "user");
@@ -548,6 +756,18 @@ route("GET", "/student/certificate/:slug", async ({ db, user, params }) => {
   return json({ code: cert.code, issued_at: cert.issued_at, name: user.name, course: c.title, signature: s.cert_signature || "", issuer: s.cert_issuer || s.brand_name || "", has_bg: !!s.cert_bg });
 }, "user");
 
+// ملفاتي: الملفات المدفوعة المتفعلة على الحساب + ملفات الكورسات المشترك فيها
+route("GET", "/student/library", async ({ db, user }) => {
+  const [{ results: files }, { results: courses }] = await Promise.all([
+    db.prepare(`SELECT ${LIB_FIELDS} FROM library_files f WHERE f.visible = 1 AND f.chunks > 0 AND (
+        (f.access = 'paid' AND EXISTS (SELECT 1 FROM library_grants g WHERE g.file_id = f.id AND g.user_id = ?1))
+        OR (f.access = 'course' AND EXISTS (SELECT 1 FROM enrollments e WHERE e.course_id = f.course_id AND e.user_id = ?1
+            AND (e.expires_at IS NULL OR e.expires_at >= date('now'))))) ORDER BY f.sort, f.id DESC`).bind(user.id).all(),
+    db.prepare("SELECT id, slug, title, status FROM courses").all(),
+  ]);
+  return json(files.map((f) => publicFile(f, courses)));
+}, "user");
+
 // =====================================================================
 // الأدمن
 // =====================================================================
@@ -562,12 +782,14 @@ route("GET", "/admin/overview", async ({ db }) => {
 
 route("GET", "/admin/students", async ({ db, url }) => {
   const q = "%" + toLatinDigits(url.searchParams.get("q") || "").trim() + "%";
-  const { results } = await db.prepare(`SELECT u.id, u.name, u.email, u.phone, u.active, u.notes, u.created_at, u.last_login, u.must_change
+  const { results } = await db.prepare(`SELECT u.id, u.name, u.email, u.phone, u.active, u.notes, u.created_at, u.last_login, u.must_change, u.source
       FROM users u WHERE u.role = 'student' AND (u.name LIKE ?1 OR IFNULL(u.email,'') LIKE ?1 OR IFNULL(u.phone,'') LIKE ?1)
       ORDER BY u.id DESC LIMIT 500`).bind(q).all();
-  const { results: enr } = await db.prepare(`SELECT e.user_id, e.course_id, e.plan_code, e.expires_at, c.title, c.slug
-      FROM enrollments e JOIN courses c ON c.id = e.course_id`).all();
-  return json(results.map((u) => ({ ...u, enrollments: enr.filter((e) => e.user_id === u.id) })));
+  const [{ results: enr }, { results: grants }] = await Promise.all([
+    db.prepare(`SELECT e.user_id, e.course_id, e.plan_code, e.expires_at, c.title, c.slug FROM enrollments e JOIN courses c ON c.id = e.course_id`).all(),
+    db.prepare("SELECT user_id, file_id FROM library_grants").all(),
+  ]);
+  return json(results.map((u) => ({ ...u, enrollments: enr.filter((e) => e.user_id === u.id), files: grants.filter((g) => g.user_id === u.id).map((g) => g.file_id) })));
 }, "admin");
 
 function studentFields(b, partial = false) {
@@ -584,6 +806,7 @@ function studentFields(b, partial = false) {
     out.phone = b.phone ? normalizePhone(b.phone) : null;
     if (b.phone && !out.phone) fail(400, "رقم التليفون مكتوب غلط.");
   }
+  if (!partial || b.source !== undefined) out.source = cleanSource(b.source) || null;
   return out;
 }
 
@@ -591,11 +814,18 @@ route("POST", "/admin/students", async ({ db, request }) => {
   const b = await body(request);
   const f = studentFields(b);
   if (!f.email && !f.phone) fail(400, "لازم ميل أو رقم تليفون علشان المتدرب يدخل بيه.");
-  validatePassword(b.password);
-  const r = await db.prepare("INSERT INTO users (name, email, phone, pass_hash, notes, must_change) VALUES (?, ?, ?, ?, ?, ?) RETURNING id")
-    .bind(f.name, f.email, f.phone, await hashPassword(b.password), b.notes || null, b.must_change === false ? 0 : 1).first();
+  // من غير باسورد: بيتعمل باسورد عشوائي محدش يعرفه، والمتدرب بيختار بتاعه من رابط التفعيل
+  const password = b.password ? String(b.password) : randomToken(12);
+  validatePassword(password);
+  // لو كان زائر سريع قبل كده بنفس الرقم، مصدره بيتنقل معاه
+  if (!f.source && f.phone) {
+    const v = await db.prepare("SELECT source FROM visitors WHERE phone = ?").bind(f.phone).first();
+    f.source = v && v.source && v.source !== "direct" ? v.source : f.source;
+  }
+  const r = await db.prepare("INSERT INTO users (name, email, phone, pass_hash, notes, must_change, source) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id")
+    .bind(f.name, f.email, f.phone, await hashPassword(password), b.notes || null, b.must_change === false ? 0 : 1, f.source).first();
   if (b.course_slug) await upsertEnrollment(db, r.id, b);
-  return json({ ok: true, id: r.id });
+  return json({ ok: true, id: r.id, source: f.source || "" });
 }, "admin");
 
 route("PATCH", "/admin/students/:id", async ({ db, request, params }) => {
@@ -609,6 +839,28 @@ route("PATCH", "/admin/students/:id", async ({ db, request, params }) => {
   if (!sets.length) fail(400, "مفيش حاجة اتغيرت.");
   await db.prepare(`UPDATE users SET ${sets.join(", ")} WHERE id = ? AND role = 'student'`).bind(...vals, params.id).run();
   if (b.password || b.active === false) await db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(params.id).run();
+  return json({ ok: true });
+}, "admin");
+
+// رابط تفعيل جديد (أي رابط قديم لسه ما اتستخدمش بيتلغي)
+route("POST", "/admin/students/:id/activation", async ({ db, params, url }) => {
+  const u = await db.prepare("SELECT id FROM users WHERE id = ? AND role = 'student'").bind(params.id).first();
+  if (!u) fail(404, "المتدرب ده مش موجود.");
+  const token = randomToken(24), expires = Date.now() + 48 * 3600e3;
+  await db.batch([
+    db.prepare("DELETE FROM activation_tokens WHERE user_id = ? AND used_at IS NULL").bind(u.id),
+    db.prepare("INSERT INTO activation_tokens (token_hash, user_id, expires_at) VALUES (?, ?, ?)").bind(await sha256(token), u.id, expires),
+  ]);
+  return json({ link: `${url.origin}/activate?t=${token}`, expires_at: new Date(expires).toISOString() });
+}, "admin");
+
+// تفعيل ملف مدفوع من المكتبة لمتدرب، أو إلغاؤه
+route("PUT", "/admin/students/:id/library/:file", async ({ db, params }) => {
+  await db.prepare("INSERT OR IGNORE INTO library_grants (user_id, file_id) VALUES (?, ?)").bind(params.id, params.file).run();
+  return json({ ok: true });
+}, "admin");
+route("DELETE", "/admin/students/:id/library/:file", async ({ db, params }) => {
+  await db.prepare("DELETE FROM library_grants WHERE user_id = ? AND file_id = ?").bind(params.id, params.file).run();
   return json({ ok: true });
 }, "admin");
 
@@ -723,8 +975,12 @@ route("POST", "/admin/courses", async ({ db, request }) => {
 
 route("PATCH", "/admin/courses/:id", async ({ db, request, params }) => {
   const b = await body(request);
-  const f = pick(b, ["title", "subtitle", "intro", "audience", "status", "sort"]);
+  const f = pick(b, ["title", "subtitle", "intro", "audience", "status", "sort", "track", "audiences", "tools", "outcome", "seo_desc"]);
   if (f.status && !["open", "soon", "hidden"].includes(f.status)) fail(400, "حالة الكورس غلط.");
+  if (f.track !== undefined && !/^[a-z0-9-]{1,30}$/.test(f.track)) fail(400, "القسم غلط.");
+  if (f.audiences !== undefined) f.audiences = cleanAudiences(f.audiences);
+  if (f.tools !== undefined) f.tools = splitList(f.tools).join(",") || null;
+  if (f.seo_desc !== undefined && String(f.seo_desc).length > 300) fail(400, "وصف جوجل لازم يكون أقل من 300 حرف.");
   if (b.unit !== undefined) {
     if (!UNITS[b.unit]) fail(400, "اسم التقسيم غلط.");
     const old = await unitOf(db, params.id), neu = UNITS[b.unit];
@@ -810,7 +1066,15 @@ route("GET", "/admin/stats", async ({ db }) => {
     db.prepare(`SELECT m.id, m.title, l.num, c.slug FROM materials m JOIN levels l ON l.id = m.level_id
                 JOIN courses c ON c.id = l.course_id WHERE m.free = 1`).all(),
   ]);
-  return json({ rows, daily, courses, free: mats, since: d(29) });
+  // الرحلة لكل مصدر في آخر 30 يوم: زيارات ثم زوار سجلوا ثم ضغطات اشترك ثم متدربين اتفعلوا
+  const since = d(29);
+  const [{ results: visitorsBy }, { results: studentsBy }, { results: notify }, { results: files }] = await Promise.all([
+    db.prepare("SELECT IFNULL(source, 'direct') AS source, COUNT(*) AS n FROM visitors WHERE created_at >= ? GROUP BY 1").bind(since).all(),
+    db.prepare("SELECT IFNULL(source, '') AS source, COUNT(*) AS n FROM users WHERE role = 'student' AND created_at >= ? GROUP BY 1").bind(since).all(),
+    db.prepare("SELECT ref AS slug, COUNT(*) AS n FROM visitor_events WHERE kind = 'notify' GROUP BY ref").all(),
+    db.prepare("SELECT id, title, access FROM library_files").all(),
+  ]);
+  return json({ rows, daily, courses, free: mats, since, visitors_by: visitorsBy, students_by: studentsBy, notify, files });
 }, "admin");
 
 route("DELETE", "/admin/materials/:id", async ({ db, params }) => {
@@ -865,7 +1129,7 @@ route("POST", "/admin/courses/:id/exams", async ({ db, request, params }) => {
 route("PATCH", "/admin/exams/:id", async ({ db, request, params }) => {
   const f = pick(await body(request), ["title", "question_count", "pass_pct", "duration_min"]);
   if (f.question_count !== undefined && !(Number(f.question_count) >= 1)) fail(400, "عدد الأسئلة لازم يكون 1 أو أكتر.");
-  if (f.pass_pct !== undefined && !(Number(f.pass_pct) >= 0 && Number(f.pass_pct) < 100)) fail(400, "نسبة النجاح لازم تكون بين 0 و 99.");
+  if (f.pass_pct !== undefined && !(Number(f.pass_pct) >= 0 && Number(f.pass_pct) <= 100)) fail(400, "نسبة النجاح لازم تكون بين 0 و 100.");
   if (f.duration_min !== undefined && !(Number.isInteger(Number(f.duration_min)) && Number(f.duration_min) >= 0 && Number(f.duration_min) <= 300)) fail(400, "مدة الامتحان لازم تكون من 0 لـ 300 دقيقة (0 = من غير وقت).");
   await update(db, "exams", params.id, f);
   return json({ ok: true });
@@ -939,6 +1203,13 @@ route("PUT", "/admin/settings", async ({ db, request }) => {
     if (k === "wm_student") v = v === "0" ? "0" : "1";
     if (k === "wm_level" && !["light", "medium", "strong"].includes(v)) v = "medium";
     if (k === "wm_text" && v.length > 60) fail(400, "نص العلامة المائية لازم يكون أقل من 60 حرف.");
+    if (k === "tracks") {
+      const t = parseLines(v, 2);
+      if (!t.length) fail(400, "لازم قسم واحد على الأقل.");
+      for (const [key] of t) if (!/^[a-z0-9-]{1,30}$/.test(key)) fail(400, `مفتاح القسم "${key}" لازم يكون إنجليزي صغير من غير مسافات، زي accounting.`);
+      v = t.map((x) => x.slice(0, 3).join(" | ")).join("\n");
+    }
+    if (k === "lib_subcats") v = parseLines(v, 2).map((x) => x.slice(0, 2).join(" | ")).join("\n");
     stmts.push(db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").bind(k, v));
   }
   if (stmts.length) await db.batch(stmts);
@@ -956,4 +1227,115 @@ route("PUT", "/admin/cert-bg", async ({ db, request }) => {
   await db.prepare("INSERT INTO settings (key, value) VALUES ('cert_bg', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").bind(key).run();
   if (old) await db.prepare("DELETE FROM files WHERE key = ?").bind(old).run();
   return json({ ok: true });
+}, "admin");
+
+// ---------- مكتبة IK ----------
+route("GET", "/admin/library", async ({ db }) => {
+  const { results } = await db.prepare(`SELECT f.*, (SELECT COUNT(*) FROM library_grants g WHERE g.file_id = f.id) AS grants
+                                        FROM library_files f ORDER BY f.sort, f.id DESC`).all();
+  return json(results.map((f) => ({ ...f, audiences: splitList(f.audiences) })));
+}, "admin");
+
+function libraryFields(b, partial = false) {
+  const f = pick(b, ["title", "description", "track", "subcat", "audiences", "access", "price", "course_id", "related_course_id", "visible", "sort"]);
+  if (!partial || f.title !== undefined) { f.title = String(f.title || "").trim(); if (!f.title) fail(400, "اكتب اسم الملف."); }
+  if (f.access !== undefined && !["free", "paid", "course"].includes(f.access)) fail(400, "نوع الوصول غلط.");
+  if (f.track !== undefined && !/^[a-z0-9-]{1,30}$/.test(f.track)) fail(400, "القسم غلط.");
+  if (f.audiences !== undefined) f.audiences = cleanAudiences(f.audiences);
+  if (f.price !== undefined) { f.price = Number(toLatinDigits(f.price)) || 0; if (f.price < 0) fail(400, "السعر لازم يكون موجب."); }
+  for (const k of ["course_id", "related_course_id"]) if (f[k] !== undefined) f[k] = Number(f[k]) || null;
+  if (f.visible !== undefined) f.visible = f.visible ? 1 : 0;
+  if (f.sort !== undefined) f.sort = Number(f.sort) || 0;
+  if (f.access === "course" && !f.course_id) fail(400, "اختار الكورس اللي الملف ده تبعه.");
+  return f;
+}
+
+route("POST", "/admin/library", async ({ db, request }) => {
+  const f = libraryFields(await body(request));
+  const keys = Object.keys(f);
+  const r = await db.prepare(`INSERT INTO library_files (${keys.join(", ")}) VALUES (${keys.map(() => "?").join(", ")}) RETURNING id`).bind(...Object.values(f)).first();
+  return json({ ok: true, id: r.id });
+}, "admin");
+
+route("PATCH", "/admin/library/:id", async ({ db, request, params }) => {
+  const f = libraryFields(await body(request), true);
+  await update(db, "library_files", params.id, { ...f, updated_at: new Date().toISOString() });
+  return json({ ok: true });
+}, "admin");
+
+route("DELETE", "/admin/library/:id", async ({ db, params }) => {
+  await deletePrefix(db, `lib/${params.id}/`);
+  await db.prepare("DELETE FROM library_files WHERE id = ?").bind(params.id).run();
+  return json({ ok: true });
+}, "admin");
+
+// الملف بيترفع أجزاء (كل جزء أقل من 1.9 ميجا) على نسخة جديدة، وبعد النشر النسخة القديمة بتتمسح
+const LIB_MAX_CHUNKS = 8; // يعني الملف لحد حوالي 15 ميجا
+route("PUT", "/admin/library/:id/chunks/:n", async ({ db, request, params, url }) => {
+  const f = await db.prepare("SELECT id, version FROM library_files WHERE id = ?").bind(params.id).first();
+  if (!f) fail(404, "الملف ده مش موجود.");
+  const v = parseInt(url.searchParams.get("v"), 10), n = parseInt(params.n, 10);
+  if (v !== f.version + 1 || !(n >= 1 && n <= LIB_MAX_CHUNKS)) fail(400, "رقم النسخة أو الجزء غلط.");
+  const data = await request.arrayBuffer();
+  if (!data.byteLength || data.byteLength > MAX_FILE) fail(400, "حجم الجزء كبير.");
+  await putFile(db, `lib/${f.id}/v${v}/${n}`, "application/octet-stream", data);
+  return json({ ok: true });
+}, "admin");
+
+route("POST", "/admin/library/:id/publish", async ({ db, request, params }) => {
+  const b = await body(request);
+  const f = await db.prepare("SELECT id, version FROM library_files WHERE id = ?").bind(params.id).first();
+  if (!f) fail(404, "الملف ده مش موجود.");
+  const chunks = parseInt(b.chunks, 10), v = f.version + 1;
+  if (Number(b.version) !== v || !(chunks >= 1 && chunks <= LIB_MAX_CHUNKS)) fail(400, "بيانات النشر غلط.");
+  const last = await db.prepare("SELECT 1 FROM files WHERE key = ?").bind(`lib/${f.id}/v${v}/${chunks}`).first();
+  if (!last) fail(400, "الملف ما اترفعش كله. جرب ترفعه تاني.");
+  const name = String(b.file_name || "file").replace(/[\\/:*?"<>|]/g, "").slice(0, 120) || "file";
+  await db.prepare("UPDATE library_files SET version = ?, chunks = ?, file_name = ?, mime = ?, size = ?, updated_at = datetime('now') WHERE id = ?")
+    .bind(v, chunks, name, String(b.mime || "application/octet-stream").slice(0, 100), Number(b.size) || 0, f.id).run();
+  if (f.version > 0) await deletePrefix(db, `lib/${f.id}/v${f.version}/`);
+  return json({ ok: true });
+}, "admin");
+
+// ---------- الزوار السريعين ----------
+const VISITORS_SQL = `SELECT v.id, v.name, v.phone, v.consent_marketing, v.consent_at, v.source, v.utm, v.landing, v.created_at, v.last_seen,
+    (SELECT GROUP_CONCAT(e.kind || ':' || IFNULL(e.ref, ''), '|') FROM visitor_events e WHERE e.visitor_id = v.id) AS events,
+    (SELECT u.id FROM users u WHERE u.phone = v.phone) AS user_id
+  FROM visitors v WHERE (v.name LIKE ?1 OR v.phone LIKE ?1) ORDER BY v.id DESC LIMIT 1000`;
+const visitorRows = async (db, q) => {
+  const { results } = await db.prepare(VISITORS_SQL).bind("%" + toLatinDigits(q || "").trim() + "%").all();
+  return results.map((v) => ({ ...v, events: String(v.events || "").split("|").filter(Boolean).map((x) => { const i = x.indexOf(":"); return { kind: x.slice(0, i), ref: x.slice(i + 1) }; }) }));
+};
+
+route("GET", "/admin/visitors", async ({ db, url }) => json(await visitorRows(db, url.searchParams.get("q"))), "admin");
+
+route("GET", "/admin/visitors.csv", async ({ db }) => {
+  const [rows, { results: files }, { results: mats }] = await Promise.all([
+    visitorRows(db, ""), db.prepare("SELECT id, title FROM library_files").all(), db.prepare("SELECT id, title FROM materials").all(),
+  ]);
+  const fBy = Object.fromEntries(files.map((f) => [String(f.id), f.title])), mBy = Object.fromEntries(mats.map((m) => [String(m.id), m.title]));
+  const label = (e) => e.kind === "file" ? "ملف: " + (fBy[e.ref] || e.ref) : e.kind === "chapter" ? "فصل: " + (mBy[e.ref] || e.ref)
+    : e.kind === "notify" ? "بلغني: " + e.ref : "تواصل: " + e.ref;
+  const lines = [["الاسم", "الرقم", "المصدر", "موافق على الرسايل التسويقية", "تاريخ الموافقة", "سجل في", "آخر نشاط", "اشترك؟", "عمل إيه"]];
+  for (const v of rows) lines.push([v.name, v.phone, v.source || "", v.consent_marketing ? "أيوه" : "لأ", v.consent_at || "", v.created_at, v.last_seen || "",
+    v.user_id ? "أيوه" : "لأ", v.events.map(label).join(" / ")]);
+  const csv = "﻿" + lines.map((l) => l.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+  return new Response(csv, { headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="visitors-${today()}.csv"` } });
+}, "admin");
+
+route("DELETE", "/admin/visitors/:id", async ({ db, params }) => {
+  await db.prepare("DELETE FROM visitors WHERE id = ?").bind(params.id).run();
+  return json({ ok: true });
+}, "admin");
+
+// ---------- نسخة احتياطية: كل البيانات في ملف JSON (من غير صفحات الـ PDF والملفات نفسها) ----------
+const BACKUP_TABLES = ["settings", "courses", "plans", "levels", "materials", "exams", "questions", "users", "enrollments", "progress", "reading",
+  "attempts", "certificates", "stats", "visitors", "visitor_events", "library_files", "library_grants"];
+route("GET", "/admin/backup.json", async ({ db }) => {
+  const out = { app: "IK Academy", created_at: new Date().toISOString(), note: "صفحات الـ PDF وملفات المكتبة نفسها مش جوه النسخة دي (حجمها كبير). احتفظ بالملفات الأصلية عندك.", tables: {} };
+  for (const t of BACKUP_TABLES) out.tables[t] = (await db.prepare(`SELECT * FROM ${t}`).all()).results;
+  const { results: files } = await db.prepare("SELECT key, type, length(data) AS bytes FROM files").all();
+  out.tables.files_index = files;
+  return new Response(JSON.stringify(out), { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store",
+    "content-disposition": `attachment; filename="ik-academy-backup-${today()}.json"` } });
 }, "admin");

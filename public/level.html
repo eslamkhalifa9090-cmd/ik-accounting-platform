@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mr. Islam Khalifa</title>
+<title>IK Academy</title>
+<meta name="robots" content="noindex">
 <link rel="icon" href="/assets/logo.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,7 +38,7 @@
     const action = !e.ready ? '<span class="badge lock">الأسئلة لسه بتتجهز</span>'
       : !e.available ? `<span class="badge lock">${e.waiting === "materials" ? "هيفتح بعد ما تخلص الفصول" : "هيفتح بعد امتحان " + U.the + " " + U.before}</span>`
       : `<a class="btn ${e.passed ? "btn-ghost" : "btn-primary"}" href="/exam?id=${e.id}">${e.passed ? "حسّن درجتك" : e.tries ? "حاول تاني" : "ادخل الامتحان"}</a>`;
-    return `<article class="card spread"><div><h3>${IK.esc(e.title)}</h3><p class="muted">${e.ready ? e.questions + " سؤال · النجاح بأكتر من " + e.pass_pct + "%" + (e.duration_min ? " · متوسط الحل " + e.duration_min + " دقيقة" : "") : ""}</p><div class="row" style="margin-top:6px">${state}</div></div>${action}</article>`;
+    return `<article class="card spread"><div><h3>${IK.esc(e.title)}</h3><p class="muted">${e.ready ? e.questions + " سؤال · النجاح من " + e.pass_pct + "% أو أكتر" + (e.duration_min ? " · متوسط الحل " + e.duration_min + " دقيقة" : "") : ""}</p><div class="row" style="margin-top:6px">${state}</div></div>${action}</article>`;
   };
   root.innerHTML = `
     <div class="page-head">

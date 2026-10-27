@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>الخصوصية | IK Academy</title>
+<meta name="description" content="إزاي IK Academy بتتعامل مع بياناتك: بنسجل إيه، وليه، ومين يشوفه، وإزاي تمسحه.">
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js"></script>
+</head>
+<body>
+<main class="wrap narrow">
+  <div class="page-head">
+    <span class="eyebrow">الخصوصية</span>
+    <h1>بياناتك أمانة عندنا</h1>
+    <p>الكلام هنا ببساطة ومن غير لف ودوران: بنسجل إيه، وليه، ومين يشوفه.</p>
+  </div>
+  <div class="card stack">
+    <h2 style="font-size:19px">بنسجل إيه؟</h2>
+    <p>لما تعمل <b>دخول سريع كزائر</b> أو تسيب رقمك: اسمك، ورقم الواتساب، والملف أو الفصل أو الكورس اللي طلبته، والتاريخ، وإنت جيت منين (فيسبوك، واتساب، جوجل ...)، واختيارك في الموافقات.</p>
+    <p>ولو إنت مشترك: بيانات حسابك، وتقدمك في الكورس، ونتايج امتحاناتك، علشان المنصة تفتحلك اللي بعده وتطلعلك الشهادة.</p>
+    <h2 style="font-size:19px">ليه؟</h2>
+    <p>علشان نفتحلك الفصول والملفات المجانية، ونرد عليك لو طلبت حاجة، ونعرف أنهي قنوات بتجيب ناس مهتمة فنركز عليها.</p>
+    <p>الرسايل عن الكورسات والشيتات الجديدة <b>اختيارية</b>، ومش هنبعتلك حاجة منها إلا لو إنت علّمت عليها. وتقدر تغيّر رأيك في أي وقت.</p>
+    <h2 style="font-size:19px">مين يشوفها؟</h2>
+    <p>إدارة الأكاديمية بس. مش بنبيع بياناتك ولا بنشاركها مع أي جهة. والمنصة مش بتستخدم أدوات إعلانات أو تتبع خارجية؛ العدادات كلها جوه المنصة نفسها.</p>
+    <h2 style="font-size:19px">عايز تمسح بياناتك؟</h2>
+    <p>ابعتلنا على واتساب من نفس الرقم وقولنا، وهنمسحها. <a id="del" target="_blank" rel="noopener" href="#">ابعت طلب المسح</a></p>
+    <h2 style="font-size:19px">الملفات اللي بتحملها</h2>
+    <p>الملفات بتنزل باسمك علشان تبقى نسختك الشخصية. ومحتوى الكورسات للقراية جوه المنصة بس، وعليه علامة مائية باسمك.</p>
+  </div>
+</main>
+<script>
+(async function () {
+  let me = null;
+  try { me = await IK.api("/auth/me", { noRedirect: true }); } catch (e) {}
+  const site = await IK.chrome({ user: me });
+  IK.$("#del").href = IK.wa(IK.contact(site.settings, "support"), "السلام عليكم، عايز أمسح بياناتي من IK Academy.");
+})();
+</script>
+</body>
+</html>
