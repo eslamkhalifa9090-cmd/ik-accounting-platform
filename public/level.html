@@ -29,7 +29,7 @@
   catch (e) { root.innerHTML = `<div class="card empty" style="margin-top:28px">${IK.esc(e.message)}</div>`; return; }
   const l = d.level, c = d.course, U = IK.U(c.unit);
   document.title = U.the + " " + l.num + " | " + c.title;
-  const follow = IK.wa(IK.contact(s, "lecturer"), IK.fill(s.follow_message, { name: me.name, course: c.title, level: U.the + " " + l.num + " (" + l.title + ")" }));
+  const follow = IK.followBtn(d.follow, s, { name: me.name, course: c.title, level: U.the + " " + l.num + " (" + l.title + ")" }, "عندك سؤال؟ كلّم المحاضر");
   const upgrade = IK.wa(IK.contact(s, "customer"), "السلام عليكم، عايز أرفع باقتي في كورس " + c.title + " لباقة Pro.");
   const examCard = (e) => {
     if (!e) return "";
@@ -63,7 +63,7 @@
     <section id="viewer-wrap" style="margin-top:20px" hidden></section>
     <h2 style="font-size:19px;margin:28px 0 10px">الامتحانات</h2>
     <div class="stack">${examCard(l.exam)}${examCard(l.cumulative)}</div>
-    <div class="row" style="margin-top:24px"><a class="btn btn-wa" target="_blank" rel="noopener" href="${follow}">${IK.chatIcon}عندك سؤال؟ كلم المحاضر</a></div>`;
+    ${follow ? `<div class="row" style="margin-top:24px">${follow}</div>` : ""}`;
 
   // ===== عارض المادة المحمي =====
   const wrap = IK.$("#viewer-wrap");

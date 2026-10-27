@@ -85,6 +85,7 @@
       <span class="eyebrow">${c.track_name ? IK.esc(c.track_name) + " · " : ""}${soon ? "قيد الافتتاح قريباً" : "كورس متاح دلوقتي"}</span>
       <h1>${IK.esc(c.title)}</h1>
       ${c.subtitle ? `<p style="font-weight:600;color:var(--sky)">${IK.esc(c.subtitle)}</p>` : ""}
+      ${(c.lecturers || []).length ? `<p style="font-weight:600">🎓 ${IK.esc(IK.byLecturers(c.lecturers))}</p>` : ""}
       ${c.intro ? `<p>${IK.esc(c.intro)}</p>` : ""}
       ${c.outcome ? `<p class="outcome"><b>هتقدر تعمل إيه بعد الكورس؟</b>${IK.esc(c.outcome)}</p>` : ""}
       ${c.audience ? `<p><b style="color:var(--gold)">الكورس ده لمين؟</b> ${IK.esc(c.audience)}</p>` : ""}
@@ -96,6 +97,10 @@
         ${me ? "" : '<a class="btn btn-ghost" style="color:#fff;border-color:rgba(255,255,255,.3)" href="/login">مشترك بالفعل؟ ادخل</a>'}
       </div>
     </section>
+    ${(c.lecturers || []).some((l) => l.bio || l.role) ? `<section class="sec" id="lecturers">
+      <h2>مين هيشرحلك؟</h2>
+      <div class="stack">${c.lecturers.map((l) => `<article class="card"><h3>${IK.esc(l.name)}</h3>${l.role ? `<p style="font-weight:600;color:var(--sky)">${IK.esc(l.role)}</p>` : ""}${l.bio ? `<p style="margin-top:6px">${IK.esc(l.bio)}</p>` : ""}</article>`).join("")}</div>
+    </section>` : ""}
     ${d.levels.length ? `<section class="sec" id="chapters">
       <h2>${U.pl} (${d.levels.length})</h2>
       ${!enrolled && freeN ? `<p class="muted" style="margin:-6px 0 12px">🎁 فيه ${freeN === 1 ? "فصل مجاني تقدر تقراه" : freeN + " فصول مجانية تقدر تقراها"} كامل${freeN === 1 ? "" : "ة"} من غير اشتراك. كل اللي محتاجه دخول سريع كزائر (اسمك ورقمك بس). باقي الفصول 🔒 للمشتركين.</p>` : ""}

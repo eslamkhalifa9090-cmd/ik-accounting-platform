@@ -148,6 +148,7 @@ section{padding-block:clamp(52px,7vw,96px)}
 .path p{font-size:15px;color:var(--ink-2)}
 .path .outcome{border-inline-start:3px solid var(--gold);padding-inline-start:10px;font-size:14.5px}
 .path .outcome b{display:block;font-family:var(--f-display);font-size:13px;color:var(--navy)}
+.path .by{font-size:13.5px;font-weight:600;color:var(--navy)}
 .path .pr{font-family:var(--f-display);color:var(--navy)}
 .path .pr s{color:var(--ink-3);font-weight:400;margin-inline-end:8px;display:inline-block}
 .path .acts{margin-top:auto;display:grid;gap:8px}
@@ -204,7 +205,7 @@ section{padding-block:clamp(52px,7vw,96px)}
 @media (max-width:900px){.why{grid-template-columns:1fr 1fr}.why div:nth-child(3){border-inline-start:none;padding-inline-start:0}}
 @media (max-width:520px){.why{grid-template-columns:1fr}.why div{border-inline-start:none;padding-inline-start:0;border-bottom:1px solid var(--line-2);padding-bottom:20px}}
 
-/* عن المحاضر */
+/* عن المؤسس */
 #about{background:var(--white)}
 .about{display:grid;grid-template-columns:.8fr 1.2fr;gap:clamp(32px,5vw,72px);align-items:center}
 .portrait{position:relative;aspect-ratio:4/5;max-width:420px;width:100%;border-radius:var(--r-l);overflow:hidden;background:radial-gradient(120% 80% at 50% 100%,var(--blue),var(--navy))}
@@ -331,7 +332,7 @@ footer .slogan em{font-style:normal;color:var(--gold)}
       <a href="#catalog">الكورسات</a>
       <a href="#free">جرّب مجاناً</a>
       <a href="/library">مكتبة IK</a>
-      <a href="#about">عن المحاضر</a>
+      <a href="#about">عن المؤسس</a>
       <a href="#services">الخدمات</a>
       <a href="#faq">الأسئلة الشائعة</a>
       <a href="#contact">تواصل</a>
@@ -464,7 +465,7 @@ footer .slogan em{font-style:normal;color:var(--gold)}
       <div><b>بالقصة مش بالحفظ</b><p>كل مفهوم بييجي جوه حكاية شركة حقيقية الشكل، فبتفهمه وبيفضل معاك.</p></div>
       <div><b>إنت اللي بتبني</b><p>بتعمل الملف بإيدك من أول الدليل لحد التقارير، وتعرف كل خطوة بتتعمل ليه.</p></div>
       <div><b>بتختبر نفسك أول بأول</b><p>امتحان بعد كل وحدة يطمنك إنك فاهم قبل ما تكمل، وشهادة في الآخر بكود تحقق.</p></div>
-      <div><b>مش لوحدك</b><p>عندك سؤال؟ المحاضر والدعم على واتساب، وهتلاقي حد يرد عليك.</p></div>
+      <div><b>مش لوحدك</b><p>عندك سؤال؟ هتلاقي المحاضر والدعم على واتساب، وفيه دايماً حد يرد عليك.</p></div>
     </div>
   </div>
 </section>
@@ -473,7 +474,7 @@ footer .slogan em{font-style:normal;color:var(--gold)}
   <div class="wrap about">
     <div class="portrait"><img src="/assets/portrait.webp" alt="Mr. Islam Khalifa" width="720" height="720" loading="lazy"></div>
     <div class="about-copy">
-      <span class="eyebrow">عن المحاضر</span>
+      <span class="eyebrow">عن المؤسس</span>
       <h2 id="about-h">Mr. Islam Khalifa</h2>
       <p class="role">مؤسس IK Academy</p>
       <p class="desc">محاسب بقاله سنين في الشغل الحقيقي، وبيحب يبسّط المحاسبة لدرجة إنك تحس إنها حكاية بتتحكي. مهتم بتصميم الأنظمة المحاسبية على Excel، والتقارير، والتحليل المالي، وربط المعايير الدولية بالتطبيق.</p>
@@ -572,7 +573,7 @@ footer .slogan em{font-style:normal;color:var(--gold)}
   <div class="wrap">
     <span class="slogan"><b id="foot-1">IK Academy</b><em id="foot-2">اتعلم .. طبق .. ابن</em></span>
     <nav aria-label="روابط سريعة">
-      <a href="#catalog">الكورسات</a><a href="/library">مكتبة IK</a><a href="#about">عن المحاضر</a><a href="#faq">الأسئلة الشائعة</a><a href="/privacy">الخصوصية</a><a class="js-wa" href="#" target="_blank" rel="noopener">واتساب</a>
+      <a href="#catalog">الكورسات</a><a href="/library">مكتبة IK</a><a href="#about">عن المؤسس</a><a href="#faq">الأسئلة الشائعة</a><a href="/privacy">الخصوصية</a><a class="js-wa" href="#" target="_blank" rel="noopener">واتساب</a>
     </nav>
   </div>
 </footer>
@@ -633,7 +634,7 @@ footer .slogan em{font-style:normal;color:var(--gold)}
     const more = `<a class="btn ${open ? "btn-primary" : "btn-ghost"}" href="/course?c=${encodeURIComponent(c.slug)}">${open ? "شوف الكورس وجرّب مجاناً" : "شوف هيتشرح فيه إيه"}</a>`;
     const notify = open ? "" : `<button class="btn btn-ghost js-notify" type="button" data-slug="${esc(c.slug)}" data-title="${esc(c.title)}">🔔 بلغني أول ما يفتح</button>`;
     return `<article class="path ${open ? "open" : "soon"}"><span class="st">${open ? "متاح دلوقتي" : "قيد الافتتاح قريباً"}</span>
-      <h3>${esc(c.title)}</h3>${c.subtitle ? `<p>${esc(c.subtitle)}</p>` : ""}
+      <h3>${esc(c.title)}</h3>${c.subtitle ? `<p>${esc(c.subtitle)}</p>` : ""}${(c.lecturers || []).length ? `<p class="by">🎓 ${esc(IK.byLecturers(c.lecturers))}</p>` : ""}
       ${c.outcome ? `<p class="outcome"><b>هتقدر تعمل إيه بعده؟</b>${esc(c.outcome)}</p>` : ""}
       <div class="tags">${IK.tags(c.audiences, c.tools, site.audiences)}</div>${units}${price}
       <div class="acts">${more}${notify}</div></article>`;

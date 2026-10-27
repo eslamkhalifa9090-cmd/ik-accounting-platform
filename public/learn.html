@@ -29,16 +29,16 @@
   document.title = d.course.title + " | IK Academy";
   const cur = d.levels.find((l) => l.num === d.current_level);
   const U = IK.U(d.unit);
-  const follow = IK.wa(IK.contact(s, "lecturer"), IK.fill(s.follow_message, {
+  const follow = IK.followBtn(d.follow, s, {
     name: me.name, course: d.course.title, level: cur ? U.the + " " + cur.num + " (" + cur.title + ")" : "",
-  }));
+  });
   const examChip = (e) => !e ? "" : e.passed
     ? `<span class="badge ok">${IK.esc(e.kind === "level" ? "عديت الامتحان" : "عديت التراكمي")} · ${e.best}%</span>`
     : e.tries ? `<span class="badge bad">لسه معديتش ${IK.esc(e.kind === "level" ? "الامتحان" : "التراكمي")} · أعلى درجة ${e.best}%</span>` : "";
   root.innerHTML = `
     <div class="page-head spread">
       <div><span class="eyebrow">كورساتي</span><h1>${IK.esc(d.course.title)}</h1><p>${IK.esc(d.course.subtitle || "")}</p></div>
-      <a class="btn btn-wa" target="_blank" rel="noopener" href="${follow}">${IK.chatIcon}كلم المحاضر</a>
+      ${follow}
     </div>
     <div class="card stack">
       <div class="spread"><b>نسبة تقدمك في الكورس</b><b class="num">${d.progress}%</b></div>
