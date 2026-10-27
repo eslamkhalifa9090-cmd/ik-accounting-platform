@@ -70,6 +70,7 @@ npm run dev
 | `scripts/build_contracting.py` | بيولد مستويات كورس المقاولات وامتحاناته وأسئلة المستوى الأول (`0004_contracting.sql`) من ملف أسئلة Excel |
 | `scripts/build_tax.py` | بيولد مستويات كورس الضرايب وامتحاناته وأسئلة المستوى الأول (`0006_tax.sql`) من ملف أسئلة Excel |
 | `scripts/build_ifrs.py` | بيولد مستويات كورس IFRS ووحداته (كل معيار وحدة) وامتحاناته وأسئلة المستوى الأول (`0010_ifrs.sql`) من ملف أسئلة Excel |
+| `scripts/build_ifrs_questions.py` | بيولد أسئلة امتحان أي مستوى تاني في كورس IFRS (`0011_ifrs_l2.sql` وبعده) من ملف أسئلة Excel |
 | `scripts/build_tax_questions.py` | بيولد أسئلة امتحان أي مستوى تاني في كورس الضرايب (`0008_tax_l2.sql` و`0009_tax_l3.sql` وبعدهم) من ملف أسئلة Excel |
 
 ---
