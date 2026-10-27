@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>الكورس | Mr. Islam Khalifa</title>
+<title>الكورس | IK Academy</title>
+<meta name="robots" content="noindex">
 <link rel="icon" href="/assets/logo.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,7 +26,7 @@
   let d;
   try { d = await IK.api("/student/course/" + encodeURIComponent(slug)); }
   catch (e) { root.innerHTML = `<div class="card empty" style="margin-top:28px">${IK.esc(e.message)}</div>`; return; }
-  document.title = d.course.title + " | Mr. Islam Khalifa";
+  document.title = d.course.title + " | IK Academy";
   const cur = d.levels.find((l) => l.num === d.current_level);
   const U = IK.U(d.unit);
   const follow = IK.wa(IK.contact(s, "lecturer"), IK.fill(s.follow_message, {

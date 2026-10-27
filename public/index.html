@@ -1,14 +1,22 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Mr. Islam Khalifa | Accounting</title>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>IK Academy | by Mr. Islam Khalifa</title>
+<meta name="description" content="IK Academy: كورسات عملية في المحاسبة والضرائب وإدارة المشروعات الصغيرة والموارد البشرية، بالقصة والتطبيق. جرّب فصول مجانية وحمّل شيتات Excel جاهزة.">
+<link rel="canonical" href="https://ik-accounting-platform.pages.dev/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="IK Academy | by Mr. Islam Khalifa">
+<meta property="og:description" content="اتعلم .. طبق .. ابن. كورسات عملية في المحاسبة والبيزنس والـ HR، وفصول مجانية تجربها قبل ما تشترك.">
+<meta property="og:image" content="https://ik-accounting-platform.pages.dev/assets/logo.webp">
 <link rel="icon" href="/assets/logo.webp">
-<meta name="description" content="IK Accounting Academy by Mr. Islam Khalifa — كورسات عملية في الأنظمة المحاسبية باستخدام Excel والتحليل المالي.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="/assets/app.js"></script>
 <style>
-/* Layout concept: a working ledger — the page moves like the accounting cycle itself,
-   from the worksheet in the hero to the course "accounts" and closes on one action (WhatsApp).
-   Single light theme by choice: the navy "I" in the official logo needs a light ground. */
+/* الصفحة ماشية زي الدورة المحاسبية: من الشيت في الأول، لحد الكورسات، وتقفل بخطوة واحدة (واتساب) */
 :root{
   --navy:#102B4E; --blue:#1D426B; --sky:#79D3F2; --gold:#C9A45C; --gold-deep:#A9853F;
   --paper:#F3F5F7; --white:#FFFFFF; --ink:#102B4E; --ink-2:#3F5470; --ink-3:#6B7C93;
@@ -22,95 +30,150 @@
   color-scheme:light;
 }
 *{box-sizing:border-box}
-html{scroll-padding-top:84px}
+html{scroll-padding-top:120px}
 body{margin:0;background:var(--white);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.8;-webkit-font-smoothing:antialiased}
 img{max-width:100%;display:block}
 a{color:inherit}
 h1,h2,h3{font-family:var(--f-display);line-height:1.35;margin:0;text-wrap:balance;color:var(--navy)}
 p{margin:0}
+[hidden]{display:none!important}
 .wrap{max-width:var(--wrap);margin-inline:auto;padding-inline:var(--gutter)}
-.en{font-family:var(--f-body);direction:ltr;unicode-bidi:isolate;display:inline-block}
 .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.muted{color:var(--ink-3)}
 :focus-visible{outline:3px solid var(--sky);outline-offset:3px;border-radius:4px}
 
-/* ---------- buttons ---------- */
+/* أزرار */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:.6em;font-family:var(--f-display);font-weight:600;font-size:16px;text-decoration:none;padding:.85em 1.4em;border-radius:var(--r-m);border:1.5px solid transparent;cursor:pointer;transition:background .2s,border-color .2s,transform .2s;white-space:nowrap}
 .btn:hover{transform:translateY(-1px)}
 .btn-primary{background:var(--navy);color:var(--white)}
 .btn-primary:hover{background:var(--blue)}
 .btn-ghost{background:transparent;color:var(--navy);border-color:var(--line)}
 .btn-ghost:hover{border-color:var(--gold)}
+.btn-gold{background:var(--gold);color:var(--navy)}
 .btn-wa{background:var(--wa);color:var(--white)}
 .btn-wa:hover{background:var(--wa-deep)}
+.btn-sm{padding:.5em 1em;font-size:14px}
 .btn svg{width:20px;height:20px;flex:none}
+.btn[disabled]{opacity:.6;cursor:wait;transform:none}
+.badge{display:inline-flex;align-items:center;font-size:12.5px;font-weight:600;border-radius:999px;padding:2px 10px;background:var(--paper);color:var(--blue);white-space:nowrap}
+.badge.gold{background:#F6EEDC;color:var(--gold-deep)}
 
-/* ---------- header ---------- */
-.site-header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(255,255,255,.92);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line-2)}
-.site-header .wrap{display:flex;align-items:center;gap:24px;min-height:72px}
+/* الهيدر */
+.site-header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.95);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line-2)}
+.site-header .wrap{display:flex;align-items:center;gap:20px;min-height:72px}
 .brand{display:flex;align-items:center;gap:12px;text-decoration:none}
 .brand img{height:40px;width:auto}
-.brand span{display:flex;flex-direction:column;line-height:1.2;direction:ltr;text-align:left}
-.brand b{font-family:var(--f-display);font-size:15px;letter-spacing:.06em;color:var(--navy)}
+.brand span{display:flex;flex-direction:column;line-height:1.15;direction:ltr;text-align:left}
+.brand b{font-family:var(--f-display);font-size:19px;letter-spacing:.02em;color:var(--navy)}
 .brand b em{font-style:normal;color:var(--gold-deep)}
-.brand small{font-size:12px;color:var(--ink-3)}
+.brand small{font-size:11.5px;color:var(--ink-3)}
 .nav{display:flex;gap:2px;margin-inline-start:auto}
 .nav a{white-space:nowrap;text-decoration:none;font-size:15px;font-weight:500;color:var(--ink-2);padding:6px 12px;border-radius:var(--r-s)}
-.nav a:hover{color:var(--navy);background:var(--paper)}
+.nav a:hover,.nav a.active{color:var(--navy);background:var(--paper)}
+.head-end{display:flex;align-items:center;gap:8px}
 .site-header .btn{padding:.6em 1.1em;font-size:15px}
-@media (max-width:900px){.nav{display:none}.site-header .btn{margin-inline-start:auto}}
-@media (max-width:420px){.brand small{display:none}.site-header .btn span{display:none}.site-header .btn{padding:.6em}}
+.visitor-chip{display:inline-flex;align-items:center;gap:6px}
+@media (max-width:1180px){
+  .site-header{backdrop-filter:none;background:var(--white)}
+  .site-header .wrap{flex-wrap:wrap;row-gap:0;min-height:0;padding-block:10px 0}
+  .head-end{margin-inline-start:auto}
+  .nav{order:3;flex-basis:100%;margin-inline:calc(var(--gutter)*-1);padding:6px var(--gutter) 8px;overflow-x:auto;scrollbar-width:none;border-top:1px solid var(--line-2);margin-top:10px}
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{flex:none;font-size:14px}
+}
+@media (max-width:480px){.brand img{height:34px}.brand b{font-size:17px}.brand small{font-size:10.5px}.head-end .hide-xs{display:none}.site-header .btn{padding:.55em .8em;font-size:14px}}
 
-/* ---------- hero ---------- */
-.hero{background:linear-gradient(180deg,var(--white),var(--paper));padding-block:clamp(40px,7vw,88px) clamp(48px,7vw,96px);overflow:hidden}
+/* الواجهة */
+.hero{background:linear-gradient(180deg,var(--white),var(--paper));padding-block:clamp(36px,6vw,80px) clamp(44px,6vw,88px);overflow:hidden}
 .hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(32px,5vw,64px);align-items:center}
 .hero-copy{min-width:0}
 .eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:var(--gold-deep);letter-spacing:.02em}
 .eyebrow::before{content:"";width:28px;height:2px;background:var(--gold)}
-.hero h1{font-size:clamp(30px,4.6vw,52px);font-weight:800;margin-top:18px;letter-spacing:-.01em}
-.hero h1 .lead-in{display:block;font-weight:500;font-size:.62em;color:var(--ink-3);margin-bottom:.35em}
-.hero h1 mark{background:none;color:var(--navy);background-image:linear-gradient(var(--gold),var(--gold));background-repeat:no-repeat;background-size:100% .12em;background-position:0 92%;padding-bottom:.05em}
-.hero p.lede{margin-top:22px;font-size:clamp(16px,1.6vw,19px);color:var(--ink-2);max-width:58ch}
-.hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
-.hero .tools{margin-top:28px;display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px;color:var(--ink-3)}
-.hero .tools span{direction:ltr}
-.hero .tools span::before{content:"▪";color:var(--gold);margin-inline-end:6px}
-
-/* worksheet visual */
-.sheet{position:relative;min-width:0}
+.hero h1{font-size:clamp(29px,4.4vw,50px);font-weight:800;margin-top:18px}
+.hero h1 .lead-in{display:block;font-weight:500;font-size:.6em;color:var(--ink-3);margin-bottom:.35em}
+.hero h1 mark{background:none;color:var(--navy);background-image:linear-gradient(var(--gold),var(--gold));background-repeat:no-repeat;background-size:100% .12em;background-position:0 92%}
+.hero p.lede{margin-top:20px;font-size:clamp(16px,1.6vw,19px);color:var(--ink-2);max-width:58ch}
+.hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+.hero .proof{margin-top:24px;display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px;color:var(--ink-3)}
+.hero .proof span::before{content:"▪";color:var(--gold);margin-inline-end:6px}
+.sheet{position:relative;min-width:0;margin:0}
 .sheet-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--shadow);overflow:hidden}
 .sheet-top{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--navy);color:var(--white)}
 .sheet-top img{height:22px;width:auto;background:var(--white);border-radius:4px;padding:2px 4px}
 .sheet-top b{font-family:var(--f-display);font-weight:600;font-size:14px}
-.sheet-top small{margin-inline-start:auto;font-size:12px;color:var(--sky)}
-.fx{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--line);font-size:13px;direction:ltr}
-.fx i{font-style:italic;font-family:Georgia,serif;color:var(--ink-3);padding:8px 12px;border-right:1px solid var(--line)}
+.sheet-top small{margin-inline-start:auto;font-size:12px;color:var(--sky);direction:ltr}
+.fx{display:flex;align-items:center;border-bottom:1px solid var(--line);font-size:13px;direction:ltr}
+.fx i{font-family:Georgia,serif;color:var(--ink-3);padding:8px 12px;border-right:1px solid var(--line)}
 .fx code{font-family:var(--f-mono);color:var(--blue);padding:8px 12px;white-space:nowrap;overflow-x:auto}
 .fx code b{color:var(--gold-deep);font-weight:500}
 .tb-scroll{overflow-x:auto}
-.tb{width:100%;border-collapse:collapse;font-size:14px;min-width:360px}
-.tb th{font-family:var(--f-body);font-weight:600;font-size:12px;color:var(--ink-3);background:var(--paper);text-align:start;padding:8px 12px;border-bottom:1px solid var(--line)}
+.tb{width:100%;border-collapse:collapse;font-size:14px;min-width:340px}
+.tb th{font-weight:600;font-size:12px;color:var(--ink-3);background:var(--paper);text-align:start;padding:8px 12px;border-bottom:1px solid var(--line)}
 .tb td{padding:7px 12px;border-bottom:1px solid var(--line-2);color:var(--ink-2)}
 .tb td.num,.tb th.num{text-align:left;font-size:13px}
 .tb td.code{font-family:var(--f-mono);font-size:12px;color:var(--ink-3)}
 .tb tr.hl td{background:rgba(121,211,242,.14)}
-.tb tr.hl td.num:first-of-type{outline:2px solid var(--sky);outline-offset:-2px}
-.tb tfoot td{font-weight:700;color:var(--navy);border-top:2px solid var(--navy);border-bottom:none;background:var(--white)}
-.sheet-foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;padding:10px 16px 30px;background:var(--paper);font-size:13px;color:var(--ink-3)}
+.tb tfoot td{font-weight:700;color:var(--navy);border-top:2px solid var(--navy);border-bottom:none}
+.sheet-foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;padding:10px 16px 30px;background:var(--paper);font-size:13px;color:var(--ink-3)}
 .ok{display:inline-flex;align-items:center;gap:6px;color:var(--wa-deep);font-weight:600}
 .ok::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--wa)}
 .sheet-tag{position:absolute;inset-block-end:-16px;inset-inline-start:24px;background:var(--gold);color:var(--navy);font-family:var(--f-display);font-weight:600;font-size:13px;padding:6px 14px;border-radius:999px;box-shadow:var(--shadow)}
 @media (max-width:900px){.hero .wrap{grid-template-columns:1fr}}
 
-/* ---------- section scaffolding ---------- */
-section{padding-block:clamp(56px,8vw,104px)}
-.sec-head{max-width:720px;margin-bottom:clamp(28px,4vw,48px)}
-.sec-head h2{font-size:clamp(26px,3.4vw,38px);font-weight:700;margin-top:12px}
+/* هيكل الأقسام */
+section{padding-block:clamp(52px,7vw,96px)}
+.sec-head{max-width:740px;margin-bottom:clamp(24px,4vw,40px)}
+.sec-head h2{font-size:clamp(25px,3.3vw,37px);font-weight:700;margin-top:12px}
 .sec-head p{margin-top:12px;color:var(--ink-2)}
 
-/* ---------- cycle ---------- */
+/* سؤال الهدف + الكتالوج */
+#catalog{background:var(--white)}
+.goal{background:var(--paper);border-radius:var(--r-l);padding:clamp(18px,3vw,26px);margin-bottom:32px}
+.goal h3{font-size:clamp(19px,2.2vw,24px)}
+.goal p{color:var(--ink-2);font-size:15px;margin-top:4px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chips button{font:inherit;font-size:15px;font-weight:600;border:1.5px solid var(--line);background:var(--white);color:var(--ink-2);border-radius:999px;padding:7px 16px;cursor:pointer}
+.chips button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.track{margin-top:36px}
+.track:first-of-type{margin-top:0}
+.track-h{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--line-2)}
+.track-h h3{font-size:clamp(20px,2.4vw,26px)}
+.track-h p{color:var(--ink-3);font-size:15px}
+.paths{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.path{border:1px solid var(--line);border-radius:var(--r-l);padding:22px;display:flex;flex-direction:column;gap:12px;min-width:0;background:var(--white)}
+.path.open{border-color:var(--gold);box-shadow:var(--shadow)}
+.path .st{align-self:flex-start;font-size:12.5px;font-weight:600;border-radius:999px;padding:2px 12px;background:#E7F4EC;color:#145C39}
+.path.soon .st{background:var(--paper);color:var(--ink-3)}
+.path h3{font-size:19px;font-weight:700}
+.path p{font-size:15px;color:var(--ink-2)}
+.path .outcome{border-inline-start:3px solid var(--gold);padding-inline-start:10px;font-size:14.5px}
+.path .outcome b{display:block;font-family:var(--f-display);font-size:13px;color:var(--navy)}
+.path .pr{font-family:var(--f-display);color:var(--navy)}
+.path .pr s{color:var(--ink-3);font-weight:400;margin-inline-end:8px;display:inline-block}
+.path .acts{margin-top:auto;display:grid;gap:8px}
+.path .btn{white-space:normal;text-align:center}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:12.5px;font-weight:600;border-radius:999px;padding:2px 10px;background:#EAF6FB;color:var(--blue)}
+.tag.tool{background:#F6EEDC;color:var(--gold-deep)}
+.path.ghost{border-style:dashed;background:var(--paper);box-shadow:none}
+.no-match{padding:22px;border:1px dashed var(--line);border-radius:var(--r-l);color:var(--ink-3);text-align:center}
+@media (max-width:1000px){.paths{grid-template-columns:1fr 1fr}}
+@media (max-width:600px){.paths{grid-template-columns:1fr}}
+
+/* جرّب قبل ما تشترك */
+#free{background:#FBF7EE}
+.free-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.free-item{background:var(--white);border:1px dashed var(--gold);border-radius:var(--r-m);padding:16px 18px;display:flex;flex-direction:column;gap:8px;text-decoration:none}
+.free-item small{color:var(--gold-deep);font-weight:600}
+.free-item b{font-family:var(--f-display);font-size:16px;color:var(--navy)}
+.free-item span{font-size:14px;color:var(--ink-3)}
+.free-item:hover{box-shadow:var(--shadow)}
+.free-note{margin-top:16px;font-size:14.5px;color:var(--ink-2)}
+
+/* الدورة المحاسبية */
 .cycle{background:var(--navy);color:var(--white);padding-block:clamp(40px,6vw,64px)}
 .cycle .eyebrow{color:var(--gold)}
-.cycle h2{color:var(--white);font-size:clamp(22px,2.6vw,30px);font-weight:600;margin-top:10px;max-width:30ch}
+.cycle h2{color:var(--white);font-size:clamp(22px,2.6vw,30px);font-weight:600;margin-top:10px;max-width:32ch}
 .steps{list-style:none;margin:32px 0 0;padding:0;display:grid;grid-template-columns:repeat(6,1fr);counter-reset:s}
 .steps li{counter-increment:s;position:relative;padding-inline-end:14px;padding-top:44px;min-width:0}
 .steps li::before{content:counter(s);position:absolute;top:0;inset-inline-start:0;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--gold);color:var(--gold);font-family:var(--f-mono);font-size:14px;display:grid;place-items:center;background:var(--navy);z-index:1}
@@ -121,35 +184,18 @@ section{padding-block:clamp(56px,8vw,104px)}
 @media (max-width:900px){.steps{grid-template-columns:repeat(3,1fr);row-gap:28px}.steps li:nth-child(3)::after{display:none}}
 @media (max-width:520px){.steps{grid-template-columns:1fr 1fr}.steps li:nth-child(3)::after{display:block}.steps li:nth-child(2n)::after{display:none}}
 
-/* ---------- courses ---------- */
-#courses{background:var(--paper)}
-.courses{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.course{background:var(--white);border:1px solid var(--line);border-radius:var(--r-l);padding:28px;display:flex;flex-direction:column;gap:18px;min-width:0;transition:border-color .2s,box-shadow .2s}
-.course:hover{border-color:var(--gold);box-shadow:var(--shadow)}
-.course .tag{font-size:13px;font-weight:600;color:var(--gold-deep)}
-.course h3{font-size:20px;font-weight:700;margin-top:6px}
-.meta{display:flex;flex-wrap:wrap;gap:8px}
-.meta span{font-size:13px;font-weight:500;color:var(--blue);background:var(--paper);border-radius:999px;padding:3px 12px}
-.course ul{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:15px;color:var(--ink-2)}
-.course li{position:relative;padding-inline-start:18px}
-.course li::before{content:"";position:absolute;inset-inline-start:0;top:.8em;width:7px;height:7px;border:1.5px solid var(--gold);transform:rotate(45deg)}
-.outcome{margin-top:auto;border-top:1px dashed var(--line);padding-top:16px;font-size:15px;color:var(--ink-2)}
-.outcome b{display:block;font-family:var(--f-display);font-size:13px;font-weight:600;color:var(--navy);margin-bottom:4px}
-.course .btn{width:100%}
-.course.featured{grid-column:1/-1;background:var(--navy);border-color:var(--navy);color:var(--white);display:grid;grid-template-columns:1fr 1.3fr;gap:28px 48px;padding:clamp(28px,4vw,44px)}
-.course.featured h3{color:var(--white);font-size:clamp(22px,2.6vw,28px)}
-.course.featured .tag{color:var(--gold)}
-.course.featured .meta span{background:rgba(255,255,255,.08);color:var(--sky)}
-.course.featured ul{color:rgba(255,255,255,.85);grid-template-columns:1fr 1fr;column-gap:24px;align-content:start}
-.course.featured .outcome{border-color:rgba(255,255,255,.18);color:rgba(255,255,255,.85)}
-.course.featured .outcome b{color:var(--gold)}
-.course.featured .side{display:flex;flex-direction:column;gap:18px;min-width:0}
-.course.featured .note{font-size:13px;color:rgba(255,255,255,.6)}
-@media (max-width:1000px){.courses{grid-template-columns:1fr 1fr}.course.featured{grid-template-columns:1fr}}
-@media (max-width:640px){.courses{grid-template-columns:1fr}.course.featured ul{grid-template-columns:1fr}}
+/* مكتبة IK */
+#library{background:var(--white)}
+.lib{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.lib a{border:1px solid var(--line);border-radius:var(--r-m);padding:16px 18px;text-decoration:none;display:flex;flex-direction:column;gap:6px;min-width:0}
+.lib a:hover{border-color:var(--gold)}
+.lib b{font-family:var(--f-display);font-size:16px}
+.lib span{font-size:14px;color:var(--ink-3)}
+@media (max-width:860px){.lib{grid-template-columns:1fr}}
 
-/* ---------- why ---------- */
-.why{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line)}
+/* ليه IK */
+#why{background:var(--paper)}
+.why{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
 .why div{padding:28px 24px 8px;border-inline-start:1px solid var(--line);min-width:0}
 .why div:first-child{border-inline-start:none;padding-inline-start:0}
 .why b{display:block;font-family:var(--f-display);font-size:18px;font-weight:600;color:var(--navy)}
@@ -158,10 +204,8 @@ section{padding-block:clamp(56px,8vw,104px)}
 @media (max-width:900px){.why{grid-template-columns:1fr 1fr}.why div:nth-child(3){border-inline-start:none;padding-inline-start:0}}
 @media (max-width:520px){.why{grid-template-columns:1fr}.why div{border-inline-start:none;padding-inline-start:0;border-bottom:1px solid var(--line-2);padding-bottom:20px}}
 
-/* ---------- about ---------- */
-#why{background:var(--paper)}
+/* عن المحاضر */
 #about{background:var(--white)}
-#mission{background:var(--paper)}
 .about{display:grid;grid-template-columns:.8fr 1.2fr;gap:clamp(32px,5vw,72px);align-items:center}
 .portrait{position:relative;aspect-ratio:4/5;max-width:420px;width:100%;border-radius:var(--r-l);overflow:hidden;background:radial-gradient(120% 80% at 50% 100%,var(--blue),var(--navy))}
 .portrait::before{content:"";position:absolute;inset:auto -20% 18% -20%;height:46%;border-top:3px solid var(--gold);border-radius:50%;transform:rotate(-8deg);opacity:.8}
@@ -176,92 +220,24 @@ section{padding-block:clamp(56px,8vw,104px)}
 .quote{margin-top:28px;padding:18px 20px;border-inline-start:3px solid var(--gold);background:var(--paper);border-radius:0 var(--r-m) var(--r-m) 0;font-family:var(--f-display);font-weight:500;color:var(--navy)}
 @media (max-width:860px){.about{grid-template-columns:1fr}.portrait{max-width:340px;margin-inline:auto}}
 
-/* ---------- faq ---------- */
-.faq{display:grid;gap:10px;max-width:860px}
-.faq details{background:var(--white);border:1px solid var(--line);border-radius:var(--r-m)}
-.faq details[open]{border-color:var(--gold)}
-.faq summary{list-style:none;cursor:pointer;padding:18px 22px;font-family:var(--f-display);font-weight:600;font-size:17px;color:var(--navy);display:flex;justify-content:space-between;gap:16px;align-items:center}
-.faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:"+";font-family:var(--f-mono);font-size:22px;color:var(--gold-deep);line-height:1;flex:none;transition:transform .2s}
-.faq details[open] summary::after{transform:rotate(45deg)}
-.faq .ans{padding:0 22px 20px;color:var(--ink-2);font-size:16px}
-.faq .ans a{color:var(--wa-deep);font-weight:600}
+/* كلمة ليك */
+#mission{background:var(--paper)}
+.mission{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(32px,5vw,72px);align-items:start}
+.letter{position:relative;background:var(--white);border:1px solid var(--line);border-radius:var(--r-l);padding:clamp(28px,4vw,44px);min-width:0}
+.letter::before{content:"”";position:absolute;inset-block-start:-18px;inset-inline-start:28px;font-family:Georgia,serif;font-size:96px;line-height:1;color:var(--gold)}
+.letter p{font-size:18px;color:var(--ink-2);line-height:2}
+.letter p+p{margin-top:14px}
+.letter .sign{margin-top:22px;font-family:var(--f-display);font-weight:600;color:var(--navy);direction:ltr;text-align:right}
+.letter .sign small{display:block;font-family:var(--f-body);font-weight:400;font-size:13px;color:var(--ink-3)}
+.goals{list-style:none;margin:0;padding:0;min-width:0}
+.goals li{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line-2);font-size:16px;color:var(--ink-2)}
+.goals li::before{content:"";flex:none;width:10px;height:10px;margin-top:.7em;border:2px solid var(--gold);border-radius:50%}
+.goals-h{font-size:22px;font-weight:700;margin-bottom:8px}
+@media (max-width:860px){.mission{grid-template-columns:1fr}}
 
-/* ---------- contact ---------- */
-.contact{background:var(--navy);color:var(--white);position:relative;overflow:hidden}
-.contact::after{content:"";position:absolute;width:640px;height:640px;inset-block-start:-320px;inset-inline-start:-200px;border-radius:50%;border:2px solid rgba(201,164,92,.35);pointer-events:none}
-.contact .wrap{position:relative;z-index:1;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
-.contact h2{color:var(--white);font-size:clamp(28px,3.8vw,44px);font-weight:800}
-.contact p{margin-top:16px;color:rgba(255,255,255,.8);font-size:18px;max-width:52ch}
-.pick{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:var(--r-l);padding:24px;min-width:0}
-.pick label{display:block;font-size:14px;color:var(--sky);margin-bottom:8px}
-.pick select{width:100%;font:inherit;font-size:16px;padding:12px 14px;border-radius:var(--r-m);border:1px solid rgba(255,255,255,.2);background:var(--white);color:var(--navy)}
-.pick .btn{width:100%;margin-top:14px}
-.phone{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12);font-size:14px;color:rgba(255,255,255,.7)}
-.phone .num{font-size:18px;color:var(--white);user-select:all}
-.copy{font:inherit;font-size:13px;color:var(--gold);background:none;border:1px solid rgba(201,164,92,.5);border-radius:var(--r-s);padding:4px 10px;cursor:pointer}
-@media (max-width:860px){.contact .wrap{grid-template-columns:1fr}}
-.contact .wrap{align-items:start}
-.contact-side{display:grid;gap:24px;min-width:0}
-.lead{background:var(--white);color:var(--ink);border-radius:var(--r-l);padding:clamp(22px,3vw,32px);min-width:0;box-shadow:0 20px 40px -20px rgba(0,0,0,.4)}
-.lead h3{font-size:21px;font-weight:700}
-.lead .sub{margin-top:6px;font-size:15px;color:var(--ink-2)}
-.lead form{display:grid;gap:14px;margin-top:20px}
-.field{display:grid;gap:6px;min-width:0}
-.field label{font-size:14px;font-weight:600;color:var(--navy)}
-.field label small{font-weight:400;color:var(--ink-3)}
-.field input,.field select{width:100%;font:inherit;font-size:16px;padding:11px 14px;border-radius:var(--r-m);border:1px solid var(--line);background:var(--white);color:var(--navy)}
-.field input:focus,.field select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(121,211,242,.35)}
-.field input[aria-invalid="true"]{border-color:#B4402F}
-.field .err{font-size:13px;color:#B4402F}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media (max-width:520px){.row2{grid-template-columns:1fr}}
-.lead .btn{width:100%}
-.lead .btn[disabled]{opacity:.6;cursor:wait;transform:none}
-.privacy{font-size:12.5px;color:var(--ink-3);line-height:1.7}
-.status{border-radius:var(--r-m);padding:12px 14px;font-size:15px}
-.status.ok{background:#E7F4EC;color:#145C39}
-.status.bad{background:#FBEDEA;color:#8A2E20}
-.status a{font-weight:600;color:inherit}
-.analytics-note{flex-basis:100%;font-size:12.5px;color:rgba(255,255,255,.45)}
-
-/* ---------- footer ---------- */
-footer{background:#0B1F39;color:rgba(255,255,255,.65);font-size:14px;padding-block:28px calc(28px + env(safe-area-inset-bottom,0px))}
-footer .wrap{display:flex;flex-wrap:wrap;gap:12px 32px;align-items:center;justify-content:space-between}
-footer nav{display:flex;flex-wrap:wrap;gap:4px 18px}
-footer a{text-decoration:none}
-footer a:hover{color:var(--gold)}
-
-/* ---------- floating whatsapp ---------- */
-.fab{position:fixed;z-index:30;inset-inline-start:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:none;align-items:center;gap:8px;background:var(--wa);color:var(--white);text-decoration:none;font-family:var(--f-display);font-weight:600;font-size:15px;padding:12px 18px;border-radius:999px;box-shadow:0 10px 24px -8px rgba(16,43,78,.45)}
-.fab svg{width:22px;height:22px}
-@media (max-width:900px){.fab{display:inline-flex}footer{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}}
-
-/* ---------- tabs (nav) on tablet/mobile: second row under the logo ---------- */
-.nav a.active{color:var(--navy);background:var(--paper);box-shadow:inset 0 -2px 0 var(--gold)}
-@media (max-width:1180px){
-  .site-header{backdrop-filter:none;background:var(--white)}
-  .site-header .wrap{flex-wrap:wrap;row-gap:0;min-height:0;padding-block:10px 0}
-  .site-header .btn{margin-inline-start:auto}
-  .nav{display:flex;order:3;flex-basis:100%;margin-inline:calc(var(--gutter)*-1);padding:6px var(--gutter) 8px;overflow-x:auto;scrollbar-width:none;border-top:1px solid var(--line-2);margin-top:10px}
-  .nav::-webkit-scrollbar{display:none}
-  .nav a{flex:none;font-size:14px;padding:6px 12px}
-}
-html{scroll-padding-top:120px}
-
-/* ---------- audience ---------- */
-.aud{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.aud article{border:1px solid var(--line);border-radius:var(--r-l);padding:26px;display:flex;flex-direction:column;gap:12px;min-width:0}
-.aud .who{font-size:13px;font-weight:600;color:var(--gold-deep)}
-.aud h3{font-size:19px;font-weight:700}
-.aud p{font-size:15px;color:var(--ink-2)}
-.aud .start{margin-top:auto;padding-top:14px;border-top:1px dashed var(--line);font-size:14px;color:var(--ink-3)}
-.aud .start b{color:var(--navy);font-weight:600}
-@media (max-width:900px){.aud{grid-template-columns:1fr}}
-
-/* ---------- services ---------- */
+/* الخدمات */
 #services{background:var(--white)}
-.services{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line);border-radius:var(--r-l);overflow:hidden}
+.services{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:var(--r-l);overflow:hidden}
 .service{padding:30px 28px;display:flex;flex-direction:column;gap:12px;border-inline-start:1px solid var(--line);min-width:0}
 .service:first-child{border-inline-start:none}
 .service .k{font-family:var(--f-mono);font-size:12px;color:var(--gold-deep);direction:ltr;text-align:right}
@@ -272,93 +248,125 @@ html{scroll-padding-top:120px}
 .service .btn{margin-top:auto;align-self:flex-start;padding:.6em 1.1em;font-size:15px}
 @media (max-width:900px){.services{grid-template-columns:1fr}.service{border-inline-start:none;border-top:1px solid var(--line)}.service:first-child{border-top:none}}
 
-/* ---------- message & goals ---------- */
-.mission{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(32px,5vw,72px);align-items:start}
-.letter{position:relative;background:var(--white);border:1px solid var(--line);border-radius:var(--r-l);padding:clamp(28px,4vw,44px);min-width:0}
-.letter::before{content:"”";position:absolute;inset-block-start:-18px;inset-inline-start:28px;font-family:Georgia,serif;font-size:96px;line-height:1;color:var(--gold)}
-.letter p{font-size:18px;color:var(--ink-2);line-height:2}
-.letter p+p{margin-top:14px}
-.letter .sign{margin-top:22px;font-family:var(--f-display);font-weight:600;color:var(--navy);direction:ltr;text-align:right}
-.letter .sign small{display:block;font-family:var(--f-body);font-weight:400;font-size:13px;color:var(--ink-3)}
-.goals{list-style:none;margin:0;padding:0;display:grid;gap:0;min-width:0}
-.goals li{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line-2);font-size:16px;color:var(--ink-2)}
-.goals li::before{content:"";flex:none;width:10px;height:10px;margin-top:.7em;border:2px solid var(--gold);border-radius:50%}
-.goals-h{font-size:22px;font-weight:700;margin-bottom:8px}
-@media (max-width:860px){.mission{grid-template-columns:1fr}}
+/* الأسئلة */
+#faq{background:var(--paper)}
+.faq{display:grid;gap:10px;max-width:860px}
+.faq details{background:var(--white);border:1px solid var(--line);border-radius:var(--r-m)}
+.faq details[open]{border-color:var(--gold)}
+.faq summary{list-style:none;cursor:pointer;padding:18px 22px;font-family:var(--f-display);font-weight:600;font-size:17px;color:var(--navy);display:flex;justify-content:space-between;gap:16px;align-items:center}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:var(--f-mono);font-size:22px;color:var(--gold-deep);line-height:1;flex:none;transition:transform .2s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq .ans{padding:0 22px 20px;color:var(--ink-2);font-size:16px}
+.faq .ans a{color:var(--wa-deep);font-weight:600}
 
-/* ---------- platform paths ---------- */
-#platform{background:var(--white)}
-.paths{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.path{border:1px solid var(--line);border-radius:var(--r-l);padding:24px;display:flex;flex-direction:column;gap:12px;min-width:0;background:var(--white)}
-.path.open{border-color:var(--gold);box-shadow:var(--shadow)}
-.path .st{align-self:flex-start;font-size:12.5px;font-weight:600;border-radius:999px;padding:2px 12px;background:#E7F4EC;color:#145C39}
-.path.soon .st{background:var(--paper);color:var(--ink-3)}
-.path h3{font-size:19px;font-weight:700}
-.path p{font-size:15px;color:var(--ink-2)}
-.path .pr{font-family:var(--f-display);color:var(--navy)}
-.path .pr s{color:var(--ink-3);font-weight:400;margin-inline-end:8px;display:inline-block}
-.path .btn{margin-top:auto;white-space:normal;text-align:center}
-@media (max-width:1000px){.paths{grid-template-columns:1fr 1fr}}
-@media (max-width:560px){.paths{grid-template-columns:1fr}}
+/* التواصل */
+.contact{background:var(--navy);color:var(--white);position:relative;overflow:hidden}
+.contact::after{content:"";position:absolute;width:640px;height:640px;inset-block-start:-320px;inset-inline-start:-200px;border-radius:50%;border:2px solid rgba(201,164,92,.35);pointer-events:none}
+.contact .wrap{position:relative;z-index:1;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:start}
+.contact h2{color:var(--white);font-size:clamp(28px,3.8vw,44px);font-weight:800}
+.contact p.lead-in{margin-top:16px;color:rgba(255,255,255,.8);font-size:18px;max-width:52ch}
+.contact-side{display:grid;gap:24px;min-width:0}
+.pick{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:var(--r-l);padding:24px;min-width:0}
+.pick label{display:block;font-size:14px;color:var(--sky);margin-bottom:8px}
+.pick select{width:100%;font:inherit;font-size:16px;padding:12px 14px;border-radius:var(--r-m);border:1px solid rgba(255,255,255,.2);background:var(--white);color:var(--navy)}
+.pick .btn{width:100%;margin-top:14px}
+.phone{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12);font-size:14px;color:rgba(255,255,255,.7)}
+.phone .num{font-size:18px;color:var(--white);user-select:all}
+.copy{font:inherit;font-size:13px;color:var(--gold);background:none;border:1px solid rgba(201,164,92,.5);border-radius:var(--r-s);padding:4px 10px;cursor:pointer}
+.lead{background:var(--white);color:var(--ink);border-radius:var(--r-l);padding:clamp(22px,3vw,32px);min-width:0;box-shadow:0 20px 40px -20px rgba(0,0,0,.4)}
+.lead h3{font-size:21px;font-weight:700}
+.lead .sub{margin-top:6px;font-size:15px;color:var(--ink-2)}
+.lead form{display:grid;gap:14px;margin-top:20px}
+.lead .btn{width:100%}
+@media (max-width:860px){.contact .wrap{grid-template-columns:1fr}}
+
+/* حقول الفورم ونافذة الدخول السريع */
+.field{display:grid;gap:6px;min-width:0}
+.field label{font-size:14px;font-weight:600;color:var(--navy)}
+.field input,.field select{width:100%;font:inherit;font-size:16px;padding:11px 14px;border-radius:var(--r-m);border:1px solid var(--line);background:var(--white);color:var(--navy)}
+.field input:focus,.field select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(121,211,242,.35)}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:14px;color:var(--ink-2);cursor:pointer;line-height:1.7}
+.check input{margin-top:.35em;flex:none}
+.privacy{font-size:12.5px;color:var(--ink-3);line-height:1.7}
+.privacy a{color:var(--blue)}
+.status{border-radius:var(--r-m);padding:12px 14px;font-size:15px}
+.status.ok{background:#E7F4EC;color:#145C39}
+.status.bad{background:#FBEDEA;color:#8A2E20}
+.stack{display:grid;gap:14px}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:10px}
+dialog.gate{border:0;border-radius:var(--r-l);padding:22px;width:min(440px,calc(100vw - 32px));box-shadow:var(--shadow);color:var(--navy)}
+dialog.gate::backdrop{background:rgba(16,43,78,.55)}
+dialog.gate h2{font-size:20px}
+dialog.gate .x{border:0;background:none;font-size:18px;cursor:pointer;color:var(--ink-3)}
+
+/* الفوتر */
+footer{background:#0B1F39;color:rgba(255,255,255,.65);font-size:14px;padding-block:28px calc(28px + env(safe-area-inset-bottom,0px))}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px 32px;align-items:center;justify-content:space-between}
+footer nav{display:flex;flex-wrap:wrap;gap:4px 18px}
+footer a{text-decoration:none}
+footer a:hover{color:var(--gold)}
 footer .slogan{display:flex;flex-direction:column;line-height:1.5}
-footer .slogan b{font-family:var(--f-display);color:#fff;direction:ltr;text-align:right;font-weight:600}
+footer .slogan b{font-family:var(--f-display);color:#fff;direction:ltr;text-align:right;font-weight:600;font-size:17px}
 footer .slogan em{font-style:normal;color:var(--gold)}
-@media (max-width:420px){#login-btn{padding:.6em .8em;font-size:14px}.site-header #login-btn span{display:inline}}
+.fab{position:fixed;z-index:30;inset-inline-start:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:none;align-items:center;gap:8px;background:var(--wa);color:var(--white);text-decoration:none;font-family:var(--f-display);font-weight:600;font-size:15px;padding:12px 18px;border-radius:999px;box-shadow:0 10px 24px -8px rgba(16,43,78,.45)}
+.fab svg{width:22px;height:22px}
+@media (max-width:900px){.fab{display:inline-flex}footer{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
+</head>
+<body>
 
-<!-- أيقونة المحادثة المستخدمة في أزرار واتساب -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-chat" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.3-.4.8-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 2.9 2.9 0 0 0-.9 2.2 5 5 0 0 0 1 2.7 11.5 11.5 0 0 0 4.4 3.9c1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></symbol>
 </svg>
 
-<div dir="rtl" lang="ar">
-
 <header class="site-header">
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="IK Accounting Academy">
-      <img src="/assets/logo.webp" alt="شعار IK Accounting Academy" width="74" height="40">
-      <span><b>ACCOUNTING <em>ACADEMY</em></b><small>By Mr. Islam Khalifa</small></span>
+    <a class="brand" href="#top" aria-label="IK Academy">
+      <img src="/assets/logo.webp" alt="شعار IK Academy" width="74" height="40">
+      <span><b id="brand-name">IK <em>Academy</em></b><small id="brand-by">by Mr. Islam Khalifa</small></span>
     </a>
     <nav class="nav" aria-label="التنقل الرئيسي">
-      <a href="#platform">المنصة</a>
-      <a href="#audience">لمين الأكاديمية؟</a>
-      <a href="#courses">الكورسات</a>
-      <a href="#services">الخدمات</a>
+      <a href="#catalog">الكورسات</a>
+      <a href="#free">جرّب مجاناً</a>
+      <a href="/library">مكتبة IK</a>
       <a href="#about">عن المحاضر</a>
-      <a href="#mission">رسالتنا</a>
+      <a href="#services">الخدمات</a>
       <a href="#faq">الأسئلة الشائعة</a>
       <a href="#contact">تواصل</a>
     </nav>
-    <a class="btn btn-primary" id="login-btn" href="/login"><span>دخول المتدربين</span></a>
-    <a class="btn btn-wa js-wa" data-course="" href="#" target="_blank" rel="noopener"><svg><use href="#i-chat"/></svg><span>واتساب</span></a>
+    <div class="head-end">
+      <span id="visitor-slot"></span>
+      <a class="btn btn-primary" id="login-btn" href="/login">دخول المتدربين</a>
+      <a class="btn btn-wa js-wa hide-xs" href="#" target="_blank" rel="noopener"><svg><use href="#i-chat"/></svg>واتساب</a>
+    </div>
   </div>
 </header>
 
 <main id="top">
 
-<!-- ============ الواجهة الرئيسية ============ -->
 <section class="hero">
   <div class="wrap">
     <div class="hero-copy">
-      <span class="eyebrow">IK Accounting Academy</span>
+      <span class="eyebrow">IK Academy · by Mr. Islam Khalifa</span>
       <h1>
-        <span class="lead-in">مش مجرد محاسب بيسجل قيود..</span>
-        خليك المحاسب اللي <mark>بيفهم النظام</mark> وبيحلل الأرقام.
+        <span class="lead-in">مش حفظ ولا كلام نظري..</span>
+        هتتعلم الشغل <mark>زي ما بيتعمل بجد</mark>، وتطلع فاهم بتعمل إيه وليه.
       </h1>
-      <p class="lede">في IK Accounting Academy هتتعلم إزاي تبني نظام محاسبي متكامل، وتستخدم Excel في تطوير التقارير والأتمتة، وتحلل النتائج المالية، وتربط المعرفة المحاسبية بالتطبيق العملي داخل الشركات.</p>
+      <p class="lede">سواء لسه متخرج وعايز تدخل سوق العمل وإنت واثق، أو محاسب عايز تكبر، أو صاحب شغل عايز تفهم أرقامك بنفسك.. هنا هتلاقي كورسات بالقصة والتطبيق، وامتحان بعد كل خطوة، وشهادة في الآخر، وشيتات جاهزة تشتغل عليها من بكرة.</p>
       <div class="ctas">
-        <a class="btn btn-primary" href="#courses">اكتشف الكورسات</a>
-        <a class="btn btn-ghost js-wa" data-course="" href="#" target="_blank" rel="noopener"><svg><use href="#i-chat"/></svg>تواصل معنا على واتساب</a>
+        <a class="btn btn-primary" href="#catalog">اختار كورسك</a>
+        <a class="btn btn-ghost" href="#free">🎁 جرّب فصل مجاناً</a>
       </div>
-      <div class="tools" aria-label="الأدوات المستخدمة">
-        <span>Excel</span><span>Power Query</span><span>Pivot Tables</span><span>VBA</span><span>Dashboards</span><span>IFRS</span>
+      <div class="proof">
+        <span>شرح بالعامية وبالقصة</span><span>امتحان بعد كل وحدة</span><span>شهادة بكود تحقق</span><span>شيتات Excel جاهزة</span>
       </div>
     </div>
 
-    <figure class="sheet" aria-label="مثال تعليمي: ميزان مراجعة مبني على Excel">
+    <figure class="sheet" aria-label="مثال تعليمي: ميزان مراجعة على Excel">
       <div class="sheet-card">
-        <div class="sheet-top"><img src="/assets/logo.webp" alt=""><b>ميزان المراجعة</b><small class="en">TB · Excel</small></div>
+        <div class="sheet-top"><img src="/assets/logo.webp" alt=""><b>ميزان المراجعة</b><small>TB · Excel</small></div>
         <div class="fx"><i>fx</i><code>=SUMIFS(<b>GL!E:E</b>, GL!B:B, A5)</code></div>
         <div class="tb-scroll">
           <table class="tb">
@@ -368,7 +376,7 @@ footer .slogan em{font-style:normal;color:var(--gold)}
               <tr><td class="code">1102</td><td>البنك</td><td class="num">240,000</td><td class="num">—</td></tr>
               <tr class="hl"><td class="code">1201</td><td>العملاء</td><td class="num">120,000</td><td class="num">—</td></tr>
               <tr><td class="code">1301</td><td>المخزون</td><td class="num">175,000</td><td class="num">—</td></tr>
-              <tr><td class="code">2101</td><td>الموردون</td><td class="num">—</td><td class="num">95,000</td></tr>
+              <tr><td class="code">2101</td><td>الموردين</td><td class="num">—</td><td class="num">95,000</td></tr>
               <tr><td class="code">3101</td><td>رأس المال</td><td class="num">—</td><td class="num">400,000</td></tr>
               <tr><td class="code">4101</td><td>المبيعات</td><td class="num">—</td><td class="num">310,000</td></tr>
               <tr><td class="code">5101</td><td>تكلفة المبيعات</td><td class="num">150,000</td><td class="num">—</td></tr>
@@ -377,30 +385,52 @@ footer .slogan em{font-style:normal;color:var(--gold)}
             <tfoot><tr><td></td><td>الإجمالي</td><td class="num">805,000</td><td class="num">805,000</td></tr></tfoot>
           </table>
         </div>
-        <div class="sheet-foot"><span class="ok">الميزان متوازن</span><span>مثال تعليمي من محاضرات الكورس</span></div>
+        <div class="sheet-foot"><span class="ok">الميزان متوازن</span><span>مثال من شيتات مكتبة IK</span></div>
       </div>
-      <span class="sheet-tag">من الدليل المحاسبي للقوائم المالية</span>
+      <span class="sheet-tag">هتبنيه بإيدك خطوة بخطوة</span>
     </figure>
   </div>
 </section>
 
-<!-- ============ لمين الأكاديمية؟ (المحتوى في CONTENT.audience) ============ -->
-<section id="audience" aria-labelledby="aud-h">
+<!-- الكورسات متقسمة على الأقسام، وسؤال "عايز تحقق إيه؟" بيفلترها -->
+<section id="catalog" aria-labelledby="catalog-h">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">لمين الأكاديمية؟</span>
-      <h2 id="aud-h">من أول حديث التخرج.. لحد صاحب الشركة</h2>
-      <p>كل واحد بيبدأ من النقطة اللي تناسبه، والهدف واحد: تفهم المحاسبة وتطبقها بنفسك.</p>
+      <span class="eyebrow">الكورسات</span>
+      <h2 id="catalog-h">كل كورس هنا بيطلعك بحاجة تقدر تعملها بإيدك</h2>
+      <p>اختار الهدف اللي جاي علشانه، وإحنا نوريك تبدأ منين.</p>
     </div>
-    <div class="aud" id="aud-list"></div>
+    <div class="goal">
+      <h3>داخل IK Academy عشان تحقق إيه؟</h3>
+      <p>اختار اللي يشبهك، والكورسات المناسبة ليك هتظهر تحت.</p>
+      <div class="chips" id="goal-chips" role="group" aria-label="فلتر الكورسات">
+        <button type="button" class="on" data-f="all">الكل</button>
+        <button type="button" data-f="accountant">عايز أشتغل محاسب وأنا فاهم</button>
+        <button type="button" data-f="business">عايز أفهم أرقام شغلي</button>
+        <button type="button" data-f="hr">شغلي في الـ HR</button>
+        <button type="button" data-f="tools">عايز أدوات عملية (Excel ...)</button>
+      </div>
+    </div>
+    <div id="tracks"><p class="muted">ثانية واحدة بنجهزلك الكورسات...</p></div>
   </div>
 </section>
 
-<!-- ============ المنهج: الدورة المحاسبية ============ -->
+<section id="free" aria-labelledby="free-h">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">جرّب قبل ما تشترك</span>
+      <h2 id="free-h">اقرا فصل كامل مجاناً، واحكم بنفسك</h2>
+      <p>مش محتاج تدفع حاجة علشان تعرف الشرح هيعجبك ولا لأ. افتح أي فصل من دول واقرا براحتك.</p>
+    </div>
+    <div class="free-list" id="free-list"></div>
+    <p class="free-note">🎁 الفصول المجانية بتفتح بـ <b>دخول سريع كزائر</b>: اسمك ورقمك بس، من غير باسورد ومن غير أي فلوس.</p>
+  </div>
+</section>
+
 <section class="cycle" aria-labelledby="cycle-h">
   <div class="wrap">
     <span class="eyebrow">طريقة التعلم</span>
-    <h2 id="cycle-h">بنبني الشركة والنظام المحاسبي من الصفر، خطوة بخطوة.</h2>
+    <h2 id="cycle-h">بنبني الشركة والنظام المحاسبي من الصفر، وإنت ماشي معانا خطوة بخطوة.</h2>
     <ol class="steps">
       <li><b>الدليل المحاسبي</b><small>Chart of Accounts</small></li>
       <li><b>القيود اليومية</b><small>Journal Entries</small></li>
@@ -412,74 +442,51 @@ footer .slogan em{font-style:normal;color:var(--gold)}
   </div>
 </section>
 
-<!-- ============ المنصة التعليمية (المسارات بتيجي من لوحة الأدمن) ============ -->
-<section id="platform" aria-labelledby="platform-h">
+<section id="library" aria-labelledby="lib-h">
   <div class="wrap">
     <div class="sec-head">
-      <span class="eyebrow">المنصة التعليمية</span>
-      <h2 id="platform-h">مسارات المنصة: اتعلم بالقصة، واختبر نفسك خطوة بخطوة</h2>
-      <p>كل متدرب ليه حساب خاص يتابع منه تقدمه، ومادة علمية محمية، وامتحان في آخر كل مرحلة، وشهادة في آخر الكورس.</p>
+      <span class="eyebrow">مكتبة IK</span>
+      <h2 id="lib-h">شيتات وملفات جاهزة توفر عليك ساعات شغل</h2>
+      <p>نماذج Excel ومستندات عملية في المحاسبة والبيزنس والـ HR. فيه منها مجاني تحمّله على طول، وفيه ملفات متقدمة للمشتركين.</p>
     </div>
-    <div class="paths" id="path-list"><p class="muted">جاري التحميل...</p></div>
+    <div class="lib" id="lib-list"></div>
+    <p style="margin-top:18px"><a class="btn btn-ghost" href="/library">ادخل المكتبة وشوف كل الملفات</a></p>
   </div>
 </section>
 
-<!-- ============ الكورسات (المحتوى في CONTENT.courses أسفل الصفحة) ============ -->
-<section id="courses" aria-labelledby="courses-h">
-  <div class="wrap">
-    <div class="sec-head">
-      <span class="eyebrow">الكورسات</span>
-      <h2 id="courses-h">اختار المسار اللي يناسب هدفك</h2>
-      <p>كل كورس بينتهي بمخرج عملي تقدر تستخدمه في شغلك، مش مجرد شرح نظري.</p>
-    </div>
-    <div class="courses" id="course-list"></div>
-  </div>
-</section>
-
-<!-- ============ الخدمات (المحتوى في CONTENT.services) ============ -->
-<section id="services" aria-labelledby="services-h">
-  <div class="wrap">
-    <div class="sec-head">
-      <span class="eyebrow">الخدمات للشركات والمنشآت</span>
-      <h2 id="services-h">محتاج نظام محاسبي لشغلك؟ نبنيه معاك</h2>
-      <p>غير التدريب، بنساعد الشركات وأصحاب المنشآت في تنظيم الحسابات من الأساس.</p>
-    </div>
-    <div class="services" id="service-list"></div>
-  </div>
-</section>
-
-<!-- ============ ليه الأكاديمية ============ -->
 <section id="why" aria-labelledby="why-h">
   <div class="wrap">
     <div class="sec-head">
       <span class="eyebrow">ليه IK Academy؟</span>
-      <h2 id="why-h">المحاسبة زي ما بتتعمل فعلًا جوه الشركات</h2>
+      <h2 id="why-h">علشان هتتعلم الحاجة اللي هتحتاجها فعلاً بكرة الصبح في الشغل</h2>
     </div>
     <div class="why">
-      <div><b>تطبيق عملي بدل الحفظ</b><p>كل مفهوم بنطبقه على حالة شركة واقعية ومستندات وعمليات حقيقية الشكل.</p></div>
-      <div><b>بناء الأنظمة خطوة بخطوة</b><p>بتبني الملف بنفسك من أول الدليل المحاسبي لحد التقارير، وتفهم كل خطوة ليه بتتعمل.</p></div>
-      <div><b>المحاسبة + التكنولوجيا</b><p>Excel وPower Query وVBA كأدوات بتوفر وقتك وتقلل الأخطاء في الشغل اليومي.</p></div>
-      <div><b>أرقام تساعد في القرار</b><p>تحويل الأرقام لتقارير وتحليلات تقدر تعرضها على الإدارة وتدعم بيها القرار.</p></div>
+      <div><b>بالقصة مش بالحفظ</b><p>كل مفهوم بييجي جوه حكاية شركة حقيقية الشكل، فبتفهمه وبيفضل معاك.</p></div>
+      <div><b>إنت اللي بتبني</b><p>بتعمل الملف بإيدك من أول الدليل لحد التقارير، وتعرف كل خطوة بتتعمل ليه.</p></div>
+      <div><b>بتختبر نفسك أول بأول</b><p>امتحان بعد كل وحدة يطمنك إنك فاهم قبل ما تكمل، وشهادة في الآخر بكود تحقق.</p></div>
+      <div><b>مش لوحدك</b><p>عندك سؤال؟ المحاضر والدعم على واتساب، وهتلاقي حد يرد عليك.</p></div>
     </div>
   </div>
 </section>
 
-<!-- ============ عن المحاضر ============ -->
 <section id="about" aria-labelledby="about-h">
   <div class="wrap about">
     <div class="portrait"><img src="/assets/portrait.webp" alt="Mr. Islam Khalifa" width="720" height="720" loading="lazy"></div>
     <div class="about-copy">
       <span class="eyebrow">عن المحاضر</span>
       <h2 id="about-h">Mr. Islam Khalifa</h2>
-      <p class="role">مؤسس IK Accounting Academy</p>
-      <p class="desc">محترف محاسبة ومهتم بتصميم الأنظمة المحاسبية باستخدام Excel، وتطوير التقارير، والتحليل المالي، والتطبيق العملي للمعايير الدولية.</p>
-      <ul class="facts" id="about-facts"></ul>
-      <p class="quote">«متشرحش النظرية بس.. ابني الشركة والنظام المحاسبي من الصفر.»</p>
+      <p class="role">مؤسس IK Academy</p>
+      <p class="desc">محاسب بقاله سنين في الشغل الحقيقي، وبيحب يبسّط المحاسبة لدرجة إنك تحس إنها حكاية بتتحكي. مهتم بتصميم الأنظمة المحاسبية على Excel، والتقارير، والتحليل المالي، وربط المعايير الدولية بالتطبيق.</p>
+      <ul class="facts">
+        <li>خبرة أكتر من 9 سنين في الحسابات والإدارة المالية: التصنيع، والمقاولات، والتصدير، والتجاري، والخدمي.</li>
+        <li>حاصل على دبلومة المعايير الدولية DipIFRS من ACCA، وشهادة FMAA من IMA.</li>
+        <li>متخصص في الضرايب المحلية (القيمة المضافة، والخصم والإضافة، وضريبة الدخل)، وتصميم البرامج المحاسبية على Excel.</li>
+      </ul>
+      <p class="quote">«ماتحفظش النظرية وبس.. ابني الشركة والنظام المحاسبي من الصفر بإيدك.»</p>
     </div>
   </div>
 </section>
 
-<!-- ============ رسالة الأكاديمية والأهداف (المحتوى في CONTENT.message و CONTENT.goals) ============ -->
 <section id="mission" aria-labelledby="mission-h">
   <div class="wrap">
     <div class="sec-head">
@@ -487,78 +494,73 @@ footer .slogan em{font-style:normal;color:var(--gold)}
       <h2 id="mission-h">كلمة مني ليك</h2>
     </div>
     <div class="mission">
-      <div class="letter" id="letter"></div>
+      <div class="letter">
+        <p>IK Academy بدأت من سؤال بيقابلني كتير في الشغل: ليه ناس كتير بتعرف تسجل القيد، وقليل اللي فاهم النظام اللي القيد ده جزء منه؟ وليه صاحب الشغل بيشوف أرقامه آخر السنة من غير ما يفهم جت منين؟</p>
+        <p>علشان كده هنا مش بنحفظ قواعد. إحنا بنبني الشركة والنظام من الصفر، بنفس الأدوات اللي بنستخدمها في الشغل الحقيقي، لحد ما توصل لتقارير تفهمها وتاخد بيها قرار.</p>
+        <p>سواء لسه متخرج، أو محاسب عايز يكبر، أو صاحب شغل عايز يفهم أرقامه، أو شغال في الـ HR.. مكانك هنا، وأنا معاك خطوة بخطوة.</p>
+        <p class="sign">Islam Khalifa<small>مؤسس IK Academy</small></p>
+      </div>
       <div>
-        <h3 class="goals-h">أهدافنا</h3>
-        <ul class="goals" id="goal-list"></ul>
+        <h3 class="goals-h">إحنا عايزين نوصل لإيه؟</h3>
+        <ul class="goals">
+          <li>تطلع محاسب فاهم الدورة المحاسبية والمستندية كاملة، مش مجرد بتسجل قيود.</li>
+          <li>صاحب الشغل يفهم أرقامه ويتابعها بنفسه من غير ما حد يتوهه.</li>
+          <li>الـ HR يعمل المرتبات والتأمينات صح من أول مرة.</li>
+          <li>Excel يبقى إيدك اليمين في الشغل: وقت أقل وأخطاء أقل.</li>
+          <li>الأرقام تتحول لتقارير تساعد في القرار.</li>
+        </ul>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ============ الأسئلة الشائعة (المحتوى في CONTENT.faq) ============ -->
+<section id="services" aria-labelledby="services-h">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">خدمات للشركات</span>
+      <h2 id="services-h">محتاج نظام محاسبي لشغلك؟ نبنيه معاك</h2>
+      <p>غير التدريب، بنساعد الشركات وأصحاب المنشآت ينظموا حساباتهم من الأساس.</p>
+    </div>
+    <div class="services" id="service-list"></div>
+  </div>
+</section>
+
 <section id="faq" aria-labelledby="faq-h">
   <div class="wrap">
     <div class="sec-head">
       <span class="eyebrow">الأسئلة الشائعة</span>
-      <h2 id="faq-h">أسئلة بتتكرر قبل الاشتراك</h2>
+      <h2 id="faq-h">أسئلة بتتسأل كتير قبل الاشتراك</h2>
     </div>
     <div class="faq" id="faq-list"></div>
   </div>
 </section>
 
-<!-- ============ التواصل ============ -->
 <section id="contact" class="contact" aria-labelledby="contact-h">
   <div class="wrap">
     <div class="contact-side">
       <div>
-        <h2 id="contact-h">ابدأ تطورك المهني بخطوة عملية.</h2>
-        <p>اختار الكورس المناسب لهدفك، وتواصل معنا لمعرفة تفاصيل المحتوى والاشتراك والعروض الحالية.</p>
+        <h2 id="contact-h">خطوتك الجاية أسهل مما تتخيل.</h2>
+        <p class="lead-in">قولنا إنت فين دلوقتي وعايز توصل لإيه، وإحنا نقولك تبدأ منين بالظبط.</p>
       </div>
-    <div class="pick">
-      <label for="course-select">الكورس اللي مهتم بيه</label>
-      <select id="course-select"></select>
-      <a class="btn btn-wa" id="pick-btn" href="#" target="_blank" rel="noopener"><svg><use href="#i-chat"/></svg>ابعت رسالة على واتساب</a>
-      <div class="phone"><span>رقم واتساب</span><span class="num" id="phone-num"></span><button class="copy" id="copy-btn" type="button">نسخ</button></div>
+      <div class="pick">
+        <label for="course-select">الكورس اللي مهتم بيه</label>
+        <select id="course-select"></select>
+        <a class="btn btn-wa" id="pick-btn" href="#" target="_blank" rel="noopener"><svg><use href="#i-chat"/></svg>ابعت رسالة على واتساب</a>
+        <div class="phone"><span>رقم واتساب</span><span class="num" id="phone-num"></span><button class="copy" id="copy-btn" type="button">نسخ</button></div>
+      </div>
     </div>
-    </div>
-
-    <!-- فورم تسجيل الاهتمام: بيشتغل على نسخة Netlify (Netlify Forms) وبتوصلك البيانات في لوحة Netlify وعلى الإيميل -->
-    <div class="lead" id="lead">
-      <h3>سيب بياناتك ونكلمك</h3>
-      <p class="sub">لو مش فاضي تكتب رسالة دلوقتي، سيب اسمك ورقمك وهنتواصل معاك بالتفاصيل.</p>
-      <form name="leads" method="POST" data-netlify="true" netlify-honeypot="bot-field" id="lead-form" novalidate>
-        <input type="hidden" name="form-name" value="leads">
-        <input type="hidden" name="source" id="lead-source" value="">
-        <p hidden><label>اترك هذا الحقل فارغًا <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
-        <div class="field">
-          <label for="lead-name">الاسم</label>
-          <input id="lead-name" name="name" type="text" autocomplete="name" required maxlength="80">
-          <span class="err" id="lead-name-err" hidden>اكتب اسمك علشان نعرف نكلمك.</span>
-        </div>
-        <div class="field">
-          <label for="lead-phone">رقم الموبايل / واتساب</label>
-          <input id="lead-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" dir="ltr" placeholder="01xxxxxxxxx" required maxlength="20">
-          <span class="err" id="lead-phone-err" hidden>اكتب رقم صحيح، مثلًا 01012345678.</span>
-        </div>
-        <div class="row2">
-          <div class="field">
-            <label for="lead-segment">إنت</label>
-            <select id="lead-segment" name="segment">
-              <option>طالب / حديث التخرج</option>
-              <option>محاسب</option>
-              <option>صاحب منشأة</option>
-              <option>أخرى</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="lead-interest">مهتم بـ</label>
-            <select id="lead-interest" name="interest"><option>استفسار عام</option></select>
-          </div>
-        </div>
-        <button class="btn btn-primary" type="submit" id="lead-submit">ابعت بياناتي</button>
+    <div class="lead">
+      <h3>مش فاضي تكتب دلوقتي؟ سيب رقمك ونكلمك</h3>
+      <p class="sub">اسمك ورقمك بس، وهنكلمك على واتساب ونفهم منك عايز إيه.</p>
+      <form id="lead-form" novalidate>
+        <div class="field"><label for="lead-name">اسمك</label><input id="lead-name" autocomplete="name" required maxlength="80"></div>
+        <div class="field"><label for="lead-phone">رقم الواتساب</label><input id="lead-phone" type="tel" inputmode="tel" autocomplete="tel" dir="ltr" placeholder="01xxxxxxxxx" required maxlength="20"></div>
+        <div class="field"><label for="lead-interest">مهتم بإيه؟</label><select id="lead-interest"><option value="general">استفسار عام</option></select></div>
+        <label class="check"><input type="checkbox" id="lead-service" checked> موافق إنكم تكلموني على الرقم ده بخصوص طلبي</label>
+        <label class="check"><input type="checkbox" id="lead-mkt"> ابعتولي الجديد من كورسات وشيتات (اختياري)</label>
+        <button class="btn btn-primary" type="submit" id="lead-submit">ابعت</button>
         <div class="status" id="lead-status" role="status" aria-live="polite" hidden></div>
-        <p class="privacy">بياناتك هتستخدم للتواصل معاك بخصوص الكورسات والخدمات بس، ومش هتتشارك مع أي جهة.</p>
+        <p class="privacy">بياناتك مش بتظهر لحد غير إدارة الأكاديمية، ومش بتتشارك مع أي جهة. <a href="/privacy">إزاي بنستخدم بياناتك</a></p>
       </form>
     </div>
   </div>
@@ -568,358 +570,205 @@ footer .slogan em{font-style:normal;color:var(--gold)}
 
 <footer>
   <div class="wrap">
-    <span class="slogan"><b id="foot-1">Mr. Islam Khalifa | Accounting</b><em id="foot-2">اتعلم .. طبق .. ابن</em></span>
+    <span class="slogan"><b id="foot-1">IK Academy</b><em id="foot-2">اتعلم .. طبق .. ابن</em></span>
     <nav aria-label="روابط سريعة">
-      <a href="#courses">الكورسات</a><a href="#services">الخدمات</a><a href="#about">عن المحاضر</a><a href="#faq">الأسئلة الشائعة</a><a class="js-wa" data-course="" href="#" target="_blank" rel="noopener">واتساب</a>
+      <a href="#catalog">الكورسات</a><a href="/library">مكتبة IK</a><a href="#about">عن المحاضر</a><a href="#faq">الأسئلة الشائعة</a><a href="/privacy">الخصوصية</a><a class="js-wa" href="#" target="_blank" rel="noopener">واتساب</a>
     </nav>
-    <p class="analytics-note" id="analytics-note" hidden>الموقع بيستخدم أدوات إحصاء (Google Analytics وMicrosoft Clarity) لقياس عدد الزيارات وتحسين المحتوى، من غير ما تعرف هويتك.</p>
   </div>
 </footer>
 
-<a class="fab js-wa" data-course="" href="#" target="_blank" rel="noopener" aria-label="تواصل معنا على واتساب"><svg><use href="#i-chat"/></svg>واتساب</a>
-
-</div>
+<a class="fab js-wa" href="#" target="_blank" rel="noopener" aria-label="كلمنا على واتساب"><svg><use href="#i-chat"/></svg>واتساب</a>
 
 <script>
-/* =========================================================
-   CONTENT — عدّل من هنا فقط: الواتساب، لمين الأكاديمية، الخدمات، الكورسات،
-   عن المحاضر، كلمة ليك، الأهداف، الأسئلة. غيّر الكلام بين علامات " " بس.
-   ========================================================= */
-var CONTENT = {
-  // ---------- الإحصائيات (لوحة الأدمن بتاعتك) ----------
-  // حط هنا الكود اللي بتاخده من Google Analytics (بيبدأ بـ G-) ومن Microsoft Clarity.
-  // لو سبتهم فاضيين، الموقع يشتغل عادي من غير إحصائيات.
-  analytics: {
-    ga4: "",        // مثال: "G-AB12CD34EF"
-    clarity: ""     // مثال: "q1w2e3r4t5"
-  },
-
-  whatsapp: "201500069190",          // الرقم بالصيغة الدولية بدون + أو أصفار
-  phoneDisplay: "01500069190",
-  formHost: "",   // لو اشتريت دومين بعدين (مثلًا ikacademy.com) اكتبه هنا علشان الفورم يشتغل عليه
-  generalMessage: "السلام عليكم، عايز أعرف تفاصيل الكورسات في IK Accounting Academy.",
-  courseMessage: "السلام عليكم، عايز أعرف تفاصيل كورس: {course}",
-  // ---------- لمين الأكاديمية؟ ----------
-  audience: [
-    { who: "حديثي التخرج والطلاب",
-      title: "عايز تدخل سوق العمل وإنت فاهم",
-      text: "هتتعلم الدورة المحاسبية والمستندية زي ما بتحصل جوه الشركات، وتبني ملفاتك بنفسك على Excel، فتدخل أول شغل وإنت عارف بتعمل إيه وليه.",
-      start: "دبلومة المحاسب المتكامل، أو كورس النظام المحاسبي على Excel" },
-    { who: "المحاسبين في سوق العمل",
-      title: "عايز تطوّر نفسك وتتنقل لمستوى أعلى",
-      text: "من تسجيل القيود لتصميم الأنظمة وأتمتة التقارير والتحليل المالي، علشان تبقى المحاسب اللي الإدارة بترجعله وقت القرار.",
-      start: "كورس الأنظمة المتقدمة وVBA، أو التحليل المالي المتقدم" },
-    { who: "أصحاب المنشآت ورواد الأعمال",
-      title: "عايز تفهم حساباتك أو تمسك شغلك بنفسك",
-      text: "هتفهم أرقام شغلك ومعناها، وتقدر تنظم حساباتك على Excel وتتابع المبيعات والمصروفات والعملاء والموردين بنفسك، أو تتابع شغل المحاسب عندك بوعي.",
-      start: "كورس النظام المحاسبي على Excel، أو خدمات تصميم النظام لشركتك" }
-  ],
-
-  // ---------- الخدمات ----------
-  services: [
-    { key: "Excel Accounting Systems",
-      title: "تصميم برامج محاسبية باستخدام Excel",
-      text: "برنامج محاسبي على Excel مصمم على مقاس نشاطك، بدل البرامج الجاهزة اللي مش مناسبة لحجم شغلك.",
-      items: ["الدليل المحاسبي والقيود والأستاذ","العملاء والموردين والمخزون","التقارير والقوائم المالية"] },
-    { key: "Accounting Cycle Setup",
-      title: "إعداد الدورة المحاسبية",
-      text: "تنظيم الدورة المحاسبية لمنشأتك من التسجيل اليومي لحد الإقفال وإعداد القوائم المالية.",
-      items: ["تصميم الدليل المحاسبي","خطوات التسجيل والترحيل","التسويات والإقفال والتقارير"] },
-    { key: "Documentary Cycle",
-      title: "إعداد الدورة المستندية",
-      text: "تحديد المستندات وخط سيرها والمسؤوليات في كل دورة، علشان كل عملية يكون ليها مستند ومراجعة.",
-      items: ["دورة المبيعات والتحصيل","دورة المشتريات والسداد","دورة المخزون والخزينة"] }
-  ],
-  serviceMessage: "السلام عليكم، عايز أستفسر عن خدمة: {service}",
-
-  courses: [
-    {
-      tag: "الكورس الأول",
-      title: "تصميم نظام محاسبي متكامل باستخدام Excel",
-      meta: ["8 محاضرات", "2–3 ساعات للمحاضرة"],
-      items: ["تصميم الدليل المحاسبي","تسجيل القيود اليومية","الأستاذ العام وكشوف الحسابات","ميزان المراجعة","إعداد القوائم المالية","المعادلات المتقدمة في Excel","التقارير والتحليل المالي","بناء ملف محاسبي مترابط"],
-      outcome: "تصميم نظام محاسبي باستخدام Excel من الدليل المحاسبي إلى القوائم والتقارير."
-    },
-    {
-      tag: "الكورس الثاني",
-      title: "تصميم الأنظمة المحاسبية المتقدمة وبرمجة Excel باستخدام VBA",
-      meta: ["8 محاضرات", "2–3 ساعات للمحاضرة"],
-      items: ["تطوير الأنظمة المحاسبية","Power Query","Pivot Tables وData Model","تقارير المبيعات والعملاء والمشتريات والموردين والمخزون","بناء لوحات المعلومات","أساسيات VBA","أتمتة المهام المحاسبية","بناء تقارير وأدوات تفاعلية"],
-      outcome: "نظام Excel متقدم يساعد على تنظيم البيانات المحاسبية وأتمتة التقارير المتكررة."
-    },
-    {
-      tag: "الكورس الثالث",
-      title: "التحليل المالي المتقدم",
-      meta: ["8 محاضرات", "2–3 ساعات للمحاضرة"],
-      items: ["تحليل القوائم المالية","التحليل الأفقي والرأسي","نسب السيولة والربحية والنشاط والرفع المالي","تحليل DuPont","التدفقات النقدية وجودة الأرباح","الموازنات والتوقعات المالية","تحليل الانحرافات","إعداد Dashboard وتقرير مالي للإدارة"],
-      outcome: "نموذج تحليل مالي وتقرير يساعد على تقييم الأداء ودعم القرارات."
-    },
-    {
-      tag: "الدبلومة الشاملة",
-      title: "دبلومة المحاسب المتكامل",
-      featured: true,
-      meta: ["16 محاضرة", "2–3 ساعات للمحاضرة", "+ مشروع تخرج"],
-      items: ["فهم دورة العمل والمستندات المحاسبية","تصميم الدليل المحاسبي","القيود اليومية والترحيل","العملاء والموردون","المبيعات والمشتريات","الخزينة والبنوك","المخزون والأصول الثابتة","التسويات الجردية والإقفال","ميزان المراجعة والقوائم المالية","تطبيقات مختارة من معايير IFRS","التحليل المالي","مشروع تخرج متكامل"],
-      outcome: "محاكاة دورة محاسبية متكاملة تبدأ من العمليات اليومية وتنتهي بالقوائم المالية والتحليلات.",
-      note: "برنامج تدريبي عملي، وليس اعتمادًا أكاديميًا أو مهنيًا رسميًا."
-    }
-  ],
-  // ---------- عن المحاضر (النقاط تحت الوصف) ----------
-  aboutFacts: [
-    "خبرة تزيد عن 10 سنوات في الحسابات بقطاعات مختلفة: التصنيع، والمقاولات، والتصدير، والتجاري، والخدمي.",
-    "حاصل على دبلومة المعايير الدولية لإعداد التقارير المالية (IFRS).",
-    "خبير في تصميم البرامج المحاسبية باستخدام Excel، وإعداد الدورات المحاسبية والدورات المستندية."
-  ],
-
-  // ---------- كلمة ليك (كل سطر = فقرة) ----------
-  message: [
-    "بدأت IK Accounting Academy من سؤال بيقابلني كتير في الشغل: ليه ناس كتير بتعرف تسجل القيد، وقليل اللي فاهم النظام اللي القيد ده جزء منه؟ وليه صاحب المنشأة بيشوف أرقامه آخر السنة من غير ما يفهم جت منين؟",
-    "علشان كده هنا مبنحفظش قواعد. إحنا بنبني الشركة والنظام المحاسبي من الصفر، بنفس الأدوات اللي بنستخدمها في الشغل الحقيقي، لحد ما توصل لتقارير تفهمها وتاخد بيها قرار.",
-    "سواء لسه متخرج، أو محاسب عايز يكبر، أو صاحب شغل عايز يفهم أرقامه.. مكانك هنا."
-  ],
-  signature: "Islam Khalifa",
-  signatureRole: "مؤسس IK Accounting Academy",
-
-  // ---------- أهدافنا ----------
-  goals: [
-    "تخريج محاسب فاهم الدورة المحاسبية والمستندية كاملة، مش مجرد مسجّل قيود.",
-    "تمكين أصحاب المنشآت من فهم أرقام شغلهم ومتابعتها بنفسهم.",
-    "نشر استخدام Excel والأتمتة في الشغل المحاسبي لتوفير الوقت وتقليل الأخطاء.",
-    "ربط المعايير الدولية والمعرفة المحاسبية بالتطبيق العملي داخل الشركات.",
-    "تحويل الأرقام لتقارير وتحليلات تساعد في اتخاذ القرار.",
-    "تقديم محتوى عملي ومتجدد يناسب احتياجات سوق العمل."
-  ],
-
-  faq: [
-    { q: "محتاج خبرة قد إيه عشان أبدأ؟",
-      a: "الأكاديمية مناسبة لكل المستويات: حديث التخرج، والمحاسب اللي عايز يطوّر نفسه، وصاحب المنشأة اللي عايز يفهم حساباته. الفرق بس في نقطة البداية. {wa} وقولنا مستواك وهدفك، ونرشحلك الكورس المناسب." },
-    { q: "محتاج أي برامج على جهازي؟",
-      a: "محتاج Microsoft Excel على الكمبيوتر، ويُفضّل نسخة حديثة (2016 أو أحدث، أو Microsoft 365). لو هتدرس VBA وData Model يُفضّل نسخة Windows، لأن بعض الأدوات دي محدودة على Mac." },
-    { q: "إيه الفرق بين الكورسات؟",
-      a: "الكورس الأول بيبني النظام المحاسبي على Excel من الدليل للقوائم. الكورس الثاني بيطوّر النظام بـ Power Query وPivot Tables وVBA للأتمتة والتقارير. الكورس الثالث مركز على التحليل المالي والتقارير للإدارة. والدبلومة بتغطي الدورة المحاسبية كاملة بالتطبيقات ومعاها مشروع تخرج." },
-    { q: "التطبيق العملي بيكون إزاي؟",
-      a: "بنشتغل على حالة شركة واقعية: بتسجل العمليات، وتبني الملفات بنفسك خطوة بخطوة، لحد ما توصل للقوائم المالية والتقارير. كل كورس بينتهي بمخرج عملي واضح." },
-    { q: "مشروع التخرج في الدبلومة عبارة عن إيه؟",
-      a: "محاكاة دورة محاسبية متكاملة لشركة، من العمليات اليومية لحد القوائم المالية والتحليل. لتفاصيل المشروع وطريقة تقييمه {wa}." },
-    { q: "المواعيد وتفاصيل الاشتراك؟",
-      a: "مواعيد المجموعات وطريقة الدراسة وتفاصيل الاشتراك بتتحدد مع كل مجموعة جديدة. {wa} وهنبعتلك التفاصيل الحالية." },
-    { q: "فيه شهادة ودعم بعد الكورس؟",
-      a: "الكورسات برامج تدريبية عملية وليست اعتمادًا أكاديميًا أو مهنيًا رسميًا. لتفاصيل الشهادة ونوع الدعم والمتابعة المتاحة {wa}." }
-  ]
-};
-
-/* ======================= منطق الصفحة ======================= */
-(function(){
-  function waLink(course){
-    var msg = course ? CONTENT.courseMessage.replace("{course}", course) : CONTENT.generalMessage;
-    return "https://wa.me/" + CONTENT.whatsapp + "?text=" + encodeURIComponent(msg);
-  }
-  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
-  var chat = '<svg><use href="#i-chat"/></svg>';
-
-  // الكورسات
-  var list = document.getElementById("course-list");
-  list.innerHTML = CONTENT.courses.map(function(c){
-    var head = '<div><span class="tag">'+esc(c.tag)+'</span><h3>'+esc(c.title)+'</h3></div>'+
-      '<div class="meta">'+c.meta.map(function(m){return '<span>'+esc(m)+'</span>';}).join("")+'</div>';
-    var ul = '<ul>'+c.items.map(function(i){return '<li>'+esc(i)+'</li>';}).join("")+'</ul>';
-    var out = '<div class="outcome"><b>المخرج العملي</b>'+esc(c.outcome)+'</div>';
-    var btn = '<a class="btn btn-wa" href="'+waLink(c.title)+'" target="_blank" rel="noopener">'+chat+'استفسر عن '+(c.featured?'الدبلومة':'الكورس')+'</a>';
-    if (c.featured){
-      return '<article class="course featured"><div class="side">'+head+out+btn+(c.note?'<p class="note">'+esc(c.note)+'</p>':'')+'</div>'+ul+'</article>';
-    }
-    return '<article class="course">'+head+ul+out+btn+'</article>';
-  }).join("");
-
-  // لمين الأكاديمية
-  document.getElementById("aud-list").innerHTML = CONTENT.audience.map(function(a){
-    return '<article><span class="who">'+esc(a.who)+'</span><h3>'+esc(a.title)+'</h3><p>'+esc(a.text)+'</p><p class="start">نقطة البداية المقترحة: <b>'+esc(a.start)+'</b></p></article>';
-  }).join("");
+(async function () {
+  const esc = IK.esc;
+  const chat = '<svg><use href="#i-chat"/></svg>';
+  let S = { whatsapp: "201500069190", whatsapp_display: "01500069190" };
+  const waGeneral = () => IK.wa(S.whatsapp, IK.subText("السلام عليكم، عايز أعرف تفاصيل الكورسات في IK Academy."));
+  const waCourse = (t) => IK.wa(S.whatsapp, IK.subText("السلام عليكم، عايز أعرف تفاصيل كورس: " + t));
+  IK.source();
+  IK.track("home_view");
 
   // الخدمات
-  document.getElementById("service-list").innerHTML = CONTENT.services.map(function(s){
-    var link = "https://wa.me/" + CONTENT.whatsapp + "?text=" + encodeURIComponent(CONTENT.serviceMessage.replace("{service}", s.title));
-    return '<article class="service"><span class="k">'+esc(s.key)+'</span><h3>'+esc(s.title)+'</h3><p>'+esc(s.text)+'</p><ul>'+
-      s.items.map(function(i){return '<li>'+esc(i)+'</li>';}).join("")+'</ul><a class="btn btn-ghost" href="'+link+'" target="_blank" rel="noopener">'+chat+'اطلب الخدمة</a></article>';
-  }).join("");
-
-  // عن المحاضر
-  document.getElementById("about-facts").innerHTML = CONTENT.aboutFacts.map(function(f){return '<li>'+esc(f)+'</li>';}).join("");
-
-  // كلمة ليك + الأهداف
-  document.getElementById("letter").innerHTML = CONTENT.message.map(function(p){return '<p>'+esc(p)+'</p>';}).join("") +
-    '<p class="sign">'+esc(CONTENT.signature)+'<small>'+esc(CONTENT.signatureRole)+'</small></p>';
-  document.getElementById("goal-list").innerHTML = CONTENT.goals.map(function(g){return '<li>'+esc(g)+'</li>';}).join("");
-
-  // التاب النشط في القائمة حسب القسم الظاهر
-  // ملاحظة: بنحرك شريط التابات بس (scrollLeft)، ومبنستخدمش scrollIntoView لأنه كان بيوقف سكرول الصفحة على الموبايل
-  var nav = document.querySelector(".nav");
-  var links = Array.prototype.slice.call(nav.querySelectorAll("a"));
-  var current = null;
-  function setActive(id){
-    if (id === current) return;
-    current = id;
-    links.forEach(function(l){
-      var on = l.getAttribute("href") === "#" + id;
-      l.classList.toggle("active", on);
-      if (on && nav.scrollWidth > nav.clientWidth){
-        var lr = l.getBoundingClientRect(), nr = nav.getBoundingClientRect();
-        if (lr.left < nr.left || lr.right > nr.right) nav.scrollLeft += (lr.left + lr.width / 2) - (nr.left + nr.width / 2);
-      }
-    });
-  }
-  if ("IntersectionObserver" in window){
-    var io = new IntersectionObserver(function(entries){
-      entries.forEach(function(e){ if (e.isIntersecting) setActive(e.target.id); });
-    }, {rootMargin: "-45% 0px -50% 0px"});
-    links.forEach(function(l){ var s = document.querySelector(l.getAttribute("href")); if (s) io.observe(s); });
-  }
-
-  // الضغط على أي رابط داخلي (#...) : ننزل للقسم بنفسنا مع حساب ارتفاع الهيدر
-  var header = document.querySelector(".site-header");
-  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  document.addEventListener("click", function(ev){
-    var a = ev.target.closest && ev.target.closest('a[href^="#"]');
-    if (!a) return;
-    var id = a.getAttribute("href").slice(1);
-    var target = id === "top" ? document.body : document.getElementById(id);
-    if (!target) return;
-    ev.preventDefault();
-    var y = id === "top" ? 0 : target.getBoundingClientRect().top + window.pageYOffset - header.offsetHeight - 8;
-    window.scrollTo({ top: Math.max(0, y), behavior: reduce ? "auto" : "smooth" });
-    if (id !== "top") setActive(id);
-  });
+  const SERVICES = [
+    { key: "Excel Accounting Systems", title: "برنامج محاسبي على Excel على مقاس شغلك", text: "بدل البرامج الجاهزة اللي مش مناسبة لحجمك، بنعملك برنامج على Excel بيمشي زي ما شغلك ماشي.",
+      items: ["الدليل المحاسبي والقيود والأستاذ", "العملاء والموردين والمخزون", "التقارير والقوائم المالية"] },
+    { key: "Accounting Cycle Setup", title: "تنظيم الدورة المحاسبية", text: "من التسجيل اليومي لحد الإقفال والقوائم المالية، كل خطوة ليها ترتيب ومسؤول.",
+      items: ["تصميم الدليل المحاسبي", "خطوات التسجيل والترحيل", "التسويات والإقفال والتقارير"] },
+    { key: "Documentary Cycle", title: "إعداد الدورة المستندية", text: "كل عملية ليها مستند، وكل مستند ليه خط سير ومراجعة، فمفيش حاجة تضيع.",
+      items: ["دورة المبيعات والتحصيل", "دورة المشتريات والسداد", "دورة المخزون والخزينة"] },
+  ];
+  const renderServices = () => {
+    IK.$("#service-list").innerHTML = SERVICES.map((s) => `<article class="service"><span class="k">${esc(s.key)}</span><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p>
+      <ul>${s.items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
+      <a class="btn btn-ghost" target="_blank" rel="noopener" href="${IK.wa(S.whatsapp, "السلام عليكم، عايز أستفسر عن خدمة: " + s.title)}">${chat}اطلب الخدمة</a></article>`).join("");
+  };
 
   // الأسئلة الشائعة
-  var waInline = '<a href="'+waLink("")+'" target="_blank" rel="noopener">تواصل معنا على واتساب</a>';
-  document.getElementById("faq-list").innerHTML = CONTENT.faq.map(function(f,i){
-    return '<details'+(i===0?' open':'')+'><summary>'+esc(f.q)+'</summary><div class="ans">'+esc(f.a).replace("{wa}",waInline)+'</div></details>';
-  }).join("");
+  const FAQ = [
+    { q: "أبدأ منين لو أنا لسه مبتدئ خالص؟", a: "من أول الكورس، لأن كل حاجة فيه بتبدأ من الصفر وبالقصة. ولو محتار، {wa} وقولنا مستواك وهدفك، ونرشحلك تبدأ منين." },
+    { q: "أقدر أجرب قبل ما أدفع؟", a: "أكيد. فيه فصول مجانية في كل كورس تقدر تقراها كاملة. كل اللي هتعمله دخول سريع كزائر: اسمك ورقمك بس، من غير باسورد ومن غير أي فلوس." },
+    { q: "الدخول السريع كزائر ده اشتراك؟", a: "لأ خالص. ده بس علشان نعرف مين بيقرا ونبعتلك الملف اللي طلبته. مفيش فلوس ولا التزام، والرسايل التسويقية اختيارية وإنت اللي بتختارها." },
+    { q: "الاشتراك بيتم إزاي؟", a: "بتكلمنا على واتساب، وبعد الدفع بنعملك حساب على المنصة، وبيوصلك رابط تفعيل تختار منه الباسورد بنفسك. وبعدها تدخل تذاكر من أي جهاز." },
+    { q: "إيه هي مكتبة IK؟", a: "شيتات Excel وملفات عملية جاهزة في المحاسبة والبيزنس والـ HR. فيه ملفات مجانية تحملها على طول، وملفات متقدمة بتتفعل على حسابك بعد الاشتراك." },
+    { q: "النجاح في الامتحانات إزاي؟", a: "بعد كل وحدة فيه امتحان، والنجاح من 50% أو أكتر. المحاولات مفتوحة والأسئلة بتتغير كل مرة، وفي الآخر بتاخد شهادة إتمام باسمك وبكود تحقق." },
+    { q: "محتاج برامج معينة على جهازي؟", a: "الكورس نفسه بيتفتح من المتصفح على الموبايل أو الكمبيوتر. ولو هتشتغل على الشيتات، هتحتاج Excel (2016 أو أحدث، أو Microsoft 365)." },
+    { q: "الشهادة معتمدة؟", a: "دي شهادة إتمام لبرنامج تدريبي عملي، وليست اعتماد أكاديمي أو مهني رسمي. قيمتها الحقيقية في اللي هتعرف تعمله بإيدك. لأي تفاصيل تانية {wa}." },
+  ];
+  const renderFaq = () => {
+    const waInline = `<a href="${waGeneral()}" target="_blank" rel="noopener">كلمنا على واتساب</a>`;
+    IK.$("#faq-list").innerHTML = FAQ.map((f, i) => `<details${i === 0 ? " open" : ""}><summary>${esc(f.q)}</summary><div class="ans">${esc(f.a).replace("{wa}", waInline)}</div></details>`).join("");
+  };
 
-  // ===== الإحصائيات =====
-  var A = CONTENT.analytics || {};
-  function track(name, params){ try { if (window.gtag) window.gtag("event", name, params || {}); } catch(e){} }
-  if (A.ga4 && /^G-[A-Z0-9]+$/.test(A.ga4)){
-    var g = document.createElement("script"); g.async = true;
-    g.src = "https://www.googletagmanager.com/gtag/js?id=" + A.ga4; document.head.appendChild(g);
-    window.dataLayer = window.dataLayer || [];
-    window.gtag = function(){ window.dataLayer.push(arguments); };
-    window.gtag("js", new Date()); window.gtag("config", A.ga4);
+  // الكتالوج
+  let site = { courses: [], tracks: [], audiences: {}, free: [] };
+  let filter = "all";
+  const money = (n) => Number(n || 0).toLocaleString("en-US") + " جنيه";
+  const matches = (c) => filter === "all" || (filter === "tools" ? c.tools.length > 0 : c.audiences.includes(filter));
+  const card = (c) => {
+    const open = c.status === "open";
+    const p = (c.plans || []).find((x) => x.code === "basic") || (c.plans || [])[0];
+    const price = open && p && p.show_price ? `<p class="pr">${p.discounted ? "<s>" + money(p.price) + "</s>" : ""}<b>${money(p.final)}</b></p>` : "";
+    const units = open && c.levels ? `<p>${c.levels} ${((c.unit && c.unit.pl) || "المستويات").replace(/^ال/, "")} + امتحانات + شهادة</p>` : "";
+    const more = `<a class="btn ${open ? "btn-primary" : "btn-ghost"}" href="/course?c=${encodeURIComponent(c.slug)}">${open ? "شوف الكورس وجرّب مجاناً" : "شوف هيتشرح فيه إيه"}</a>`;
+    const notify = open ? "" : `<button class="btn btn-ghost js-notify" type="button" data-slug="${esc(c.slug)}" data-title="${esc(c.title)}">🔔 بلغني أول ما يفتح</button>`;
+    return `<article class="path ${open ? "open" : "soon"}"><span class="st">${open ? "متاح دلوقتي" : "قيد الافتتاح قريباً"}</span>
+      <h3>${esc(c.title)}</h3>${c.subtitle ? `<p>${esc(c.subtitle)}</p>` : ""}
+      ${c.outcome ? `<p class="outcome"><b>هتقدر تعمل إيه بعده؟</b>${esc(c.outcome)}</p>` : ""}
+      <div class="tags">${IK.tags(c.audiences, c.tools, site.audiences)}</div>${units}${price}
+      <div class="acts">${more}${notify}</div></article>`;
+  };
+  function renderCatalog() {
+    const box = IK.$("#tracks");
+    const known = new Set(site.tracks.map((t) => t.key));
+    const tracks = [...site.tracks];
+    // كورس قسمه اتمسح من الإعدادات بيظهر تحت "كورسات تانية"
+    if (site.courses.some((c) => !known.has(c.track))) tracks.push({ key: "__other", name: "كورسات تانية", desc: "" });
+    let shown = 0;
+    box.innerHTML = tracks.map((t) => {
+      const all = site.courses.filter((c) => (t.key === "__other" ? !known.has(c.track) : c.track === t.key));
+      const list = all.filter(matches);
+      shown += list.length;
+      if (!all.length) {
+        if (filter !== "all") return "";
+        return `<div class="track"><div class="track-h"><h3>${esc(t.name)}</h3>${t.desc ? `<p>${esc(t.desc)}</p>` : ""}</div>
+          <div class="paths"><article class="path ghost"><span class="st">قريباً</span><h3>القسم ده بيتجهز</h3>
+          <p>بنحضّر فيه كورسات وشيتات عملية. سيب رقمك وأول ما ينزل حاجة هنبلغك.</p>
+          <div class="acts"><button class="btn btn-ghost js-track" type="button" data-track="${esc(t.key)}">🔔 بلغني أول ما ينزل</button></div></article></div></div>`;
+      }
+      if (!list.length) return "";
+      return `<div class="track"><div class="track-h"><h3>${esc(t.name)}</h3>${t.desc ? `<p>${esc(t.desc)}</p>` : ""}</div><div class="paths">${list.map(card).join("")}</div></div>`;
+    }).join("");
+    if (!shown && filter !== "all") box.innerHTML = `<div class="no-match">لسه مفيش كورس مخصوص للهدف ده، بس بنجهزله. <a href="#contact">قولنا محتاج إيه</a> وهنبلغك أول ما ينزل.</div>`;
+    if (!site.courses.length && filter === "all" && !site.tracks.length) box.innerHTML = '<p class="muted">الكورسات هتنزل قريب.</p>';
   }
-  if (A.clarity && /^[a-z0-9]+$/i.test(A.clarity)){
-    (function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-      t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-      y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script",A.clarity);
-  }
-  if (A.ga4 || A.clarity) document.getElementById("analytics-note").hidden = false;
-
-  // كل ضغطة واتساب بتتسجل ومعاها اسم الكورس/الخدمة ومكان الزر
-  document.addEventListener("click", function(ev){
-    var a = ev.target.closest && ev.target.closest('a[href^="https://wa.me/"]');
-    if (!a) return;
-    var item = "عام";
-    try { var txt = new URL(a.href).searchParams.get("text") || ""; var m = txt.split(/:\s*/); if (m.length > 1) item = m.slice(1).join(":"); } catch(e){}
-    var sec = a.closest("section, header, footer");
-    track("whatsapp_click", { item: item, placement: a.classList.contains("fab") ? "floating" : (sec && (sec.id || sec.tagName.toLowerCase())) || "page" });
+  IK.$("#goal-chips").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-f]");
+    if (!b) return;
+    filter = b.dataset.f;
+    IK.$("#goal-chips").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    renderCatalog();
   });
-  // أي قسم الزائر وصله (مرة واحدة لكل قسم)
-  if ("IntersectionObserver" in window){
-    var seen = {};
-    var so = new IntersectionObserver(function(es){
-      es.forEach(function(e){ if (e.isIntersecting && !seen[e.target.id]){ seen[e.target.id] = 1; track("section_view", { section: e.target.id }); } });
-    }, { threshold: 0.35 });
-    document.querySelectorAll("main section[id]").forEach(function(s){ so.observe(s); });
+  // بلغني: دخول سريع كزائر، وبعدها بيتسجل طلبك على الكورس
+  IK.$("#tracks").addEventListener("click", async (e) => {
+    const n = e.target.closest(".js-notify"), t = e.target.closest(".js-track");
+    if (!n && !t) return;
+    const b = n || t;
+    const v = await IK.visitorGate(n ? { item: { kind: "notify", ref: n.dataset.slug }, title: "هنبلغك أول ما «" + n.dataset.title + "» يفتح", why: "نبعتلك أول ما الكورس يفتح" }
+      : { item: { kind: "contact", ref: "track-" + t.dataset.track }, title: "هنبلغك أول ما القسم ده ينزل", why: "نبعتلك أول ما ينزل كورسات أو شيتات جديدة" });
+    if (!v) return;
+    try {
+      if (n) await IK.api("/public/notify", { method: "POST", body: { slug: n.dataset.slug }, noRedirect: true });
+      b.textContent = "✓ تمام، هنبلغك أول ما يفتح";
+      b.disabled = true;
+    } catch (err) { alert(err.message); }
+  });
+
+  // الفصول المجانية
+  function renderFree() {
+    const list = (site.free || []).slice(0, 9);
+    IK.$("#free").hidden = !list.length;
+    IK.$("#free-list").innerHTML = list.map((f) => `<a class="free-item" href="/course?c=${encodeURIComponent(f.slug)}&try=${f.id}">
+      <small>🎁 ${esc(f.course)}</small><b>${esc(f.title)}</b><span>${f.pages} صفحة · افتحه واقرا ببلاش</span></a>`).join("");
   }
 
-  // ===== فورم تسجيل الاهتمام =====
-  var form = document.getElementById("lead-form");
-  var interest = document.getElementById("lead-interest");
-  interest.innerHTML = '<option>استفسار عام</option>' +
-    CONTENT.courses.map(function(c){ return '<option>'+esc(c.title)+'</option>'; }).join("") +
-    CONTENT.services.map(function(s){ return '<option>خدمة: '+esc(s.title)+'</option>'; }).join("");
-  // مصدر الزيارة (فيسبوك، واتساب، ...) علشان تعرف الطالب جه منين
-  try {
-    var q = new URLSearchParams(location.search);
-    document.getElementById("lead-source").value = q.get("utm_source") || (document.referrer ? new URL(document.referrer).hostname : "مباشر");
-  } catch(e){}
-  var statusEl = document.getElementById("lead-status"), submitBtn = document.getElementById("lead-submit");
-  function showStatus(kind, html){ statusEl.className = "status " + kind; statusEl.innerHTML = html; statusEl.hidden = false; }
-  function fieldErr(input, errId, bad){ input.setAttribute("aria-invalid", bad ? "true" : "false"); document.getElementById(errId).hidden = !bad; }
-  var waFallback = '<a href="'+waLink("")+'" target="_blank" rel="noopener">ابعتلنا على واتساب</a>';
-  form.addEventListener("submit", function(ev){
+  // المكتبة
+  async function renderLibrary() {
+    let files = [];
+    try { files = (await IK.api("/public/library", { noRedirect: true })).files; } catch (e) {}
+    const pick = files.filter((f) => f.access === "free").concat(files.filter((f) => f.access !== "free")).slice(0, 3);
+    IK.$("#library").hidden = !pick.length;
+    IK.$("#lib-list").innerHTML = pick.map((f) => `<a href="/library#f${f.id}"><span>${f.access === "free" ? "🎁 مجاني" : f.access === "paid" ? "💎 مدفوع" : "🎓 للمشتركين"}${f.ext ? " · " + esc(f.ext.toUpperCase()) : ""}</span>
+      <b>${esc(f.title)}</b>${f.description ? `<span>${esc(f.description.slice(0, 110))}</span>` : ""}</a>`).join("");
+  }
+
+  // التواصل
+  const sel = IK.$("#course-select"), pick = IK.$("#pick-btn");
+  const syncPick = () => { pick.href = sel.value ? waCourse(sel.value) : waGeneral(); };
+  sel.addEventListener("change", syncPick);
+  pick.addEventListener("click", () => IK.subClick(""));
+  IK.$("#copy-btn").addEventListener("click", () => {
+    const num = IK.$("#phone-num"), copy = IK.$("#copy-btn");
+    const selectIt = () => { const r = document.createRange(); r.selectNodeContents(num); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
+    try { navigator.clipboard.writeText(num.textContent).then(() => { copy.textContent = "اتنسخ"; setTimeout(() => (copy.textContent = "نسخ"), 1800); }, selectIt); } catch (e) { selectIt(); }
+  });
+  IK.$("#lead-form").addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    var nameI = document.getElementById("lead-name"), phoneI = document.getElementById("lead-phone");
-    var phone = phoneI.value.replace(/[\s\-()]/g, "").replace(/[٠-٩]/g, function(d){ return "٠١٢٣٤٥٦٧٨٩".indexOf(d); });
-    var okName = nameI.value.trim().length >= 2, okPhone = /^\+?\d{10,15}$/.test(phone);
-    fieldErr(nameI, "lead-name-err", !okName); fieldErr(phoneI, "lead-phone-err", !okPhone);
-    if (!okName){ nameI.focus(); return; } if (!okPhone){ phoneI.focus(); return; }
-    phoneI.value = phone;
-    // الاستقبال شغال على نسخة Netlify بس (أو الدومين اللي تكتبه في CONTENT.formHost)
-    var live = /\.netlify\.app$/.test(location.hostname) || (CONTENT.formHost && location.hostname === CONTENT.formHost);
-    if (!live){ showStatus("bad", "استقبال البيانات شغال على النسخة المنشورة من الموقع بس. لحد ما تتواصل معانا، " + waFallback + "."); return; }
-    submitBtn.disabled = true; submitBtn.textContent = "جاري الإرسال...";
-    fetch("/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(new FormData(form)).toString() })
-      .then(function(r){
-        if (!r.ok) throw new Error(r.status);
-        track("lead_submit", { interest: interest.value, segment: document.getElementById("lead-segment").value });
-        form.reset(); showStatus("ok", "وصلتنا بياناتك، وهنتواصل معاك قريب على الرقم اللي كتبته.");
-      })
-      .catch(function(){ showStatus("bad", "البيانات موصلتش بسبب مشكلة في الاتصال. جرّب تاني، أو " + waFallback + "."); })
-      .then(function(){ submitBtn.disabled = false; submitBtn.textContent = "ابعت بياناتي"; });
+    const st = IK.$("#lead-status"), go = IK.$("#lead-submit");
+    go.disabled = true;
+    const src = IK.source();
+    try {
+      const r = await IK.api("/public/visitor", { method: "POST", noRedirect: true, body: {
+        name: IK.$("#lead-name").value, phone: IK.$("#lead-phone").value,
+        service: IK.$("#lead-service").checked, marketing: IK.$("#lead-mkt").checked,
+        source: src.src, utm: src.utm, landing: src.landing, item: { kind: "contact", ref: IK.$("#lead-interest").value },
+      } });
+      IK.showVisitor(r.visitor);
+      IK.$("#lead-form").reset();
+      IK.status(st, "ok", "وصلتنا بياناتك يا " + r.visitor.name.split(" ")[0] + "، وهنكلمك قريب على واتساب إن شاء الله.");
+    } catch (e) { IK.status(st, "bad", e.message); }
+    go.disabled = false;
   });
 
   // روابط واتساب العامة
-  document.querySelectorAll(".js-wa").forEach(function(a){ a.href = waLink(a.getAttribute("data-course")); });
+  const syncWa = () => document.querySelectorAll(".js-wa").forEach((a) => { a.href = waGeneral(); });
+  document.addEventListener("click", (e) => { if (e.target.closest(".js-wa")) IK.subClick(""); });
 
-  // اختيار الكورس في قسم التواصل
-  var sel = document.getElementById("course-select"), pick = document.getElementById("pick-btn");
-  sel.innerHTML = '<option value="">استفسار عام</option>' + CONTENT.courses.map(function(c){return '<option>'+esc(c.title)+'</option>';}).join("");
-  function syncPick(){ pick.href = waLink(sel.value); }
-  sel.addEventListener("change", syncPick); syncPick();
-
-  // الرقم + زر النسخ
-  var num = document.getElementById("phone-num"), copy = document.getElementById("copy-btn");
-  num.textContent = CONTENT.phoneDisplay;
-  copy.addEventListener("click", function(){
-    function selectIt(){ var r=document.createRange(); r.selectNodeContents(num); var s=getSelection(); s.removeAllRanges(); s.addRange(r); }
-    try {
-      navigator.clipboard.writeText(CONTENT.phoneDisplay).then(function(){ copy.textContent="تم النسخ"; setTimeout(function(){copy.textContent="نسخ";},1800); }, selectIt);
-    } catch(e){ selectIt(); }
-  });
-
-  // عداد الزيارات في تاب الإحصائيات بلوحة الأدمن
-  function count(kind, ref){
-    var data = new Blob([JSON.stringify({ kind: kind, ref: ref || "" })], { type: "application/json" });
-    try { if (navigator.sendBeacon && navigator.sendBeacon("/api/public/track", data)) return; } catch(e){}
-    fetch("/api/public/track", { method: "POST", body: data, headers: { "content-type": "application/json" }, keepalive: true }).catch(function(){});
+  // التاب النشط في القائمة حسب القسم الظاهر
+  const nav = document.querySelector(".nav");
+  const links = [...nav.querySelectorAll('a[href^="#"]')];
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver((es) => es.forEach((e) => {
+      if (!e.isIntersecting) return;
+      links.forEach((l) => {
+        const on = l.getAttribute("href") === "#" + e.target.id;
+        l.classList.toggle("active", on);
+        if (on && nav.scrollWidth > nav.clientWidth) {
+          const lr = l.getBoundingClientRect(), nr = nav.getBoundingClientRect();
+          if (lr.left < nr.left || lr.right > nr.right) nav.scrollLeft += (lr.left + lr.width / 2) - (nr.left + nr.width / 2);
+        }
+      });
+    }), { rootMargin: "-45% 0px -50% 0px" });
+    links.forEach((l) => { const s = document.querySelector(l.getAttribute("href")); if (s) io.observe(s); });
   }
-  count("home_view");
-  document.getElementById("path-list").addEventListener("click", function(e){
-    var a = e.target.closest(".js-notify");
-    if (a) count("wa_notify", a.getAttribute("data-slug"));
-  });
 
-  // ===== مسارات المنصة (من لوحة الأدمن) =====
-  fetch("/api/public/site").then(function(r){ return r.json(); }).then(function(d){
-    var st = d.settings || {};
-    if (st.whatsapp) CONTENT.whatsapp = st.whatsapp;
-    if (st.footer_line1) document.getElementById("foot-1").textContent = st.footer_line1;
-    if (st.footer_line2) document.getElementById("foot-2").textContent = st.footer_line2;
-    var money = function(n){ return Number(n||0).toLocaleString("en-US") + " جنيه"; };
-    document.getElementById("path-list").innerHTML = (d.courses || []).map(function(c){
-      var open = c.status === "open";
-      var p = (c.plans || []).filter(function(x){ return x.code === "basic"; })[0] || (c.plans || [])[0];
-      var price = open && p && p.show_price ? '<p class="pr">' + (p.discounted ? '<s>' + money(p.price) + '</s>' : '') + '<b>' + money(p.final) + '</b></p>' : '';
-      var more = '<a class="btn ' + (open ? 'btn-primary' : 'btn-ghost') + '" href="/course?c=' + encodeURIComponent(c.slug) + '">' + (open ? 'تفاصيل الكورس' : 'شوف المحتوى') + '</a>';
-      var btn = open ? more
-        : more + '<a class="btn btn-ghost js-notify" data-slug="' + esc(c.slug) + '" target="_blank" rel="noopener" href="https://wa.me/' + CONTENT.whatsapp + '?text=' + encodeURIComponent((st.notify_message || "").replace("{course}", c.title)) + '">' + chat + 'بلغني أول ما يفتح</a>';
-      return '<article class="path ' + (open ? 'open' : 'soon') + '"><span class="st">' + (open ? 'متاح الآن' : 'قيد الافتتاح قريباً') + '</span><h3>' + esc(c.title) + '</h3>' +
-        (c.subtitle ? '<p>' + esc(c.subtitle) + '</p>' : '') + (open && c.levels ? '<p>' + c.levels + ' ' + ((c.unit && c.unit.pl) || 'المستويات').replace(/^ال/, '') + ' + امتحانات + شهادة</p>' : '') + price + btn + '</article>';
-    }).join("") || '<p class="muted">المسارات هتنزل قريب.</p>';
-    document.querySelectorAll(".js-wa").forEach(function(a){ a.href = waLink(a.getAttribute("data-course")); });
-    syncPick();
-  }).catch(function(){ document.getElementById("path-list").innerHTML = '<p>تقدر <a href="/login">تدخل المنصة من هنا</a>.</p>'; });
+  renderServices(); renderFaq(); syncWa(); syncPick();
+  IK.visitor().then(IK.showVisitor);
+  try { const me = await IK.api("/auth/me", { noRedirect: true }); const lb = IK.$("#login-btn"); lb.textContent = me.role === "admin" ? "لوحة الأدمن" : "كورساتي"; lb.href = me.role === "admin" ? "/admin" : "/dashboard"; } catch (e) {}
+
+  site = await IK.site();
+  S = { ...S, ...Object.fromEntries(Object.entries(site.settings || {}).filter(([, v]) => v)) };
+  site.courses = site.courses || []; site.tracks = site.tracks || [];
+  if (S.brand_name) IK.$("#brand-name").textContent = S.brand_name;
+  if (S.brand_by) IK.$("#brand-by").textContent = S.brand_by;
+  if (S.footer_line1) IK.$("#foot-1").textContent = S.footer_line1;
+  if (S.footer_line2) IK.$("#foot-2").textContent = S.footer_line2;
+  IK.$("#phone-num").textContent = S.whatsapp_display || ("0" + String(S.whatsapp).replace(/^20/, ""));
+  sel.innerHTML = '<option value="">استفسار عام</option>' + site.courses.map((c) => `<option>${esc(c.title)}</option>`).join("");
+  IK.$("#lead-interest").innerHTML = '<option value="general">استفسار عام</option>' + site.courses.map((c) => `<option value="${esc(c.slug)}">${esc(c.title)}</option>`).join("") + '<option value="services">خدمات للشركات</option>';
+  renderCatalog(); renderFree(); renderServices(); renderFaq(); syncWa(); syncPick();
+  renderLibrary();
 })();
 </script>
-
-</body></html>
+</body>
+</html>

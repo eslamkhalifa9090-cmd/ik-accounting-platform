@@ -1,4 +1,4 @@
-// لوحة الأدمن: المتدربين، الكورسات والأسعار، المادة العلمية، الامتحانات، الإعدادات
+// لوحة الأدمن: المتدربين، الكورسات والأسعار، المادة العلمية، الامتحانات، مكتبة IK، الزوار، الإحصائيات، الإعدادات
 (async function () {
   const { esc, $, api } = IK;
   const me = await IK.requireUser({ admin: true });
@@ -7,12 +7,22 @@
   let courses = [];
   const loadCourses = async () => (courses = await api("/admin/courses"));
   await loadCourses();
+  let adminSettings = {};
+  try { adminSettings = await api("/admin/settings"); } catch (e) {}
 
   const toast = (el, kind, msg) => IK.status(el, kind, msg);
   const opt = (v, label, sel) => `<option value="${esc(v)}"${String(v) === String(sel) ? " selected" : ""}>${esc(label)}</option>`;
   const courseOptions = (sel, withEmpty) => (withEmpty ? opt("", "— من غير كورس —", sel) : "") + courses.map((c) => opt(c.slug, c.title, sel)).join("");
-  const genPass = () => String(Math.floor(100000 + crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
   const intlPhone = (p) => (p ? (p.startsWith("0") ? "20" + p.slice(1) : p) : "");
+  const tracks = () => site.tracks || [];
+  const trackName = (k) => (tracks().find((t) => t.key === k) || {}).name || k;
+  const AUD = site.audiences || { accountant: "محاسب / خريج", business: "صاحب بيزنس", hr: "HR" };
+  const audChecks = (sel) => Object.entries(AUD).map(([k, v]) => `<label class="check" style="display:inline-flex;margin-inline-end:14px"><input type="checkbox" name="audiences" value="${k}"${(sel || []).includes(k) ? " checked" : ""}> ${esc(v)}</label>`).join("");
+  const SOURCES = ["facebook", "whatsapp", "instagram", "google", "youtube", "tiktok", "telegram", "linkedin", "friend", "direct"];
+  const SRC_AR = { facebook: "فيسبوك", whatsapp: "واتساب", instagram: "إنستجرام", google: "جوجل", youtube: "يوتيوب", tiktok: "تيك توك", telegram: "تليجرام", linkedin: "لينكدإن", friend: "ترشيح من صاحبه", direct: "مباشر" };
+  const srcLabel = (s) => (s ? SRC_AR[s] || s : "—");
+  const srcOptions = (sel) => opt("", "— مش معروف (أو من الزائر بنفس الرقم) —", sel || "") + SOURCES.map((s) => opt(s, SRC_AR[s], sel)).join("") +
+    (sel && !SOURCES.includes(sel) ? opt(sel, sel, sel) : "");
 
   async function stats() {
     const o = await api("/admin/overview");
@@ -29,7 +39,7 @@
           <div class="field"><label>الاسم</label><input name="name" required></div>
           <div class="field"><label>رقم التليفون <small>(يدخل بيه)</small></label><input name="phone" dir="ltr" placeholder="01xxxxxxxxx"></div>
           <div class="field"><label>الميل <small>(اختياري، يدخل بيه برضه)</small></label><input name="email" dir="ltr"></div>
-          <div class="field"><label>الباسورد المبدئي</label><div class="row"><input name="password" dir="ltr" style="flex:1" value="${genPass()}"><button class="btn btn-ghost btn-sm" type="button" id="gen">باسورد جديد</button></div></div>
+          <div class="field"><label>جه منين؟ <small>(لو كان زائر بنفس الرقم بيتملا لوحده)</small></label><select name="source">${srcOptions("")}</select></div>
           <div class="field"><label>الكورس</label><select name="course_slug">${courseOptions("financial", true)}</select></div>
           <div class="field"><label>الباقة</label><select name="plan_code">${opt("basic", "الأساسية (PDF)")}${opt("pro", "Pro (PDF + فيديو)")}</select></div>
           <div class="field"><label>الاشتراك ينتهي في <small>(فاضي = مفتوح)</small></label><input name="expires_at" type="date"></div>
@@ -47,15 +57,14 @@
         <div id="edit" style="margin-top:16px"></div>
       </div>`;
     const f = $("#add");
-    $("#gen").onclick = () => (f.password.value = genPass());
     f.addEventListener("submit", async (e) => {
       e.preventDefault();
       const b = Object.fromEntries(new FormData(f));
       try {
-        await api("/admin/students", { method: "POST", body: b });
-        toast($("#add-st"), "ok", "اتضاف المتدرب " + b.name + ".");
-        showWelcome(b);
-        f.reset(); f.password.value = genPass(); f.course_slug.value = "financial";
+        const r = await api("/admin/students", { method: "POST", body: b });
+        toast($("#add-st"), "ok", "اتضاف المتدرب " + b.name + (r.source ? " · المصدر: " + srcLabel(r.source) : "") + ".");
+        await showActivation({ id: r.id, name: b.name, phone: b.phone, email: b.email }, b.course_slug, $("#welcome"));
+        f.reset(); f.course_slug.value = "financial";
         load(); stats();
       } catch (err) { toast($("#add-st"), "bad", err.message); }
     });
@@ -64,18 +73,21 @@
     await load();
   }
 
-  function showWelcome(b) {
+  // رسالة الترحيب: فيها رابط تفعيل لمرة واحدة (48 ساعة) والمتدرب بيختار الباسورد بنفسه، ومفيش باسورد مكشوف في أي رسالة
+  async function showActivation(u, courseSlug, w) {
     const s = site.settings;
-    const login = location.origin + "/login";
-    const id = b.phone || b.email;
-    const course = courses.find((c) => c.slug === b.course_slug);
-    const msg = `أهلاً يا ${b.name}، تم تفعيل حسابك على منصة ${s.brand_name}${course ? " في كورس " + course.title : ""}.\n\nرابط الدخول: ${login}\nبتدخل بـ: ${id}\nالباسورد: ${b.password}\n\nأول ما تدخل هيطلب منك تغير الباسورد.\n\n${s.footer_line1}\n${s.footer_line2}`;
-    const w = $("#welcome");
+    const r = await api(`/admin/students/${u.id}/activation`, { method: "POST" });
+    const course = courses.find((c) => c.slug === courseSlug);
+    const tpl = adminSettings.activation_message || "أهلاً يا {name} 👋\nحسابك على {brand} اتعمل{course}.\n\nافتح الرابط ده واختار الباسورد بتاعك بنفسك (الرابط شغال 48 ساعة ولمرة واحدة):\n{link}\n\nوبعد كده هتدخل من {login} برقمك ({id}) والباسورد اللي اخترته.\nمستنيينك 🌟";
+    const msg = IK.fill(tpl, { name: u.name.split(" ")[0], brand: s.brand_name || "IK Academy", course: course ? " في كورس " + course.title : "", link: r.link,
+      login: location.origin + "/login", id: u.phone || u.email || "" });
     w.hidden = false;
-    w.innerHTML = `<h3>رسالة الترحيب للمتدرب</h3><pre style="white-space:pre-wrap;font:inherit;margin:10px 0">${esc(msg)}</pre>
-      <div class="row">${b.phone ? `<a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="${IK.wa(intlPhone(IK.toPhone(b.phone)), msg)}">${IK.chatIcon}ابعتها على واتساب المتدرب</a>` : ""}
-      <button class="btn btn-ghost btn-sm" type="button" id="copy-w">نسخ الرسالة</button></div>`;
-    $("#copy-w").onclick = () => navigator.clipboard.writeText(msg).then(() => ($("#copy-w").textContent = "اتنسخت"));
+    w.innerHTML = `<h3>رسالة التفعيل للمتدرب</h3><p class="muted" style="font-size:13px">الرابط شغال لحد ${esc(new Date(r.expires_at).toLocaleString("ar-EG"))} ولمرة واحدة. لو اتأخر، اعمله رابط جديد من "تعديل".</p>
+      <pre style="white-space:pre-wrap;font:inherit;margin:10px 0">${esc(msg)}</pre>
+      <div class="row">${u.phone ? `<a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="${IK.wa(intlPhone(IK.toPhone(u.phone)), msg)}">${IK.chatIcon}ابعتها على واتساب المتدرب</a>` : ""}
+      <button class="btn btn-ghost btn-sm js-copy-w" type="button">نسخ الرسالة</button></div>`;
+    const cp = w.querySelector(".js-copy-w");
+    cp.onclick = () => navigator.clipboard.writeText(msg).then(() => (cp.textContent = "اتنسخت"));
   }
   IK.toPhone = (p) => String(p || "").replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g, "");
 
@@ -83,10 +95,10 @@
     const list = await api("/admin/students?q=" + encodeURIComponent(($("#q") || {}).value || ""));
     $("#rows").innerHTML = list.map((u) => `
       <tr>
-        <td><b>${esc(u.name)}</b>${u.notes ? `<br><small class="muted">${esc(u.notes)}</small>` : ""}</td>
+        <td><b>${esc(u.name)}</b>${u.source ? ` <span class="badge">${esc(srcLabel(u.source))}</span>` : ""}${u.notes ? `<br><small class="muted">${esc(u.notes)}</small>` : ""}</td>
         <td class="num">${esc(u.phone || "")}${u.phone && u.email ? "<br>" : ""}${esc(u.email || "")}</td>
         <td>${u.enrollments.map((e) => `<span class="badge ${e.plan_code === "pro" ? "gold" : ""}">${esc(e.title)}${e.expires_at ? " · لحد " + esc(e.expires_at) : ""}</span>`).join(" ") || '<span class="muted">—</span>'}</td>
-        <td>${u.active ? '<span class="badge ok">نشط</span>' : '<span class="badge bad">موقوف</span>'}${u.must_change ? '<br><small class="muted">لسه ما غيرش الباسورد</small>' : ""}</td>
+        <td>${u.active ? '<span class="badge ok">نشط</span>' : '<span class="badge bad">موقوف</span>'}${u.must_change ? '<br><small class="muted">لسه ما فعّلش حسابه</small>' : ""}</td>
         <td class="num"><small>${esc(u.last_login || "لسه ما دخلش")}</small></td>
         <td><div class="row"><button class="btn btn-ghost btn-sm" data-act="edit" data-id="${u.id}" type="button">تعديل</button>
           <button class="btn btn-ghost btn-sm" data-act="report" data-id="${u.id}" type="button">التقدم</button></div></td>
@@ -99,7 +111,9 @@
     };
   }
 
-  function editStudent(u) {
+  let libFiles = [];
+  async function editStudent(u) {
+    try { libFiles = await api("/admin/library"); } catch (e) { libFiles = []; }
     const box = $("#edit");
     const today = new Date().toISOString().slice(0, 10);
     const free = courses.filter((c) => !u.enrollments.some((e) => e.slug === c.slug));
@@ -110,10 +124,15 @@
         <div class="field"><label>رقم التليفون</label><input name="phone" dir="ltr" value="${esc(u.phone || "")}"></div>
         <div class="field"><label>الميل</label><input name="email" dir="ltr" value="${esc(u.email || "")}"></div>
         <div class="field"><label>ملاحظات</label><input name="notes" value="${esc(u.notes || "")}"></div>
-        <div class="field"><label>باسورد جديد <small>(فاضي = من غير تغيير)</small></label><input name="password" dir="ltr"></div>
+        <div class="field"><label>جه منين؟</label><select name="source">${srcOptions(u.source)}</select></div>
         <label class="check"><input type="checkbox" name="active" ${u.active ? "checked" : ""}> الحساب نشط</label>
-        <div class="full row"><button class="btn btn-primary" type="submit">حفظ البيانات</button></div>
+        <div class="full row"><button class="btn btn-primary" type="submit">حفظ البيانات</button>
+          <button class="btn btn-wa" type="button" id="act">${IK.chatIcon}ابعت رابط تفعيل / نسيت الباسورد</button></div>
       </form>
+      <div id="act-box" class="card" style="margin-top:12px;background:var(--paper)" hidden></div>
+      ${libFiles.filter((f) => f.access === "paid").length ? `<h3 style="margin-top:20px">ملفات مدفوعة من مكتبة IK</h3>
+      <p class="muted">علّم على الملف اللي المتدرب دفع تمنه، وهيقدر يحمّله على طول من المكتبة أو من صفحة "كورساتي".</p>
+      <div class="stack" style="margin-top:8px;gap:6px">${libFiles.filter((f) => f.access === "paid").map((f) => `<label class="check"><input type="checkbox" class="js-grant" value="${f.id}"${(u.files || []).includes(f.id) ? " checked" : ""}> ${esc(f.title)}${f.price ? ` <span class="muted">(${IK.money(f.price)})</span>` : ""}</label>`).join("")}</div>` : ""}
       <h3 style="margin-top:20px">الكورسات المشترك فيها (${u.enrollments.length})</h3>
       <p class="muted">نفس اليوزر والباسورد بيدخل بيهم على كل الكورسات، وكل كورس ليه باقته وتاريخ انتهائه لوحده.</p>
       ${u.enrollments.length ? `<div class="table-wrap" style="margin-top:8px"><table class="t" id="enr-t"><thead><tr><th>الكورس</th><th>الباقة</th><th>ينتهي في</th><th>الحالة</th><th></th></tr></thead><tbody>
@@ -143,14 +162,22 @@
       e.preventDefault();
       const b = Object.fromEntries(new FormData(e.target));
       b.active = e.target.active.checked;
-      if (!b.password) delete b.password;
       try {
         await api("/admin/students/" + u.id, { method: "PATCH", body: b });
-        toast(st, "ok", "اتحفظ." + (b.password ? " ابعت الباسورد الجديد للمتدرب." : ""));
-        if (b.password) showWelcomeInline(u, b);
+        toast(st, "ok", "اتحفظ.");
         load();
       } catch (err) { toast(st, "bad", err.message); }
     };
+    $("#act").onclick = async () => {
+      try { await showActivation(u, u.enrollments[0] && u.enrollments[0].slug, $("#act-box")); } catch (err) { toast(st, "bad", err.message); }
+    };
+    box.querySelectorAll(".js-grant").forEach((c) => (c.onchange = async () => {
+      try {
+        await api(`/admin/students/${u.id}/library/${c.value}`, { method: c.checked ? "PUT" : "DELETE" });
+        u.files = c.checked ? [...(u.files || []), Number(c.value)] : (u.files || []).filter((x) => x !== Number(c.value));
+        toast(st, "ok", c.checked ? "الملف اتفعل للمتدرب." : "الملف اتشال من المتدرب.");
+      } catch (err) { c.checked = !c.checked; toast(st, "bad", err.message); }
+    }));
     // بعد أي تغيير في الاشتراكات: نجيب بيانات المتدرب من جديد ونرسم الكارت تاني
     const reopen = async (msg) => {
       load(); stats();
@@ -192,13 +219,6 @@
       box.innerHTML = ""; load(); stats();
     };
   }
-  function showWelcomeInline(u, b) {
-    const s = site.settings;
-    const msg = `أهلاً يا ${b.name || u.name}، باسورد منصة ${s.brand_name} الجديد: ${b.password}\nرابط الدخول: ${location.origin}/login`;
-    const p = IK.toPhone(b.phone || u.phone);
-    if (p) $("#e-st").insertAdjacentHTML("beforeend", ` <a target="_blank" rel="noopener" href="${IK.wa(intlPhone(p), msg)}">ابعته على واتساب</a>`);
-  }
-
   async function report(u) {
     const box = $("#edit");
     box.innerHTML = '<div class="loading">جاري التحميل...</div>';
@@ -226,7 +246,12 @@
           <div class="field"><label>الحالة</label><select name="status">${opt("open", "متاح للاشتراك", c.status)}${opt("soon", "قيد الافتتاح قريباً", c.status)}${opt("hidden", "مخفي", c.status)}</select></div>
           <div class="field full"><label>سطر تعريفي</label><input name="subtitle" value="${esc(c.subtitle || "")}"></div>
           <div class="field full"><label>المقدمة (النبذة)</label><textarea name="intro" rows="4">${esc(c.intro || "")}</textarea></div>
-          <div class="field full"><label>الكورس لمين؟</label><input name="audience" value="${esc(c.audience || "")}"></div>
+          <div class="field full"><label>الكورس لمين؟ <small>(جملة بتظهر في صفحة الكورس)</small></label><input name="audience" value="${esc(c.audience || "")}"></div>
+          <div class="field"><label>القسم</label><select name="track">${tracks().map((t) => opt(t.key, t.name, c.track)).join("")}${tracks().some((t) => t.key === c.track) ? "" : opt(c.track, c.track, c.track)}</select></div>
+          <div class="field"><label>الأدوات <small>(مفصولة بفاصلة، زي Excel, Power BI)</small></label><input name="tools" value="${esc(c.tools || "")}"></div>
+          <div class="field full"><label>مناسب لـ <small>(بيستخدم في فلتر "عايز تحقق إيه؟")</small></label><div>${audChecks(String(c.audiences || "").split(","))}</div></div>
+          <div class="field full"><label>هتقدر تعمل إيه بعده؟ <small>(سطر واحد بيظهر على كارت الكورس)</small></label><input name="outcome" value="${esc(c.outcome || "")}" placeholder="مثلاً: تمسك دورة محاسبية كاملة لشركة تجارية لحد القوائم المالية"></div>
+          <div class="field full"><label>وصف جوجل <small>(لحد 160 حرف، بيظهر في نتايج البحث ولما الرابط يتبعت)</small></label><textarea name="seo_desc" rows="2" maxlength="300">${esc(c.seo_desc || "")}</textarea></div>
           <div class="field"><label>الترتيب</label><input name="sort" type="number" value="${c.sort}"></div>
           <div class="field"><label>اسم التقسيم <small>(بيظهر للمتدرب في كل الصفحات وعناوين الامتحانات)</small></label>
             <select name="unit">${opt("level", "مستويات (المستوى 1، 2 ...)", c.unit.key)}${opt("unit", "وحدات (الوحدة 1، 2 ...)", c.unit.key)}${opt("module", "موديولات (الموديول 1، 2 ...)", c.unit.key)}</select></div>
@@ -273,7 +298,10 @@
     const note = (form, kind, msg) => { const s = form.querySelector(".status"); IK.status(s, kind, msg); setTimeout(() => (s.hidden = true), 2500); };
     panel.querySelectorAll(".js-course").forEach((f) => (f.onsubmit = async (e) => {
       e.preventDefault();
-      try { await api("/admin/courses/" + f.closest("[data-course]").dataset.course, { method: "PATCH", body: Object.fromEntries(new FormData(f)) }); await loadCourses(); coursesTab(); }
+      const fd = new FormData(f);
+      const b = Object.fromEntries(fd);
+      b.audiences = fd.getAll("audiences");
+      try { await api("/admin/courses/" + f.closest("[data-course]").dataset.course, { method: "PATCH", body: b }); await loadCourses(); coursesTab(); }
       catch (err) { note(f, "bad", err.message); }
     }));
     panel.querySelectorAll(".js-plan").forEach((f) => (f.onsubmit = async (e) => {
@@ -497,12 +525,12 @@
     panel.innerHTML = `
       <div class="row" style="margin-bottom:16px"><div class="field"><label>الكورس</label><select id="pc">${courseOptions(c.slug)}</select></div></div>
       <div class="card"><h2>امتحانات الكورس</h2>
-        <div class="table-wrap" style="margin-top:12px"><table class="t"><thead><tr><th>الامتحان</th><th>بعد ${esc(c.unit.the)}</th><th>أسئلة في كل محاولة</th><th>النجاح بأكتر من %</th><th>المدة (دقيقة)</th><th>بنك الأسئلة</th><th></th></tr></thead><tbody>
+        <div class="table-wrap" style="margin-top:12px"><table class="t"><thead><tr><th>الامتحان</th><th>بعد ${esc(c.unit.the)}</th><th>أسئلة في كل محاولة</th><th>النجاح من % أو أكتر</th><th>المدة (دقيقة)</th><th>بنك الأسئلة</th><th></th></tr></thead><tbody>
         ${exams.map((e) => `<tr data-ex="${e.id}"${String(e.id) === String(examPick) ? ' style="background:#FBF7EE"' : ""}>
           <td><input class="js-t" value="${esc(e.title)}" style="font:inherit;width:100%;border:1px solid var(--line);border-radius:6px;padding:4px 8px"></td>
           <td>${e.after_level}${e.kind === "cumulative" ? ' <span class="badge gold">تراكمي</span>' : ""}</td>
           <td><input class="js-c num" type="number" min="1" value="${e.question_count}" style="width:70px"></td>
-          <td><input class="js-p num" type="number" min="0" max="99" value="${e.pass_pct}" style="width:70px"></td>
+          <td><input class="js-p num" type="number" min="0" max="100" value="${e.pass_pct}" style="width:70px"></td>
           <td><span class="stepper"><button type="button" class="js-dm" aria-label="أقل">−</button><input class="js-d num" type="number" min="0" max="300" value="${e.duration_min ?? 15}"><button type="button" class="js-dp" aria-label="أكتر">+</button></span></td>
           <td>${e.bank ? `<span class="badge ok">${e.bank} سؤال</span>` : '<span class="badge bad">فاضي</span>'}</td>
           <td><div class="row"><button class="btn btn-ghost btn-sm js-save" type="button">حفظ</button><button class="btn btn-primary btn-sm js-open" type="button">الأسئلة</button>
@@ -637,6 +665,7 @@
       <form id="sf" class="card form-grid">
         <h2 class="full">بيانات المنصة</h2>
         ${field("brand_name", "اسم المنصة", "بيظهر في الهيدر والشهادة")}
+        ${field("brand_by", "السطر الصغير تحت الاسم", "زي by Mr. Islam Khalifa", true)}
         ${field("cert_signature", "التوقيع على الشهادة")}
         ${field("cert_issuer", "الجهة المصدرة للشهادة", "بتظهر تحت اللوجو. فاضي = اسم المنصة", true)}
         ${field("footer_line1", "الفوتر: السطر الأول")}
@@ -646,7 +675,7 @@
           <select name="wm_student"><option value="1">تظهر</option><option value="0"${s.wm_student === "0" ? " selected" : ""}>متظهرش</option></select></div>
         <div class="field"><label>درجة الوضوح</label>
           <select name="wm_level">${[["light", "خفيفة"], ["medium", "متوسطة"], ["strong", "واضحة"]].map(([v, t]) => `<option value="${v}"${(s.wm_level || "medium") === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
-        ${field("wm_text", "نص إضافي في العلامة المائية", "زي Mr. Islam Khalifa | Accounting. فاضي = من غير نص إضافي", true)}
+        ${field("wm_text", "نص إضافي في العلامة المائية", "زي IK Academy. فاضي = من غير نص إضافي", true)}
         <div class="field full"><label>معاينة <small>(بتتغير وانت بتعدل، وبتتحفظ لما تدوس حفظ الإعدادات)</small></label>
           <canvas id="wm-prev" width="800" height="1000" style="width:100%;max-width:340px;border:1px solid var(--line);border-radius:8px;background:#fff"></canvas></div>
         <h2 class="full" style="margin-top:10px">أرقام التواصل</h2>
@@ -660,7 +689,13 @@
         ${field("support_message", "رسالة الدعم الفني", "{name} اسم المتدرب", false, true)}
         ${field("follow_message", "رسالة المحاضر", "{name} الاسم، {course} الكورس، {level} واقف عند فين", false, true)}
         ${field("reminder_message", "رسالة تذكير المتدرب المنقطع", "{name} الاسم، {course} الكورس، {level} واقف عند فين، {link} رابط المنصة", false, true)}
+        ${field("activation_message", "رسالة التفعيل للمتدرب الجديد", "{name} الاسم، {course} الكورس، {link} رابط التفعيل، {login} رابط الدخول، {id} بيدخل بإيه. فاضي = الرسالة الافتراضية", false, true)}
         ${field("inactive_days", "يعتبر منقطع بعد كام يوم من غير دخول", "", true)}
+        <h2 class="full" style="margin-top:10px">أقسام الأكاديمية ومكتبة IK</h2>
+        <div class="field full"><label>الأقسام <small>(كل قسم في سطر: المفتاح بالإنجليزي | الاسم | سطر تعريفي. المفتاح مايتغيرش بعد ما تربط بيه كورسات)</small></label>
+          <textarea name="tracks" rows="4" dir="rtl">${esc(s.tracks || "")}</textarea></div>
+        <div class="field full"><label>تصنيفات المكتبة <small>(كل تصنيف في سطر: مفتاح القسم | اسم التصنيف)</small></label>
+          <textarea name="lib_subcats" rows="6" dir="rtl">${esc(s.lib_subcats || "")}</textarea></div>
         <div class="full row"><button class="btn btn-primary" type="submit">حفظ الإعدادات</button><span class="status" hidden></span></div>
       </form>
       <div class="card stack">
@@ -670,6 +705,9 @@
           ${s.cert_bg ? '<a class="btn btn-ghost" href="/api/public/cert-bg" target="_blank">شوف الخلفية الحالية</a>' : ""}</div>
         <div class="status" id="bg-st" hidden></div>
       </div>
+      <div class="card stack"><h2>نسخة احتياطية</h2>
+        <p class="muted">ملف فيه كل بيانات المنصة: المتدربين والاشتراكات والدرجات والزوار والإعدادات. نزّله قبل أي تحديث كبير واحتفظ بيه في مكان آمن (فيه أرقام الناس). صفحات الـ PDF وملفات المكتبة نفسها مش جواه، فخلي الملفات الأصلية عندك.</p>
+        <div class="row"><a class="btn btn-primary" href="/api/admin/backup.json">⬇ تنزيل نسخة احتياطية</a></div></div>
       <div class="card stack"><h2>حسابي</h2><a class="btn btn-ghost" href="/account">تغيير باسورد الأدمن</a></div>`;
     const sf = $("#sf");
     const prev = () => {
@@ -685,7 +723,7 @@
     prev();
     sf.onsubmit = async (e) => {
       e.preventDefault();
-      try { await api("/admin/settings", { method: "PUT", body: Object.fromEntries(new FormData(sf)) }); IK.status(sf.querySelector(".status"), "ok", "اتحفظ"); }
+      try { await api("/admin/settings", { method: "PUT", body: Object.fromEntries(new FormData(sf)) }); IK.status(sf.querySelector(".status"), "ok", "اتحفظ"); adminSettings = await api("/admin/settings"); }
       catch (err) { IK.status(sf.querySelector(".status"), "bad", err.message); }
     };
     $("#bg").onchange = async (e) => {
@@ -732,11 +770,147 @@
       <div class="card"><h2>الفصول المجانية</h2>
         ${freeRows.length ? `<div class="table-wrap" style="margin-top:10px"><table style="width:100%">${head("الفصل")}<tbody>${freeRows.map((r) => `<tr><td>${r.m ? esc(r.m.title) : "فصل اتشال من المجاني أو اتمسح"}</td>${cells(r)}</tr>`).join("")}</tbody></table></div>`
           : `<p class="muted" style="margin-top:6px">${d.free.length ? "لسه محدش فتح الفصول المجانية." : 'مفيش فصول مجانية لسه. علّم على "مجاني للتجربة" من تاب المادة العلمية.'}</p>`}</div>`;
+    // رحلة كل مصدر: زيارات ← زوار سجلوا ← ضغطات اشترك ← متدربين اتعملوا (آخر 30 يوم)
+    const srcs = new Set([...d.rows.filter((r) => r.kind === "visit_src" || r.kind === "sub_src").map((r) => r.ref), ...d.visitors_by.map((r) => r.source), ...d.students_by.map((r) => r.source || "")]);
+    const by = (list, s) => (list.find((r) => (r.source || "") === s) || { n: 0 }).n;
+    const srcRows = [...srcs].map((s) => ({ s, v: get("visit_src", s).d30, vis: by(d.visitors_by, s), sub: get("sub_src", s).d30, st: by(d.students_by, s) })).sort((a, b) => b.v + b.vis - a.v - a.vis);
+    const dl = d.rows.filter((r) => r.kind === "file_dl").map((r) => ({ ...r, f: d.files.find((f) => String(f.id) === r.ref) }));
+    panel.insertAdjacentHTML("beforeend", `
+      <div class="card"><h2>الناس جاية منين؟</h2>
+        <p class="muted" style="margin-top:4px">آخر 30 يوم (من ${esc(d.since)}). المصدر بيتحسب من أول رابط دخل منه الزائر (فيسبوك، واتساب، جوجل، أو رابط فيه ?src=). المتدربين = اللي اتعملهم حساب ومعروف مصدرهم.</p>
+        ${srcRows.length ? `<div class="table-wrap" style="margin-top:10px"><table style="width:100%"><thead><tr><th>المصدر</th><th>زيارات</th><th>سجلوا كزوار</th><th>ضغطوا اشترك</th><th>بقوا متدربين</th></tr></thead><tbody>
+          ${srcRows.map((r) => `<tr><td>${esc(srcLabel(r.s) === "—" ? "مش معروف" : srcLabel(r.s))}</td><td class="num">${r.v}</td><td class="num">${r.vis}</td><td class="num">${r.sub}</td><td class="num">${r.st}</td></tr>`).join("")}</tbody></table></div>`
+          : '<p class="muted" style="margin-top:6px">لسه مفيش بيانات مصادر.</p>'}
+        <p class="muted" style="margin-top:8px">نصيحة: لما تنزل بوست، حط الرابط كده علشان تعرف جه منه كام: <span class="num">${esc(location.origin)}/?src=fb-post</span></p></div>
+      <div class="card"><h2>طلبات "بلغني أول ما يفتح"</h2>
+        ${d.notify.length ? `<div class="table-wrap" style="margin-top:10px"><table style="width:100%"><thead><tr><th>الكورس</th><th>عدد الناس</th></tr></thead><tbody>
+          ${d.notify.map((n) => `<tr><td>${esc((d.courses.find((c) => c.slug === n.slug) || {}).title || n.slug)}</td><td class="num">${n.n}</td></tr>`).join("")}</tbody></table></div>
+          <p class="muted" style="margin-top:8px">أساميهم وأرقامهم في تاب "الزوار".</p>` : '<p class="muted" style="margin-top:6px">لسه محدش طلب.</p>'}</div>
+      <div class="card"><h2>تحميلات مكتبة IK</h2>
+        ${dl.length ? `<div class="table-wrap" style="margin-top:10px"><table style="width:100%">${head("الملف")}<tbody>${dl.map((r) => `<tr><td>${r.f ? esc(r.f.title) : "ملف اتمسح"}</td>${cells(r)}</tr>`).join("")}</tbody></table></div>`
+          : '<p class="muted" style="margin-top:6px">لسه محدش حمّل ملفات.</p>'}</div>`);
     $("#st-re").onclick = statsTab;
   }
 
+  // ======================= مكتبة IK =======================
+  const CHUNK = 1800 * 1024; // كل جزء أقل من حد الصف في D1
+  async function libraryTab() {
+    const files = await api("/admin/library");
+    const subcats = String(adminSettings.lib_subcats || "").split("\n").map((l) => l.split("|").map((x) => x.trim())).filter((p) => p[1]);
+    const cOpts = (sel) => opt("", "— مفيش —", sel || "") + courses.map((c) => opt(c.id, c.title, sel)).join("");
+    const form = (f = {}) => `
+      <div class="field"><label>اسم الملف</label><input name="title" required value="${esc(f.title || "")}" placeholder="مثلاً: شيت كشف حساب عميل جاهز"></div>
+      <div class="field"><label>نوعه</label><select name="access">${opt("free", "🎁 مجاني (للزوار بعد الدخول السريع)", f.access)}${opt("paid", "💎 مدفوع (بتفعله لكل متدرب)", f.access)}${opt("course", "🎓 ضمن كورس (للمشتركين فيه)", f.access)}</select></div>
+      <div class="field full"><label>وصف قصير <small>(هيفيدك في إيه)</small></label><textarea name="description" rows="2">${esc(f.description || "")}</textarea></div>
+      <div class="field"><label>القسم</label><select name="track">${tracks().map((t) => opt(t.key, t.name, f.track)).join("")}</select></div>
+      <div class="field"><label>التصنيف</label><select name="subcat">${opt("", "— من غير —", f.subcat || "")}${subcats.map(([k, n]) => opt(n, trackName(k) + " ← " + n, f.subcat)).join("")}</select></div>
+      <div class="field full"><label>مناسب لـ</label><div>${audChecks(f.audiences || ["accountant"])}</div></div>
+      <div class="field"><label>السعر <small>(للمدفوع بس، بيظهر للزائر)</small></label><input name="price" type="number" min="0" value="${f.price || 0}"></div>
+      <div class="field"><label>الكورس اللي الملف تبعه <small>(لنوع "ضمن كورس")</small></label><select name="course_id">${cOpts(f.course_id)}</select></div>
+      <div class="field"><label>كورس مقترح معاه <small>(بيظهر "عايز تفهمه من جوه؟")</small></label><select name="related_course_id">${cOpts(f.related_course_id)}</select></div>
+      <div class="field"><label>الترتيب</label><input name="sort" type="number" value="${f.sort || 0}"></div>
+      <label class="check"><input type="checkbox" name="visible"${f.visible === 0 ? "" : " checked"}> ظاهر في المكتبة</label>`;
+    const body = (fm) => { const fd = new FormData(fm); const b = Object.fromEntries(fd); b.audiences = fd.getAll("audiences"); b.visible = fm.visible.checked; return b; };
+    panel.innerHTML = `
+      <div class="card"><h2>إضافة ملف للمكتبة</h2>
+        <p class="muted" style="margin-top:4px">أي نوع ملف (Excel، PDF، Word ...) لحد 14 ميجا. الملف بيتحمل باسم اللي حمّله، والمجاني محتاج دخول سريع كزائر، والمدفوع والكورس السيرفر بيتأكد من صلاحية المتدرب قبل التحميل.</p>
+        <form id="lf" class="form-grid" style="margin-top:12px">${form()}
+          <div class="field full"><label class="btn btn-ghost" style="justify-self:start">اختار الملف<input type="file" hidden id="lf-file"></label> <span class="muted" id="lf-name"></span></div>
+          <div class="full row"><button class="btn btn-primary" type="submit">إضافة ورفع</button></div>
+          <div class="full" id="lf-prog" hidden><div class="bar"><i style="width:0%"></i></div><p class="muted" id="lf-text"></p></div>
+          <div class="status full" id="lf-st" hidden></div></form></div>
+      <div class="card"><h2>ملفات المكتبة (${files.length})</h2>
+        <div class="stack" style="margin-top:12px">${files.map((f) => `
+          <div class="card" style="background:var(--paper)" data-lib="${f.id}">
+            <div class="spread"><div><b>${f.access === "free" ? "🎁" : f.access === "paid" ? "💎" : "🎓"} ${esc(f.title)}</b>${f.visible ? "" : ' <span class="badge">مخفي</span>'}
+              <p class="muted">${esc(trackName(f.track))}${f.subcat ? " · " + esc(f.subcat) : ""} · ${f.chunks ? esc(f.file_name || "") + " · " + IK.size(f.size) : '<b style="color:var(--bad)">لسه ما اترفعش ملف</b>'}${f.access === "paid" ? " · متفعل لـ " + f.grants + " متدرب" : ""}</p></div>
+              <div class="row"><label class="btn btn-primary btn-sm">${f.chunks ? "رفع نسخة جديدة" : "رفع الملف"}<input type="file" hidden class="js-lfile"></label>
+                ${f.chunks ? `<a class="btn btn-ghost btn-sm" href="/api/public/library/${f.id}/download">تحميل</a>` : ""}
+                <button class="btn btn-ghost btn-sm js-ledit" type="button">تعديل</button><button class="btn btn-danger btn-sm js-ldel" type="button">مسح</button></div></div>
+            <div class="js-prog" hidden style="margin-top:10px"><div class="bar"><i style="width:0%"></i></div><p class="muted js-ptext"></p></div>
+            <form class="form-grid js-lform" style="margin-top:12px" hidden>${form(f)}<div class="full row"><button class="btn btn-primary btn-sm" type="submit">حفظ</button><span class="status" hidden></span></div></form>
+          </div>`).join("") || '<p class="muted">المكتبة فاضية لسه.</p>'}</div></div>`;
+
+    async function upload(id, version, file, bar, txt) {
+      const n = Math.ceil(file.size / CHUNK);
+      if (!n || n > 8) throw new Error("حجم الملف لازم يكون أقل من 14 ميجا.");
+      for (let k = 1; k <= n; k++) {
+        txt.textContent = `برفع جزء ${k} من ${n}...`;
+        await api(`/admin/library/${id}/chunks/${k}?v=${version + 1}`, { method: "PUT", body: file.slice((k - 1) * CHUNK, k * CHUNK) });
+        bar.style.width = Math.round((k / n) * 100) + "%";
+      }
+      await api(`/admin/library/${id}/publish`, { method: "POST", body: { version: version + 1, chunks: n, file_name: file.name, mime: file.type || "application/octet-stream", size: file.size } });
+    }
+    let picked = null;
+    $("#lf-file").onchange = (e) => { picked = e.target.files[0] || null; $("#lf-name").textContent = picked ? picked.name + " · " + IK.size(picked.size) : ""; };
+    $("#lf").onsubmit = async (e) => {
+      e.preventDefault();
+      const st = $("#lf-st");
+      if (!picked) return IK.status(st, "bad", "اختار الملف الأول.");
+      try {
+        const { id } = await api("/admin/library", { method: "POST", body: body(e.target) });
+        $("#lf-prog").hidden = false;
+        await upload(id, 0, picked, $("#lf-prog").querySelector("i"), $("#lf-text"));
+        IK.status(st, "ok", "الملف اترفع وبقى في المكتبة.");
+        setTimeout(libraryTab, 900);
+      } catch (err) { IK.status(st, "bad", err.message); }
+    };
+    panel.querySelectorAll("[data-lib]").forEach((box) => {
+      const f = files.find((x) => String(x.id) === box.dataset.lib);
+      box.querySelector(".js-lfile").onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const prog = box.querySelector(".js-prog");
+        prog.hidden = false;
+        try { await upload(f.id, f.version, file, prog.querySelector("i"), box.querySelector(".js-ptext")); box.querySelector(".js-ptext").textContent = "تم."; setTimeout(libraryTab, 900); }
+        catch (err) { box.querySelector(".js-ptext").textContent = "الرفع وقف: " + err.message; }
+      };
+      const fm = box.querySelector(".js-lform");
+      box.querySelector(".js-ledit").onclick = () => (fm.hidden = !fm.hidden);
+      fm.onsubmit = async (e) => {
+        e.preventDefault();
+        try { await api("/admin/library/" + f.id, { method: "PATCH", body: body(fm) }); libraryTab(); }
+        catch (err) { IK.status(fm.querySelector(".status"), "bad", err.message); }
+      };
+      box.querySelector(".js-ldel").onclick = async () => {
+        if (!confirm("مسح الملف ده من المكتبة؟ المتدربين اللي متفعلهم مش هيقدروا يحملوه تاني.")) return;
+        await api("/admin/library/" + f.id, { method: "DELETE" }); libraryTab();
+      };
+    });
+  }
+
+  // ======================= الزوار السريعين =======================
+  async function visitorsTab(q = "") {
+    const [list, files] = await Promise.all([api("/admin/visitors?q=" + encodeURIComponent(q)), api("/admin/library")]);
+    const fBy = Object.fromEntries(files.map((f) => [String(f.id), f.title]));
+    const cBy = Object.fromEntries(courses.map((c) => [c.slug, c.title]));
+    const ev = (e) => e.kind === "file" ? "⬇ " + (fBy[e.ref] || "ملف") : e.kind === "chapter" ? "📖 فصل مجاني" : e.kind === "notify" ? "🔔 بلغني: " + (cBy[e.ref] || e.ref) : "💬 تواصل" + (cBy[e.ref] ? ": " + cBy[e.ref] : "");
+    panel.innerHTML = `
+      <div class="card stack">
+        <div class="spread"><h2>الزوار السريعين (${list.length})</h2>
+          <div class="row"><input id="vq" value="${esc(q)}" placeholder="دور بالاسم أو الرقم" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-m)">
+          <a class="btn btn-ghost btn-sm" href="/api/admin/visitors.csv">تصدير Excel</a></div></div>
+        <p class="muted">دول الناس اللي سجلوا اسمهم ورقمهم علشان يقروا فصل مجاني أو يحملوا ملف أو يطلبوا "بلغني". البيانات دي ليك إنت بس. ابعت رسايل تسويقية بس للي علّم على الموافقة (✓).</p>
+        <div class="table-wrap"><table class="t"><thead><tr><th>الاسم</th><th>الرقم</th><th>المصدر</th><th>رسايل تسويقية</th><th>عمل إيه</th><th>سجل في</th><th></th></tr></thead><tbody>
+        ${list.map((v) => `<tr data-v="${v.id}"><td><b>${esc(v.name)}</b>${v.user_id ? ' <span class="badge ok">بقى متدرب</span>' : ""}</td>
+          <td class="num">${esc(v.phone)}</td><td>${esc(srcLabel(v.source))}</td>
+          <td>${v.consent_marketing ? '<span class="badge ok">✓ موافق</span>' : '<span class="muted">لأ</span>'}</td>
+          <td><small>${v.events.map((e) => esc(ev(e))).join("<br>") || "—"}</small></td>
+          <td class="num"><small>${esc(v.created_at)}</small></td>
+          <td><div class="row"><a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="${IK.wa(intlPhone(v.phone), "أهلاً يا " + v.name.split(" ")[0] + " 👋 معاك IK Academy")}">${IK.chatIcon}كلمه</a>
+            <button class="btn btn-danger btn-sm js-vdel" type="button">مسح</button></div></td></tr>`).join("") || '<tr><td colspan="7" class="empty">لسه مفيش زوار سجلوا.</td></tr>'}
+        </tbody></table></div>
+      </div>`;
+    let timer;
+    $("#vq").addEventListener("input", (e) => { clearTimeout(timer); timer = setTimeout(() => visitorsTab(e.target.value).then(() => { const i = $("#vq"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }), 300); });
+    panel.querySelectorAll(".js-vdel").forEach((b) => (b.onclick = async () => {
+      if (!confirm("مسح بيانات الزائر ده نهائياً؟")) return;
+      await api("/admin/visitors/" + b.closest("tr").dataset.v, { method: "DELETE" }); visitorsTab($("#vq").value);
+    }));
+  }
+
   // ======================= التابات =======================
-  const tabs = { students: studentsTab, inactive: () => inactiveTab(), courses: coursesTab, content: contentTab, exams: examsTab, stats: statsTab, settings: settingsTab };
+  const tabs = { students: studentsTab, inactive: () => inactiveTab(), courses: coursesTab, content: contentTab, exams: examsTab, library: libraryTab, visitors: visitorsTab, stats: statsTab, settings: settingsTab };
   const tabBtns = document.querySelectorAll(".tabs button");
   function go(name) {
     tabBtns.forEach((b) => b.classList.toggle("on", b.dataset.tab === name));

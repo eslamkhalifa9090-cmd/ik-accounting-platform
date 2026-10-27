@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>الكورس | Mr. Islam Khalifa</title>
+<title>الكورس | IK Academy</title>
 <link rel="icon" href="/assets/logo.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,6 +21,11 @@
   .hero-c h1{color:#fff;font-size:clamp(26px,3.6vw,40px)}
   .hero-c .eyebrow{color:var(--gold);font-weight:600;font-size:14px}
   .hero-c p{color:rgba(255,255,255,.85);margin-top:12px;max-width:72ch;font-size:17px;line-height:2}
+  .hero-c .tags{margin-top:14px}
+  .hero-c .tag{background:rgba(255,255,255,.12);color:var(--sky)}
+  .hero-c .tag.tool{color:var(--gold)}
+  .hero-c .outcome{color:#fff;border-color:var(--gold);margin-top:16px;font-size:16px}
+  .hero-c .outcome b{display:block;color:var(--gold);font-family:var(--f-display);font-size:14px}
   .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
   .plan ul{margin:0;padding-inline-start:20px;color:var(--ink-2)}
   .price b{font-family:var(--f-display);font-size:24px;color:var(--navy)}
@@ -39,6 +44,7 @@
   @media (max-width:560px){.lv{grid-template-columns:1fr;gap:10px}.lv .n{width:38px;height:38px}.chs li{padding:8px 10px}}
   .chs li.free{background:#FBF7EE;outline:1px dashed var(--gold)}
   .chs .ic{flex:none}
+  .files{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
 </style>
 <script>
 (async function () {
@@ -52,43 +58,47 @@
   try { d = await fetch("/api/public/course/" + encodeURIComponent(slug)).then((r) => r.ok ? r.json() : Promise.reject()); }
   catch (e) { root.innerHTML = '<div class="card empty" style="margin-top:28px">الكورس ده مش موجود.</div>'; return; }
   const c = d.course;
-  document.title = c.title + " | Mr. Islam Khalifa";
+  document.title = c.title + " | " + (s.brand_name || "IK Academy");
   let enrolled = false;
   if (me) { try { await IK.api("/student/course/" + encodeURIComponent(slug), { noRedirect: true }); enrolled = true; } catch (e) {} }
-  const sub = (p) => IK.wa(s.whatsapp, IK.fill(s.subscribe_message, { course: c.title, plan: p.name }));
+  // رسالة الاشتراك فيها كود المصدر، علشان نعرف الطلب جه منين
+  const sub = (p) => IK.wa(s.whatsapp, IK.subText(IK.fill(s.subscribe_message, { course: c.title, plan: p ? p.name : "" })));
   const cumAfter = (n) => d.exams.filter((e) => e.kind === "cumulative" && e.after_level === n);
   const soon = c.status === "soon";
   const U = IK.U(c.unit);
   IK.track("course_view", slug);
-  const notifyUrl = IK.wa(s.whatsapp, IK.fill(s.notify_message, { course: c.title }));
   const plan0 = d.plans[0];
-  const subAny = plan0 ? sub(plan0) : IK.wa(s.whatsapp, IK.fill(s.subscribe_message, { course: c.title, plan: "" }));
+  const subAny = sub(plan0);
   const freeN = d.levels.reduce((a, l) => a + l.materials.filter((m) => m.free).length, 0);
+  const passPct = d.exams[0] ? d.exams[0].pass_pct : 50;
+  const notifyBtn = `<button class="btn btn-wa js-notify" type="button">🔔 بلغني أول ما يفتح</button>`;
   // كل فصل: المشترك يشوف الاسم بس (ويدخل من "ادخل الكورس")، والزائر يشوف 🔒 أو 🎁 للمجاني
   const chapter = (m, i) => {
     const meta = m.kind === "video" ? "🎬 فيديو" : m.pages ? m.pages + " صفحة" : "بيتجهز";
     const right = enrolled ? ""
-      : m.free ? `<button class="btn btn-gold btn-sm js-free" data-id="${m.id}" type="button">🎁 جرّبه مجاناً</button>`
+      : m.free ? `<button class="btn btn-gold btn-sm js-free" data-id="${m.id}" type="button">🎁 اقراه مجاناً</button>`
       : `<span class="ic" title="للمشتركين">🔒${m.min_plan === "pro" ? ' <span class="badge gold">Pro</span>' : ""}</span>`;
     return `<li class="${m.free && !enrolled ? "free" : ""}"><span class="t"><b class="num">${i + 1}.</b> ${IK.esc(m.title)} <small>${meta}</small></span>${right}</li>`;
   };
   root.innerHTML = `
     <section class="hero-c">
-      <span class="eyebrow">${soon ? "قيد الافتتاح قريباً" : "كورس متاح الآن"}</span>
+      <span class="eyebrow">${c.track_name ? IK.esc(c.track_name) + " · " : ""}${soon ? "قيد الافتتاح قريباً" : "كورس متاح دلوقتي"}</span>
       <h1>${IK.esc(c.title)}</h1>
       ${c.subtitle ? `<p style="font-weight:600;color:var(--sky)">${IK.esc(c.subtitle)}</p>` : ""}
       ${c.intro ? `<p>${IK.esc(c.intro)}</p>` : ""}
+      ${c.outcome ? `<p class="outcome"><b>هتقدر تعمل إيه بعد الكورس؟</b>${IK.esc(c.outcome)}</p>` : ""}
       ${c.audience ? `<p><b style="color:var(--gold)">الكورس ده لمين؟</b> ${IK.esc(c.audience)}</p>` : ""}
+      <div class="tags">${IK.tags(c.audiences, c.tools, site.audiences)}</div>
       <div class="row" style="margin-top:22px">
         ${enrolled ? `<a class="btn btn-gold" href="/learn?c=${encodeURIComponent(slug)}">ادخل الكورس</a>` :
-          soon ? `<a class="btn btn-wa js-notify" target="_blank" rel="noopener" href="${notifyUrl}">${IK.chatIcon}بلغني أول ما يفتح</a>` :
-          `<a class="btn btn-wa" href="#plans">${IK.chatIcon}اشترك دلوقتي</a>`}
-        ${me ? "" : '<a class="btn btn-ghost" href="/login">مشترك بالفعل؟ ادخل</a>'}
+          soon ? notifyBtn : `<a class="btn btn-wa" href="#plans">${IK.chatIcon}اشترك دلوقتي</a>`}
+        ${!enrolled && freeN ? '<a class="btn btn-ghost" style="color:#fff;border-color:rgba(255,255,255,.3)" href="#chapters">🎁 جرّب فصل مجاناً</a>' : ""}
+        ${me ? "" : '<a class="btn btn-ghost" style="color:#fff;border-color:rgba(255,255,255,.3)" href="/login">مشترك بالفعل؟ ادخل</a>'}
       </div>
     </section>
-    ${d.levels.length ? `<section class="sec">
+    ${d.levels.length ? `<section class="sec" id="chapters">
       <h2>${U.pl} (${d.levels.length})</h2>
-      ${!enrolled && freeN ? `<p class="muted" style="margin:-6px 0 12px">🎁 فيه ${freeN === 1 ? "فصل مجاني تقدر تجربه" : freeN + " فصول مجانية تقدر تجربها"} من غير اشتراك. باقي الفصول 🔒 للمشتركين.</p>` : ""}
+      ${!enrolled && freeN ? `<p class="muted" style="margin:-6px 0 12px">🎁 فيه ${freeN === 1 ? "فصل مجاني تقدر تقراه" : freeN + " فصول مجانية تقدر تقراها"} كامل${freeN === 1 ? "" : "ة"} من غير اشتراك. كل اللي محتاجه دخول سريع كزائر (اسمك ورقمك بس). باقي الفصول 🔒 للمشتركين.</p>` : ""}
       <section id="free-viewer" style="margin-bottom:20px" hidden></section>
       <div class="levels">${d.levels.map((l) => `
         <article class="lv"><span class="n">${l.num}</span><div>
@@ -101,15 +111,19 @@
         ${cumAfter(l.num).map((e) => `<article class="lv cum"><span class="n">★</span><div><h3>${IK.esc(e.title)}</h3><p class="topics">امتحان تراكمي على كل اللي فات، ولازم تعديه علشان تكمل.</p></div></article>`).join("")}`).join("")}
       </div>
       ${enrolled ? `<div class="row" style="margin-top:14px"><a class="btn btn-gold" href="/learn?c=${encodeURIComponent(slug)}">ادخل الكورس</a></div>`
-        : `<div class="row" style="margin-top:14px">${soon ? `<a class="btn btn-wa js-notify" target="_blank" rel="noopener" href="${notifyUrl}">${IK.chatIcon}بلغني أول ما يفتح</a>`
+        : `<div class="row" style="margin-top:14px">${soon ? notifyBtn
           : `<a class="btn btn-wa js-sub" target="_blank" rel="noopener" href="${subAny}">${IK.chatIcon}اشترك على واتساب وافتح كل الفصول</a>`}</div>`}
       </section>` : ""}
     <section class="sec">
-      <h2>نظام الامتحانات والشهادة</h2>
+      <h2>الامتحانات والشهادة</h2>
       <div class="card stack">
-        <p>بعد كل ${IK.U(d.course.unit).a} فيه امتحان، والنجاح فيه بيفتحلك ${IK.U(d.course.unit).the} ${IK.U(d.course.unit).key === "unit" ? "اللي بعدها" : "اللي بعده"}. النجاح بأكتر من ${d.exams[0] ? d.exams[0].pass_pct : 50}%، والمحاولات مفتوحة، والأسئلة بتتغير في كل محاولة.</p>
-        <p>وفيه امتحانات تراكمية بتجمع اللي فات، وفي الآخر امتحان شامل. لما تخلص كل الامتحانات بتطلعلك <b>شهادة إتمام</b> باسمك وبكود تحقق.</p>
+        <p>بعد كل ${U.a} فيه امتحان، ولما تنجح فيه ${U.the} ${U.key === "unit" ? "اللي بعدها بتفتحلك" : "اللي بعده بيفتحلك"}. النجاح من ${passPct}% أو أكتر، والمحاولات مفتوحة، والأسئلة بتتغير في كل محاولة، فاطمن وخد وقتك.</p>
+        <p>وفيه امتحانات تراكمية بتجمع اللي فات، وفي الآخر امتحان شامل. ولما تخلص كله بتطلعلك <b>شهادة إتمام</b> باسمك وبكود تحقق أي حد يقدر يتأكد منه.</p>
       </div>
+    </section>
+    <section class="sec" id="files" hidden>
+      <h2>ملفات من مكتبة IK مع الكورس ده</h2>
+      <div class="files" id="file-list"></div>
     </section>
     ${!soon && !enrolled && d.plans.length ? `<section class="sec" id="plans">
       <h2>الاشتراك</h2>
@@ -120,30 +134,62 @@
           ${p.features.length ? `<ul>${p.features.map((f) => `<li>${IK.esc(f)}</li>`).join("")}</ul>` : ""}
           <a class="btn btn-wa js-sub" target="_blank" rel="noopener" href="${sub(p)}">${IK.chatIcon}اشترك على واتساب</a>
         </article>`).join("")}</div>
-      <p class="muted" style="margin-top:10px">الدفع بيتم مع خدمة العملاء على واتساب، وبعدها بيتعملك حساب على المنصة.</p>
+      <p class="muted" style="margin-top:10px">الدفع بيتم مع خدمة العملاء على واتساب، وبعدها بيوصلك رابط تفعيل تختار منه الباسورد بنفسك وتبدأ على طول.</p>
     </section>` : ""}`;
 
-  root.addEventListener("click", async (ev) => {
-    if (ev.target.closest(".js-sub")) IK.track("wa_subscribe", slug);
-    if (ev.target.closest(".js-notify")) IK.track("wa_notify", slug);
+  // ملفات المكتبة المرتبطة بالكورس
+  try {
+    const lib = await IK.api("/public/library", { noRedirect: true });
+    const mine = lib.files.filter((f) => (f.course && f.course.slug === slug) || (f.related && f.related.slug === slug));
+    if (mine.length) {
+      IK.$("#files").hidden = false;
+      IK.$("#file-list").innerHTML = mine.map((f) => `<a class="card stack" style="text-decoration:none" href="/library#f${f.id}">
+        <span class="muted">${f.access === "free" ? "🎁 مجاني" : f.access === "paid" ? "💎 مدفوع" : "🎓 للمشتركين في الكورس"}${f.ext ? " · " + IK.esc(f.ext.toUpperCase()) : ""}</span>
+        <b>${IK.esc(f.title)}</b></a>`).join("");
+    }
+  } catch (e) {}
+
+  async function openFree(id) {
+    const v = me ? null : await IK.visitorGate({ item: { kind: "chapter", ref: String(id) }, title: "افتح الفصل ده مجاناً", why: "تقرا الفصول المجانية وتحمّل الشيتات" });
+    if (!me && !v) return;
+    const m = await fetch("/api/public/materials/" + id, { credentials: "same-origin" }).then(async (r) => r.ok ? r.json() : Promise.reject(new Error((await r.json()).error)));
+    const wrap = IK.$("#free-viewer");
+    const who = me || v;
+    // العلامة المائية: اسم اللي بيقرا + "نسخة تجريبية" دايماً على الفصول المجانية
+    await IK.openPdf(wrap, m, { s: { ...s, wm_student: "1" }, who: { name: (who.name || "") + " · نسخة تجريبية", phone: who.phone },
+      src: (n) => `/api/public/materials/${m.id}/pages/${n}` });
+    const cta = document.createElement("div");
+    cta.className = "card spread";
+    cta.style.marginTop = "12px";
+    cta.innerHTML = enrolled ? "" : soon ? `<p>عجبك؟ الكورس هيفتح قريب، وأول ما يفتح هنبلغك.</p>${notifyBtn}`
+      : `<p>عجبك الشرح؟ اشترك وكمل باقي الفصول والامتحانات والشهادة.</p><a class="btn btn-wa js-sub" target="_blank" rel="noopener" href="${subAny}">${IK.chatIcon}اشترك على واتساب</a>`;
+    if (!enrolled) wrap.append(cta);
+  }
+
+  document.addEventListener("click", async (ev) => {
+    if (ev.target.closest(".js-sub")) IK.subClick(slug);
+    const nb = ev.target.closest(".js-notify");
+    if (nb) {
+      const v = await IK.visitorGate({ item: { kind: "notify", ref: slug }, title: "هنبلغك أول ما «" + c.title + "» يفتح", why: "نبعتلك أول ما الكورس يفتح" });
+      if (!v) return;
+      try {
+        await IK.api("/public/notify", { method: "POST", body: { slug }, noRedirect: true });
+        document.querySelectorAll(".js-notify").forEach((x) => { x.textContent = "✓ تمام، هنبلغك أول ما يفتح"; x.disabled = true; });
+      } catch (e) { alert(e.message); }
+      return;
+    }
     const b = ev.target.closest(".js-free");
     if (!b) return;
     b.disabled = true;
-    try {
-      const m = await fetch("/api/public/materials/" + b.dataset.id).then(async (r) => r.ok ? r.json() : Promise.reject(new Error((await r.json()).error)));
-      const wrap = IK.$("#free-viewer");
-      // العلامة المائية "نسخة تجريبية" بتظهر دايماً على الفصول المجانية
-      await IK.openPdf(wrap, m, { s: { ...s, wm_student: "1" }, who: { name: "نسخة تجريبية" },
-        src: (n) => `/api/public/materials/${m.id}/pages/${n}` });
-      const cta = document.createElement("div");
-      cta.className = "card spread";
-      cta.style.marginTop = "12px";
-      cta.innerHTML = soon ? `<p>عجبك؟ الكورس هيفتح قريب.</p><a class="btn btn-wa js-notify" target="_blank" rel="noopener" href="${notifyUrl}">${IK.chatIcon}بلغني أول ما يفتح</a>`
-        : `<p>عجبك؟ اشترك وكمل باقي الفصول والامتحانات والشهادة.</p><a class="btn btn-wa js-sub" target="_blank" rel="noopener" href="${subAny}">${IK.chatIcon}اشترك على واتساب</a>`;
-      wrap.append(cta);
-    } catch (e) { alert(e.message || "الفصل ده مش متاح دلوقتي."); }
+    try { await openFree(b.dataset.id); } catch (e) { alert(e.message || "الفصل ده مش متاح دلوقتي."); }
     b.disabled = false;
   });
+  // جاي من "جرّب قبل ما تشترك" في الصفحة الرئيسية: افتح الفصل على طول
+  const tryId = IK.qs("try");
+  if (tryId && !enrolled && d.levels.some((l) => l.materials.some((m) => String(m.id) === tryId && m.free))) {
+    IK.$("#chapters").scrollIntoView({ block: "start" });
+    openFree(tryId).catch((e) => alert(e.message));
+  }
 })();
 </script>
 </body>

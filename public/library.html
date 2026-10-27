@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مكتبة IK | IK Academy</title>
+<meta name="description" content="مكتبة IK: شيتات Excel ونماذج عملية جاهزة في المحاسبة والضرايب وإدارة المشروعات والموارد البشرية. فيه ملفات مجانية تحملها على طول.">
+<link rel="canonical" href="https://ik-accounting-platform.pages.dev/library">
+<meta property="og:title" content="مكتبة IK | IK Academy">
+<meta property="og:description" content="شيتات وملفات جاهزة توفر عليك ساعات شغل، منها مجاني تحمّله على طول.">
+<meta property="og:image" content="https://ik-accounting-platform.pages.dev/assets/logo.webp">
+<link rel="icon" href="/assets/logo.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js"></script>
+</head>
+<body>
+<style>
+  .filters{display:grid;gap:12px;margin-bottom:22px}
+  .filters .row{gap:10px;align-items:center}
+  .filters select{font:inherit;font-size:15px;padding:8px 12px;border-radius:var(--r-m);border:1px solid var(--line);background:var(--white);color:var(--navy)}
+  .lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+  .file{display:flex;flex-direction:column;gap:10px}
+  .file h3{font-size:17px}
+  .file .acts{margin-top:auto;display:grid;gap:8px}
+  .file.hl{border-color:var(--gold);box-shadow:var(--shadow)}
+  .kind{font-size:13px;font-weight:600;color:var(--gold-deep)}
+</style>
+<main class="wrap">
+  <div class="page-head">
+    <span class="eyebrow">مكتبة IK</span>
+    <h1>شيتات وملفات جاهزة توفر عليك ساعات شغل</h1>
+    <p>نماذج Excel ومستندات عملية اتعملت من شغل حقيقي. المجاني منها تحمّله على طول بعد دخول سريع كزائر (اسمك ورقمك بس، من غير باسورد ومن غير فلوس)، والمدفوع بيتفعل على حسابك بعد الاشتراك.</p>
+  </div>
+  <div class="filters">
+    <div class="chips" id="f-track"></div>
+    <div class="row">
+      <select id="f-sub" aria-label="التصنيف"><option value="">كل التصنيفات</option></select>
+      <select id="f-aud" aria-label="مناسب لمين"><option value="">مناسب لأي حد</option></select>
+      <select id="f-acc" aria-label="نوع الملف"><option value="">مجاني ومدفوع</option><option value="free">🎁 المجاني بس</option><option value="paid">💎 المدفوع</option><option value="course">🎓 ملفات الكورسات</option></select>
+    </div>
+  </div>
+  <div class="lib-grid" id="list"><div class="loading">جاري التحميل...</div></div>
+</main>
+<script>
+(async function () {
+  let me = null;
+  try { me = await IK.api("/auth/me", { noRedirect: true }); } catch (e) {}
+  const site = await IK.chrome({ user: me });
+  const s = site.settings;
+  IK.track("library_view");
+  const tracks = site.tracks || [];
+  const tName = Object.fromEntries(tracks.map((t) => [t.key, t.name]));
+  const subcats = String(s.lib_subcats || "").split("\n").map((l) => l.split("|").map((x) => x.trim())).filter((p) => p[0] && p[1]);
+  let files = [];
+  const F = { track: "", sub: "", aud: "", acc: "" };
+
+  const trackBox = IK.$("#f-track");
+  trackBox.innerHTML = `<button type="button" class="on" data-t="">الكل</button>` + tracks.map((t) => `<button type="button" data-t="${IK.esc(t.key)}">${IK.esc(t.name)}</button>`).join("");
+  IK.$("#f-aud").innerHTML += Object.entries(site.audiences || {}).map(([k, v]) => `<option value="${k}">${IK.esc(v)}</option>`).join("");
+  const fillSubs = () => {
+    const list = subcats.filter(([t]) => !F.track || t === F.track);
+    IK.$("#f-sub").innerHTML = '<option value="">كل التصنيفات</option>' + [...new Set(list.map((p) => p[1]))].map((n) => `<option>${IK.esc(n)}</option>`).join("");
+    IK.$("#f-sub").value = list.some((p) => p[1] === F.sub) ? F.sub : "";
+    F.sub = IK.$("#f-sub").value;
+  };
+
+  const buy = (f) => IK.wa(s.whatsapp, IK.subText("السلام عليكم، عايز أشتري ملف «" + f.title + "» من مكتبة IK" + (me ? "، وأنا مشترك باسم " + me.name : "") + "."));
+  const action = (f) => {
+    if (f.can) return `<button class="btn btn-primary js-dl" data-id="${f.id}" type="button">⬇ حمّل الملف</button>`;
+    if (f.access === "free") return `<button class="btn btn-gold js-dl" data-id="${f.id}" type="button">🎁 حمّله مجاناً</button>`;
+    if (f.access === "paid") return `<a class="btn btn-wa js-buy" target="_blank" rel="noopener" href="${buy(f)}">${IK.chatIcon}اطلبه على واتساب${f.price ? " (" + IK.money(f.price) + ")" : ""}</a>
+      <span class="muted" style="font-size:13px">بعد الدفع بيتفعل على حسابك في المنصة وتحمّله من هنا على طول.</span>`;
+    return f.course ? `<a class="btn btn-ghost" href="/course?c=${encodeURIComponent(f.course.slug)}">🎓 للمشتركين في «${IK.esc(f.course.title)}»</a>` : "";
+  };
+  function render() {
+    const list = files.filter((f) => (!F.track || f.track === F.track) && (!F.sub || f.subcat === F.sub) && (!F.aud || f.audiences.includes(F.aud)) && (!F.acc || f.access === F.acc));
+    IK.$("#list").innerHTML = list.map((f) => `
+      <article class="card file" id="f${f.id}">
+        <span class="kind">${f.access === "free" ? "🎁 مجاني" : f.access === "paid" ? "💎 مدفوع" : "🎓 ملف كورس"} · ${IK.esc(tName[f.track] || "")}${f.subcat ? " · " + IK.esc(f.subcat) : ""}</span>
+        <h3>${IK.esc(f.title)}</h3>
+        ${f.description ? `<p class="muted">${IK.esc(f.description)}</p>` : ""}
+        <div class="tags">${IK.tags(f.audiences, f.ext ? [f.ext.toUpperCase()] : [], site.audiences)}${f.size ? `<span class="tag">${IK.size(f.size)}</span>` : ""}</div>
+        ${f.related ? `<p style="font-size:14px">عايز تفهم الملف ده من جوه؟ <a href="/course?c=${encodeURIComponent(f.related.slug)}">شوف كورس «${IK.esc(f.related.title)}»</a></p>` : ""}
+        <div class="acts">${action(f)}</div>
+      </article>`).join("") || `<div class="card empty" style="grid-column:1/-1">${files.length ? "مفيش ملفات بالفلتر ده. جرّب تغيّر الاختيارات." : "المكتبة بتتجهز، وأول الملفات هتنزل قريب. ارجعلنا تاني 🙏"}</div>`;
+    const h = location.hash.match(/^#f(\d+)$/);
+    if (h) { const el = IK.$("#f" + h[1]); if (el) { el.classList.add("hl"); el.scrollIntoView({ block: "center" }); } }
+  }
+  async function load() {
+    try { files = (await IK.api("/public/library", { noRedirect: true })).files; } catch (e) { files = []; }
+    render();
+  }
+
+  trackBox.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    F.track = b.dataset.t;
+    trackBox.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    fillSubs(); render();
+  });
+  IK.$("#f-sub").onchange = (e) => { F.sub = e.target.value; render(); };
+  IK.$("#f-aud").onchange = (e) => { F.aud = e.target.value; render(); };
+  IK.$("#f-acc").onchange = (e) => { F.acc = e.target.value; render(); };
+  IK.$("#list").addEventListener("click", async (e) => {
+    if (e.target.closest(".js-buy")) { IK.subClick("library"); return; }
+    const b = e.target.closest(".js-dl");
+    if (!b) return;
+    const f = files.find((x) => String(x.id) === b.dataset.id);
+    b.disabled = true;
+    const label = b.innerHTML;
+    b.textContent = "جاري التحميل...";
+    try {
+      const ok = await IK.download(f);
+      if (ok) { b.textContent = "✓ اتحمل"; if (!f.can) { await load(); return; } }
+      else b.innerHTML = label;
+    } catch (err) { alert(err.message); b.innerHTML = label; }
+    b.disabled = false;
+    setTimeout(() => { if (b.isConnected) b.innerHTML = label; }, 2500);
+  });
+  fillSubs();
+  await load();
+})();
+</script>
+</body>
+</html>

@@ -236,30 +236,19 @@
     (tools || []).map((t) => `<span class="tag tool">${IK.esc(t)}</span>`).join("");
   IK.size = (b) => (b >= 1048576 ? (b / 1048576).toFixed(1) + " ميجا" : Math.max(1, Math.round(b / 1024)) + " كيلو");
 
-  // تحميل ملف من المكتبة: بنجرب الأول، ولو محتاج دخول سريع بنفتح النافذة ونرجع نحمّل
+  // تحميل ملف من المكتبة: المجاني محتاج دخول سريع كزائر الأول، وبعدها المتصفح بيحمّل من السيرفر مباشرة
+  // (السيرفر بيتأكد من الصلاحية تاني، وبيسمي الملف باسم اللي حمّله)
   IK.download = async (f) => {
-    const url = "/api/public/library/" + f.id + "/download";
-    const get = () => fetch(url, { credentials: "same-origin" });
-    let r = await get();
-    if (r.status === 403 && f.access === "free") {
+    if (!f.can && f.access === "free") {
       const v = await IK.visitorGate({ item: { kind: "file", ref: String(f.id) }, title: "خد الملف ده مجاناً", why: "تحمّل الشيت ده وأي ملف مجاني تاني" });
       if (!v) return false;
-      r = await get();
     }
-    if (!r.ok) {
-      let msg = "الملف ما اتحملش. جرب تاني.";
-      try { msg = (await r.json()).error || msg; } catch (e) {}
-      throw new Error(msg);
-    }
-    const blob = await r.blob();
-    const cd = r.headers.get("content-disposition") || "";
-    const m = cd.match(/filename\*=UTF-8''([^;]+)/);
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = m ? decodeURIComponent(m[1]) : (f.title || "file");
+    a.href = "/api/public/library/" + f.id + "/download";
+    a.rel = "nofollow";
     document.body.append(a);
     a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    setTimeout(() => a.remove(), 1000);
     return true;
   };
 })();
