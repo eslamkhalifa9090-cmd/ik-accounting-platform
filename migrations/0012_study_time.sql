@@ -1,0 +1,9 @@
+-- وقت المذاكرة: دقايق كل متدرب في كل فصل في كل يوم (بتتحسب والفصل مفتوح والمتدرب شغال عليه)
+CREATE TABLE IF NOT EXISTS study_time (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  material_id INTEGER NOT NULL REFERENCES materials(id) ON DELETE CASCADE,
+  day TEXT NOT NULL,
+  minutes INTEGER NOT NULL DEFAULT 0,
+  last_at TEXT,
+  PRIMARY KEY (user_id, material_id, day)
+);

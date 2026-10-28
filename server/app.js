@@ -630,7 +630,7 @@ route("GET", "/student/dashboard", async ({ db, user }) => {
       slug: e.slug, title: e.title, subtitle: e.subtitle, plan: e.plan_code, expires_at: e.expires_at,
       active: !e.expires_at || e.expires_at >= today(), progress: st.progress, completed: st.completed,
       current_level: st.current_level, current_title: cur ? cur.title : "", levels: st.levels.length, unit: st.unit,
-      ...courseSummary(st),
+      ...courseSummary(st), study: await studyTime(db, user.id, e.course_id),
     });
   }
   return json({ user: { name: user.name, must_change: !!user.must_change }, courses });
@@ -688,6 +688,38 @@ route("PUT", "/student/materials/:id/position", async ({ db, user, request, para
                     ON CONFLICT (user_id, material_id) DO UPDATE SET page = excluded.page, updated_at = datetime('now')`).bind(user.id, m.id, page).run();
   return json({ ok: true });
 }, "user");
+
+// وقت المذاكرة: الصفحة بتبعت نبضة كل دقيقة والفصل مفتوح والمتدرب شغال عليه، والسيرفر بيحسب دقيقة بس لو آخر نبضة من 50 ثانية أو أكتر
+route("POST", "/student/materials/:id/time", async ({ db, user, params }) => {
+  const m = await materialForUser(db, user, params.id);
+  if (user.role === "admin") return json({ ok: true });
+  try {
+  await db.prepare(`INSERT INTO study_time (user_id, material_id, day, minutes, last_at) VALUES (?, ?, ?, 1, datetime('now'))
+      ON CONFLICT (user_id, material_id, day) DO UPDATE SET
+        minutes = minutes + (CASE WHEN last_at IS NULL OR last_at <= datetime('now', '-50 seconds') THEN 1 ELSE 0 END),
+        last_at = CASE WHEN last_at IS NULL OR last_at <= datetime('now', '-50 seconds') THEN datetime('now') ELSE last_at END`)
+    .bind(user.id, m.id, today()).run();
+  } catch (e) { /* الجدول لسه ما اتعملش في D1 */ }
+  return json({ ok: true });
+}, "user");
+
+// إجمالي دقايق المذاكرة في كورس: الكل، وآخر 7 أيام، ولكل فصل ولكل مستوى
+// لو جدول study_time لسه ما اتعملش في D1 بترجع null والصفحات بتشتغل عادي
+async function studyTime(db, userId, courseId) {
+  try {
+    const { results } = await db.prepare(`SELECT t.material_id, m.level_id, SUM(t.minutes) AS total,
+        SUM(CASE WHEN t.day >= date('now', '-6 days') THEN t.minutes ELSE 0 END) AS week
+        FROM study_time t JOIN materials m ON m.id = t.material_id JOIN levels l ON l.id = m.level_id
+        WHERE t.user_id = ? AND l.course_id = ? GROUP BY t.material_id`).bind(userId, courseId).all();
+    const out = { total: 0, week: 0, by_material: {}, by_level: {} };
+    for (const r of results) {
+      out.total += r.total; out.week += r.week;
+      out.by_material[r.material_id] = r.total;
+      out.by_level[r.level_id] = (out.by_level[r.level_id] || 0) + r.total;
+    }
+    return out;
+  } catch (e) { return null; }
+}
 
 route("GET", "/student/materials/:id/pages/:n", async ({ db, user, params }) => {
   const m = await materialForUser(db, user, params.id);
@@ -950,7 +982,8 @@ route("GET", "/admin/students/:id/report", async ({ db, params }) => {
   if (!u) fail(404, "المتدرب ده مش موجود.");
   const { results: enr } = await db.prepare("SELECT e.*, c.title, c.slug FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE e.user_id = ?").bind(u.id).all();
   const courses = [];
-  for (const e of enr) courses.push({ title: e.title, slug: e.slug, plan: e.plan_code, ...(await courseState(db, u.id, { id: e.course_id }, e.plan_code)) });
+  for (const e of enr) courses.push({ title: e.title, slug: e.slug, plan: e.plan_code, ...(await courseState(db, u.id, { id: e.course_id }, e.plan_code)),
+    study: await studyTime(db, u.id, e.course_id) });
   return json({ user: u, courses });
 }, "admin");
 
@@ -979,13 +1012,13 @@ route("GET", "/admin/export.csv", async ({ db }) => {
   const { results: rows } = await db.prepare(`SELECT u.id, u.name, u.email, u.phone, u.active, u.last_login, e.course_id, e.plan_code, e.expires_at, c.title
       FROM users u LEFT JOIN enrollments e ON e.user_id = u.id LEFT JOIN courses c ON c.id = e.course_id
       WHERE u.role = 'student' ORDER BY u.id`).all();
-  const head = ["الاسم", "الميل", "التليفون", "الحالة", "آخر دخول", "الكورس", "الباقة", "ينتهي في", "نسبة التقدم", "واقف عند", "خلص الكورس"];
+  const head = ["الاسم", "الميل", "التليفون", "الحالة", "آخر دخول", "الكورس", "الباقة", "ينتهي في", "نسبة التقدم", "واقف عند", "خلص الكورس", "دقايق المذاكرة"];
   const lines = [head];
   for (const r of rows) {
-    let st = null;
-    if (r.course_id) st = await courseState(db, r.id, { id: r.course_id }, r.plan_code);
+    let st = null, time = null;
+    if (r.course_id) { st = await courseState(db, r.id, { id: r.course_id }, r.plan_code); time = await studyTime(db, r.id, r.course_id); }
     lines.push([r.name, r.email || "", r.phone || "", r.active ? "نشط" : "موقوف", r.last_login || "", r.title || "", r.plan_code || "",
-      r.expires_at || "", st ? st.progress + "%" : "", st ? st.current_level : "", st ? (st.completed ? "نعم" : "لا") : ""]);
+      r.expires_at || "", st ? st.progress + "%" : "", st ? st.current_level : "", st ? (st.completed ? "نعم" : "لا") : "", time ? time.total : ""]);
   }
   const csv = "﻿" + lines.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
   return new Response(csv, { headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="students-${today()}.csv"` } });
@@ -1414,11 +1447,13 @@ route("DELETE", "/admin/visitors/:id", async ({ db, params }) => {
 }, "admin");
 
 // ---------- نسخة احتياطية: كل البيانات في ملف JSON (من غير صفحات الـ PDF والملفات نفسها) ----------
-const BACKUP_TABLES = ["settings", "courses", "plans", "levels", "materials", "exams", "questions", "users", "enrollments", "progress", "reading",
+const BACKUP_TABLES = ["settings", "courses", "plans", "levels", "materials", "exams", "questions", "users", "enrollments", "progress", "reading", "study_time",
   "attempts", "certificates", "stats", "visitors", "visitor_events", "library_files", "library_grants"];
 route("GET", "/admin/backup.json", async ({ db }) => {
   const out = { app: "IK Academy", created_at: new Date().toISOString(), note: "صفحات الـ PDF وملفات المكتبة نفسها مش جوه النسخة دي (حجمها كبير). احتفظ بالملفات الأصلية عندك.", tables: {} };
-  for (const t of BACKUP_TABLES) out.tables[t] = (await db.prepare(`SELECT * FROM ${t}`).all()).results;
+  for (const t of BACKUP_TABLES) {
+    try { out.tables[t] = (await db.prepare(`SELECT * FROM ${t}`).all()).results; } catch (e) { out.tables[t] = []; } // جدول لسه ما اتعملش في D1
+  }
   const { results: files } = await db.prepare("SELECT key, type, length(data) AS bytes FROM files").all();
   out.tables.files_index = files;
   return new Response(JSON.stringify(out), { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store",

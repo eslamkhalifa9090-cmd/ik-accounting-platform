@@ -96,8 +96,18 @@
     wrap.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  // وقت المذاكرة: نبضة كل دقيقة والفصل مفتوح والتبويب قدامك، والـ PDF كمان لازم تكون بتتحرك فيه (الفيديو بيتحسب وهو شغال)
+  let studying = null, lastMove = Date.now();
+  ["pointerdown", "keydown", "scroll", "touchstart", "wheel"].forEach((ev) => addEventListener(ev, () => { lastMove = Date.now(); }, { passive: true, capture: true }));
+  setInterval(() => {
+    if (!studying || wrap.hidden || document.visibilityState !== "visible") return;
+    if (studying.kind === "pdf" && Date.now() - lastMove > 3 * 60 * 1000) return;
+    IK.api(`/student/materials/${studying.id}/time`, { method: "POST" }).catch(() => {});
+  }, 60 * 1000);
+
   async function openMaterial(id) {
     const m = await IK.api("/student/materials/" + id);
+    studying = { id: m.id, kind: m.kind };
     if (m.kind === "pdf") await openPdf(m); else openVideo(m);
   }
   root.addEventListener("click", async (ev) => {
