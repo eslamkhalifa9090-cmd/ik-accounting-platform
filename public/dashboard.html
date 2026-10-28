@@ -73,6 +73,7 @@
           <div><b class="num">${c.current_level}<small> / ${c.levels}</small></b><span>${IK.U(c.unit).the} الحالي${IK.U(c.unit).key === "unit" ? "ة" : ""}</span></div>
           <div><b class="num">${c.summary.passed}<small> / ${c.summary.total}</small></b><span>امتحانات عديتها</span></div>
           <div><b class="num">${c.summary.avg_best === null ? "—" : c.summary.avg_best + "%"}</b><span>متوسط أعلى درجاتك</span></div>
+          ${c.study ? `<div><b class="num">${IK.hm(c.study.total)}</b><span>وقت مذاكرتك (${IK.hm(c.study.week)} آخر 7 أيام)</span></div>` : ""}
         </div>
         ${c.active ? "" : `<div class="status bad">اشتراكك انتهى. <a href="${care}" target="_blank" rel="noopener">كلم خدمة العملاء</a> علشان تجدده.</div>`}
         ${c.expires_at && c.active ? '<p class="muted">الاشتراك متاح لحد ' + IK.esc(c.expires_at) + "</p>" : ""}

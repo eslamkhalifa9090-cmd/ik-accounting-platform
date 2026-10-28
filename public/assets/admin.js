@@ -227,9 +227,11 @@
     box.innerHTML = `<div class="card" style="border-color:var(--gold)">
       <div class="spread"><h2>تقدم: ${esc(r.user.name)}</h2><button class="btn btn-ghost btn-sm" type="button" id="x">قفل</button></div>
       ${r.courses.map((c) => `<h3 style="margin-top:14px">${esc(c.title)} · ${c.progress}% ${c.completed ? '<span class="badge ok">خلص الكورس</span>' : ""}</h3>
-        <div class="table-wrap" style="margin-top:8px"><table class="t"><thead><tr><th>${esc(IK.U(c.unit).the)}</th><th>الحالة</th><th>الفصول</th><th>الامتحان</th><th>التراكمي</th></tr></thead><tbody>
+        ${c.study ? `<p class="muted">إجمالي وقت المذاكرة: <b>${IK.hm(c.study.total)}</b> · آخر 7 أيام: <b>${IK.hm(c.study.week)}</b></p>` : ""}
+        <div class="table-wrap" style="margin-top:8px"><table class="t"><thead><tr><th>${esc(IK.U(c.unit).the)}</th><th>الحالة</th><th>الفصول</th><th>الامتحان</th><th>التراكمي</th>${c.study ? "<th>وقت المذاكرة</th>" : ""}</tr></thead><tbody>
         ${c.levels.map((l) => `<tr><td>${l.num}. ${esc(l.title)}</td><td>${l.status === "locked" ? "مقفول" : l.status === "done" ? "مكتمل" : "مفتوح"}</td>
-          <td>${l.materials.filter((m) => m.done).length} / ${l.materials.length}</td><td>${ex(l.exam)}</td><td>${l.cumulative ? ex(l.cumulative) : ""}</td></tr>`).join("")}
+          <td>${l.materials.filter((m) => m.done).length} / ${l.materials.length}</td><td>${ex(l.exam)}</td><td>${l.cumulative ? ex(l.cumulative) : ""}</td>
+          ${c.study ? `<td class="num">${IK.hm(c.study.by_level[l.id] || 0)}</td>` : ""}</tr>`).join("")}
         </tbody></table></div>`).join("") || '<p class="muted">مش مشترك في أي كورس.</p>'}
     </div>`;
     $("#x").onclick = () => (box.innerHTML = "");
