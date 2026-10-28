@@ -61,6 +61,9 @@ async function getFile(db, key) {
 const deletePrefix = (db, prefix) => db.prepare("DELETE FROM files WHERE key LIKE ? || '%'").bind(prefix).run();
 
 // ---------- إعدادات ----------
+// نصوص الشهادة (الديباجة): الأدمن بيعدلها من الإعدادات، والفاضي بيرجع للنص الافتراضي
+const CERT_TEXTS = { cert_title: "شهادة إتمام", cert_title_en: "CERTIFICATE OF COMPLETION", cert_lead: "تشهد المنصة بأن", cert_course_lead: "أتم بنجاح كورس" };
+const CERT_TEXT_KEYS = Object.keys(CERT_TEXTS);
 async function getSettings(db) {
   const { results } = await db.prepare("SELECT key, value FROM settings").all();
   return Object.fromEntries(results.map((r) => [r.key, r.value]));
@@ -68,7 +71,7 @@ async function getSettings(db) {
 // whatsapp = خدمة العملاء، support_whatsapp = الدعم الفني، lecturer_whatsapp = المحاضر
 const PUBLIC_SETTINGS = ["whatsapp", "whatsapp_display", "support_whatsapp", "lecturer_whatsapp", "brand_name", "brand_by", "footer_line1", "footer_line2",
   "subscribe_message", "support_message", "follow_message", "notify_message", "cert_signature", "wm_text", "wm_student", "wm_level", "tracks", "lib_subcats", "follow_mode"];
-const ADMIN_SETTINGS = [...PUBLIC_SETTINGS, "reminder_message", "inactive_days", "cert_issuer", "activation_message"];
+const ADMIN_SETTINGS = [...PUBLIC_SETTINGS, "reminder_message", "inactive_days", "cert_issuer", "activation_message", ...CERT_TEXT_KEYS];
 
 // الأقسام بتتكتب في الإعدادات سطر لكل قسم: المفتاح | الاسم | سطر تعريفي
 const parseLines = (txt, n) => String(txt || "").split("\n").map((l) => l.split("|").map((x) => x.trim())).filter((p) => p[0] && p.length >= n);
@@ -117,6 +120,15 @@ async function unitOf(db, courseId) {
   return UNITS[r && r.value] || UNITS.level;
 }
 
+// طريقة فتح المحتوى في كل كورس، بتتحفظ تحت unlock_<id>:
+// sequence = بالترتيب (الفصل بعد اللي قبله، والمستوى بعد امتحان اللي قبله) / open = كل الكورس مفتوح (كل وحدة مستقلة)
+const UNLOCKS = ["sequence", "open"];
+const unlockFrom = (s, courseId) => (UNLOCKS.includes(s["unlock_" + courseId]) ? s["unlock_" + courseId] : "sequence");
+async function unlockOf(db, courseId) {
+  const r = await db.prepare("SELECT value FROM settings WHERE key = ?").bind("unlock_" + courseId).first();
+  return r && UNLOCKS.includes(r.value) ? r.value : "sequence";
+}
+
 function publicPlan(p) {
   const info = priceInfo(p);
   return {
@@ -127,7 +139,7 @@ function publicPlan(p) {
 
 // ---------- حالة المتدرب في كورس ----------
 async function courseState(db, userId, course, plan) {
-  const [{ results: levels }, { results: exams }, { results: materials }, { results: done }, { results: best }, unit] = await Promise.all([
+  const [{ results: levels }, { results: exams }, { results: materials }, { results: done }, { results: best }, unit, unlock] = await Promise.all([
     db.prepare("SELECT id, num, title, topics, teaser FROM levels WHERE course_id = ? ORDER BY num").bind(course.id).all(),
     db.prepare(`SELECT e.id, e.kind, e.after_level, e.title, e.question_count, e.pass_pct, e.duration_min,
                 (SELECT COUNT(*) FROM questions q WHERE q.exam_id = e.id) AS bank
@@ -141,13 +153,17 @@ async function courseState(db, userId, course, plan) {
                 FROM attempts a JOIN exams e ON e.id = a.exam_id
                 WHERE a.user_id = ? AND e.course_id = ? AND a.submitted_at IS NOT NULL GROUP BY a.exam_id`).bind(userId, course.id).all(),
     unitOf(db, course.id),
+    unlockOf(db, course.id),
   ]);
+  const free = unlock === "open";
   const doneSet = new Set(done.map((d) => d.material_id));
   const bestBy = Object.fromEntries(best.map((b) => [b.exam_id, b]));
   // المستوى الجاي بيفتح بس لما المتدرب ينجح في امتحان المستوى اللي قبله (والتراكمي لو موجود)
   const examPassed = (e) => !e || !!(bestBy[e.id] && bestBy[e.id].passed);
   const levelExam = (n) => exams.find((e) => e.kind === "level" && e.after_level === n);
   const cumBefore = (n) => exams.filter((e) => e.kind === "cumulative" && e.after_level < n);
+  // في الكورس المفتوح: التراكمي بيفتح لما المتدرب ينجح في امتحانات كل الوحدات اللي بيغطيها
+  const levelsUpTo = (n) => exams.filter((e) => e.kind === "level" && e.after_level <= n).every(examPassed);
 
   const shapeExam = (e, available, waiting = null) => e && ({
     id: e.id, kind: e.kind, title: e.title, after_level: e.after_level, pass_pct: e.pass_pct, duration_min: e.duration_min,
@@ -159,7 +175,7 @@ async function courseState(db, userId, course, plan) {
 
   let doneCount = 0, total = 0, prevUnlocked = true;
   const outLevels = levels.map((l) => {
-    const unlocked = l.num === 1 || (prevUnlocked && examPassed(levelExam(l.num - 1)) && cumBefore(l.num).every(examPassed));
+    const unlocked = free || l.num === 1 || (prevUnlocked && examPassed(levelExam(l.num - 1)) && cumBefore(l.num).every(examPassed));
     prevUnlocked = unlocked;
     // الفصول بتفتح بالترتيب: الفصل مايفتحش غير لما المتدرب يخلص اللي قبله (اللي في باقته واترفع فعلاً)
     let chainOpen = true;
@@ -168,7 +184,7 @@ async function courseState(db, userId, course, plan) {
       const isDone = doneSet.has(m.id);
       const ready = !(m.kind === "pdf" && !m.pages);
       if (allowed) { total++; if (isDone) doneCount++; }
-      const open = allowed && chainOpen;
+      const open = allowed && (free || chainOpen);
       if (allowed && ready && !isDone) chainOpen = false;
       return { id: m.id, kind: m.kind, title: m.title, min_plan: m.min_plan, pages: m.pages, allowed, open, done: isDone };
     });
@@ -183,13 +199,15 @@ async function courseState(db, userId, course, plan) {
       ...l, unlocked, status, materials: mats,
       materials_done: matsDone,
       exam: shapeExam(ex, unlocked && matsDone, unlocked && !matsDone ? "materials" : null),
-      cumulative: shapeExam(cum, unlocked && examPassed(ex) && cumBefore(l.num).every(examPassed)),
+      cumulative: shapeExam(cum, free ? levelsUpTo(l.num) : unlocked && examPassed(ex) && cumBefore(l.num).every(examPassed)),
     };
   });
   const completed = levels.length > 0 && exams.length > 0 && exams.every(examPassed);
-  const current = outLevels.filter((l) => l.unlocked).pop();
+  // الكورس المفتوح: الوحدة الحالية = أول وحدة لسه ما خلصهاش
+  const current = free ? (outLevels.find((l) => l.status !== "done") || outLevels[outLevels.length - 1]) : outLevels.filter((l) => l.unlocked).pop();
   return {
     unit,
+    unlock,
     levels: outLevels,
     progress: total ? Math.round((doneCount / total) * 100) : 0,
     completed,
@@ -775,11 +793,23 @@ route("GET", "/student/certificate/:slug", async ({ db, user, params }) => {
     await db.prepare("INSERT INTO certificates (code, user_id, course_id) VALUES (?, ?, ?)").bind(code, user.id, c.id).run();
     cert = { code, issued_at: today() };
   }
-  const s = await getSettings(db);
-  // توقيع الشهادة: توقيع محاضر الكورس لو متسجل، وإلا التوقيع العام
-  const lec = courseLecturers(s, c.id).find((x) => x.signature);
-  return json({ code: cert.code, issued_at: cert.issued_at, name: user.name, course: c.title, signature: (lec && lec.signature) || s.cert_signature || "", issuer: s.cert_issuer || s.brand_name || "", has_bg: !!s.cert_bg });
+  return json(certPayload(await getSettings(db), c, { code: cert.code, issued_at: cert.issued_at, name: user.name }));
 }, "user");
+
+// شكل الشهادة: الديباجة من الإعدادات + سطر الكورس الإضافي (cert_note_<id>) + توقيع محاضر الكورس لو متسجل، وإلا التوقيع العام
+function certPayload(s, c, cert) {
+  const lec = courseLecturers(s, c.id).find((x) => x.signature);
+  const texts = Object.fromEntries(CERT_TEXT_KEYS.map((k) => [k.replace("cert_", ""), s[k] || CERT_TEXTS[k]]));
+  return { ...cert, course: c.title, note: s["cert_note_" + c.id] || "", texts, signature: (lec && lec.signature) || s.cert_signature || "",
+    issuer: s.cert_issuer || s.brand_name || "", has_bg: !!s.cert_bg };
+}
+
+// معاينة الشهادة للأدمن باسم وكود تجريبيين، من غير ما تتسجل شهادة حقيقية
+route("GET", "/admin/certificate-preview/:slug", async ({ db, params }) => {
+  const c = await db.prepare("SELECT * FROM courses WHERE slug = ?").bind(params.slug).first();
+  if (!c) fail(404, "الكورس ده مش موجود.");
+  return json({ ...certPayload(await getSettings(db), c, { code: "IK-PREVIEW", issued_at: today(), name: "اسم المتدرب هنا" }), preview: true });
+}, "admin");
 
 // ملفاتي: الملفات المدفوعة المتفعلة على الحساب + ملفات الكورسات المشترك فيها
 route("GET", "/student/library", async ({ db, user }) => {
@@ -972,6 +1002,8 @@ route("GET", "/admin/courses", async ({ db }) => {
   return json(courses.map((c) => ({
     ...c,
     unit: unitFrom(s, c.id),
+    unlock: unlockFrom(s, c.id),
+    cert_note: s["cert_note_" + c.id] || "",
     plans: plans.filter((p) => p.course_id === c.id).map((p) => ({ ...p, features: parseJSON(p.features, []), ...priceInfo(p) })),
     levels: levels.filter((l) => l.course_id === c.id),
   })));
@@ -1014,6 +1046,14 @@ route("PATCH", "/admin/courses/:id", async ({ db, request, params }) => {
       db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").bind("unit_" + params.id, neu.key),
       db.prepare("UPDATE exams SET title = REPLACE(REPLACE(title, ?, ?), ?, ?) WHERE course_id = ?").bind(old.pl, neu.pl, old.the, neu.the, params.id),
     ]);
+  }
+  if (b.cert_note !== undefined) {
+    const note = String(b.cert_note).trim().slice(0, 200);
+    await db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").bind("cert_note_" + params.id, note).run();
+  }
+  if (b.unlock !== undefined) {
+    if (!UNLOCKS.includes(b.unlock)) fail(400, "طريقة الفتح غلط.");
+    await db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").bind("unlock_" + params.id, b.unlock).run();
   }
   if (Object.keys(f).length) await update(db, "courses", params.id, f);
   return json({ ok: true });

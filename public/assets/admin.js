@@ -240,7 +240,7 @@
   function coursesTab() {
     panel.innerHTML = courses.map((c) => `
       <div class="card" data-course="${c.id}">
-        <div class="spread"><h2>${esc(c.title)}</h2><a class="btn btn-ghost btn-sm" href="/course?c=${encodeURIComponent(c.slug)}" target="_blank">شوف صفحة الكورس</a></div>
+        <div class="spread"><h2>${esc(c.title)}</h2><div class="row"><a class="btn btn-ghost btn-sm" href="/certificate?c=${encodeURIComponent(c.slug)}&preview=1" target="_blank">🎓 معاينة الشهادة</a><a class="btn btn-ghost btn-sm" href="/course?c=${encodeURIComponent(c.slug)}" target="_blank">شوف صفحة الكورس</a></div></div>
         <form class="form-grid js-course" style="margin-top:12px">
           <div class="field"><label>اسم الكورس</label><input name="title" value="${esc(c.title)}"></div>
           <div class="field"><label>الحالة</label><select name="status">${opt("open", "متاح للاشتراك", c.status)}${opt("soon", "قيد الافتتاح قريباً", c.status)}${opt("hidden", "مخفي", c.status)}</select></div>
@@ -255,6 +255,9 @@
           <div class="field"><label>الترتيب</label><input name="sort" type="number" value="${c.sort}"></div>
           <div class="field"><label>اسم التقسيم <small>(بيظهر للمتدرب في كل الصفحات وعناوين الامتحانات)</small></label>
             <select name="unit">${opt("level", "مستويات (المستوى 1، 2 ...)", c.unit.key)}${opt("unit", "وحدات (الوحدة 1، 2 ...)", c.unit.key)}${opt("module", "موديولات (الموديول 1، 2 ...)", c.unit.key)}</select></div>
+          <div class="field"><label>طريقة فتح المحتوى <small>(بالترتيب للكورس اللي مبني على قصة، ومفتوح للكورس اللي كل جزء فيه مستقل)</small></label>
+            <select name="unlock">${opt("sequence", "بالترتيب: الفصل بعد اللي قبله، و" + c.unit.the + " بعد امتحان اللي قبله", c.unlock)}${opt("open", "كل الكورس مفتوح: المتدرب يبدأ من أي " + c.unit.a, c.unlock)}</select></div>
+          <div class="field full"><label>سطر إضافي على الشهادة <small>(اختياري، بيظهر تحت اسم الكورس. مثلاً: 10 مستويات و13 امتحان. فاضي = مفيش)</small></label><input name="cert_note" maxlength="200" value="${esc(c.cert_note || "")}"></div>
           <div class="full row"><button class="btn btn-primary" type="submit">حفظ الكورس</button><span class="status" hidden></span></div>
         </form>
         <h3 style="margin-top:22px">الباقات والأسعار</h3>
@@ -668,6 +671,11 @@
         ${field("brand_by", "السطر الصغير تحت الاسم", "زي by Mr. Islam Khalifa", true)}
         ${field("cert_signature", "التوقيع على الشهادة")}
         ${field("cert_issuer", "الجهة المصدرة للشهادة", "بتظهر تحت اللوجو. فاضي = اسم المنصة", true)}
+        <h2 class="full" style="margin-top:10px">ديباجة الشهادة <small class="muted">(الفاضي بيرجع للنص الافتراضي، وتقدر تشوف الشكل من زرار "معاينة الشهادة" في تاب الكورسات)</small></h2>
+        ${field("cert_title", "العنوان", "افتراضي: شهادة إتمام")}
+        ${field("cert_title_en", "العنوان بالإنجليزي", "افتراضي: CERTIFICATE OF COMPLETION", true)}
+        ${field("cert_lead", "قبل اسم المتدرب", "افتراضي: تشهد المنصة بأن")}
+        ${field("cert_course_lead", "قبل اسم الكورس", "افتراضي: أتم بنجاح كورس")}
         ${field("footer_line1", "الفوتر: السطر الأول")}
         ${field("footer_line2", "الفوتر: السطر التاني")}
         <h2 class="full" style="margin-top:10px">العلامة المائية على المادة العلمية</h2>
