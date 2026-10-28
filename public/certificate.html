@@ -31,6 +31,7 @@
   .cert .lead{font-family:var(--f-body);font-size:19px;color:var(--ink-2);margin-top:28px}
   .cert .name{font-size:44px;font-weight:800;margin-top:10px;padding:0 30px 6px;border-bottom:2px solid var(--gold)}
   .cert .course{font-size:27px;margin-top:20px}
+  .cert .note{font-family:var(--f-body);font-size:16px;color:var(--ink-2);margin-top:8px}
   .cert .meta{position:absolute;bottom:72px;inset-inline:90px;display:flex;justify-content:space-between;align-items:flex-end;font-family:var(--f-body);font-size:14px;color:var(--ink-2)}
   .cert .meta b{display:block;font-family:var(--f-display);font-size:18px;color:var(--navy)}
   .cert .qr{display:flex;align-items:flex-end;gap:12px;text-align:start}
@@ -59,18 +60,22 @@
   const s = site.settings;
   const el = IK.$("#cert");
   let c;
-  try { c = await IK.api("/student/certificate/" + encodeURIComponent(IK.qs("c") || "financial")); }
+  const slug = encodeURIComponent(IK.qs("c") || "financial");
+  const preview = IK.qs("preview") === "1" && me.role === "admin";
+  try { c = await IK.api((preview ? "/admin/certificate-preview/" : "/student/certificate/") + slug); }
   catch (e) { el.innerHTML = `<div class="empty" style="padding-top:300px">${IK.esc(e.message)}</div>`; return; }
+  if (preview) IK.$(".page-head h1").textContent = "معاينة الشهادة (اسم وكود تجريبيين)";
+  const t = c.texts;
   if (c.has_bg) { el.classList.add("has-bg"); el.style.backgroundImage = "url(/api/public/cert-bg)"; }
   const verify = location.origin + "/verify?code=" + c.code;
   el.innerHTML = `<div class="band"></div><div class="in">
       <img class="logo" src="/assets/logo.webp" alt="">
       <div class="brand">${IK.esc(c.issuer)}</div>
-      <h1>شهادة إتمام</h1><div class="en-t">CERTIFICATE OF COMPLETION</div>
-      <p class="lead">تشهد المنصة بأن</p>
+      <h1>${IK.esc(t.title)}</h1><div class="en-t">${IK.esc(t.title_en)}</div>
+      <p class="lead">${IK.esc(t.lead)}</p>
       <div class="name">${IK.esc(c.name)}</div>
-      <p class="lead">أتم بنجاح كورس</p>
-      <div class="course">${IK.esc(c.course)}</div>
+      <p class="lead">${IK.esc(t.course_lead)}</p>
+      <div class="course">${IK.esc(c.course)}</div>${c.note ? `<p class="note">${IK.esc(c.note)}</p>` : ""}
     </div>
     <div class="meta">
       <div style="text-align:start">تاريخ الإصدار<b class="num">${IK.esc(c.issued_at)}</b></div>
