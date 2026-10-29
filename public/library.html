@@ -43,6 +43,10 @@
     </div>
   </div>
   <div class="lib-grid" id="list"><div class="loading">جاري التحميل...</div></div>
+  <section style="margin-top:36px" id="demos-sec" hidden>
+    <h2 style="font-size:20px;margin-bottom:12px">جرّب البرامج بنفسك (Demo)</h2>
+    <div class="lib-grid" id="demo-list"></div>
+  </section>
 </main>
 <script>
 (async function () {
@@ -51,6 +55,12 @@
   const site = await IK.chrome({ user: me });
   const s = site.settings;
   IK.track("library_view");
+  const demos = IK.demosFor(site, "library");
+  if (demos.length) {
+    IK.$("#demos-sec").hidden = false;
+    IK.$("#demo-list").innerHTML = demos.map((a) => IK.demoCard(a)).join("");
+    IK.bindDemos(IK.$("#demo-list"), demos, me);
+  }
   const tracks = site.tracks || [];
   const tName = Object.fromEntries(tracks.map((t) => [t.key, t.name]));
   const subcats = String(s.lib_subcats || "").split("\n").map((l) => l.split("|").map((x) => x.trim())).filter((p) => p[0] && p[1]);

@@ -24,10 +24,11 @@ def one_line(*names):
 
 (mig / "console").mkdir(exist_ok=True)
 # أول تشغيل على قاعدة فاضية
-(mig / "console" / "setup_once.sql").write_text(one_line("0001_schema.sql", "0002_seed.sql", "0003_phase1.sql", "0004_contracting.sql", "0005_catalog_stats.sql", "0006_tax.sql", "0007_academy.sql", "0008_tax_l2.sql", "0009_tax_l3.sql", "0010_ifrs.sql", "0011_ifrs_l2.sql"), encoding="utf-8")
+(mig / "console" / "setup_once.sql").write_text(one_line("0001_schema.sql", "0002_seed.sql", "0003_phase1.sql", "0004_contracting.sql", "0005_catalog_stats.sql", "0006_tax.sql", "0007_academy.sql", "0008_tax_l2.sql", "0009_tax_l3.sql", "0010_ifrs.sql", "0011_ifrs_l2.sql", "0012_study_time.sql", "0013_packages_demo.sql"), encoding="utf-8")
 # تحديث قاعدة شغالة فعلاً
 (mig / "console" / "0003_phase1.sql").write_text(one_line("0003_phase1.sql"), encoding="utf-8")
 (mig / "console" / "0004_contracting.sql").write_text(one_line("0004_contracting.sql", "0005_catalog_stats.sql"), encoding="utf-8")
+(mig / "console" / "0013_packages_demo.sql").write_text(one_line("0013_packages_demo.sql"), encoding="utf-8")
 (mig / "console" / "0005_catalog_stats.sql").write_text(one_line("0005_catalog_stats.sql"), encoding="utf-8")
 # كورس الضرايب على 3 أجزاء صغيرة، لأن الـ Console رفض الملف كله مرة واحدة
 tax = one_line("0006_tax.sql").split("; ")

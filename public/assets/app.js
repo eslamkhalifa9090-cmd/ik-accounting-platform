@@ -145,6 +145,36 @@
     });
   };
 
+  // ===== برامج الـ Demo =====
+  // كروت البرامج في مكان معين (home / course / dashboard / library). slug = الكورس الحالي في صفحة الكورس
+  IK.demosFor = (site, place, slug) => (site.demos || []).filter((a) => (a.places || []).includes(place) &&
+    (place !== "course" || !a.courses.length || a.courses.includes(slug)));
+  IK.demoCard = (a, extra = "") => `<article class="card demo-card stack" data-demo="${IK.esc(a.id)}">
+      <span class="badge gold">Demo</span>
+      <h3>${IK.esc(a.name)}</h3>${a.desc ? `<p class="muted">${IK.esc(a.desc)}</p>` : ""}${extra}
+      ${a.mine ? "" : `<button class="btn btn-wa js-demo" type="button" data-demo="${IK.esc(a.id)}">${IK.chatIcon}${IK.esc(a.button || "اطلب Demo")}</button>`}
+    </article>`;
+  // طلب Demo: الزائر بيعرّف بنفسه الأول (اسم ورقم)، والطلب بيتسجل، وبعدين واتساب خدمة العملاء بيفتح برسالة جاهزة
+  IK.requestDemo = async (a, user) => {
+    let who = user;
+    if (who === undefined) { try { who = await IK.api("/auth/me", { noRedirect: true }); } catch (e) { who = null; } }
+    if (!who) {
+      who = await IK.visitorGate({ item: { kind: "demo", ref: a.id }, title: "جرّب " + a.name, why: "نبعتلك بيانات دخول الـ Demo على واتساب" });
+      if (!who) return;
+    }
+    const s = (await IK.site()).settings || {};
+    const win = window.open("", "_blank");
+    try { await IK.api("/public/demo/" + encodeURIComponent(a.id), { method: "POST", noRedirect: true }); }
+    catch (e) { if (win) win.close(); alert(e.message); return; }
+    const text = IK.fill(a.message || "السلام عليكم، أنا {name} وعايز أجرب Demo {app}. رقمي: {phone}", { name: who.name || "", phone: who.phone || "", app: a.name });
+    const link = IK.wa(s.whatsapp, IK.subText(text));
+    if (win) win.location.href = link; else location.href = link;
+  };
+  // ربط زراير "اطلب Demo" جوه عنصر
+  IK.bindDemos = (root, list, user) => root.querySelectorAll(".js-demo").forEach((b) => {
+    b.onclick = () => { const a = list.find((x) => x.id === b.dataset.demo); if (a) IK.requestDemo(a, user); };
+  });
+
   // الهيدر والفوتر لكل صفحات المنصة
   IK.chrome = async ({ user } = {}) => {
     IK.source();

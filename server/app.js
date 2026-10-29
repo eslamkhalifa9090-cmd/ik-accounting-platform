@@ -71,7 +71,7 @@ async function getSettings(db) {
 // whatsapp = خدمة العملاء، support_whatsapp = الدعم الفني، lecturer_whatsapp = المحاضر
 const PUBLIC_SETTINGS = ["whatsapp", "whatsapp_display", "support_whatsapp", "lecturer_whatsapp", "brand_name", "brand_by", "footer_line1", "footer_line2",
   "subscribe_message", "support_message", "follow_message", "notify_message", "cert_signature", "wm_text", "wm_student", "wm_level", "tracks", "lib_subcats", "follow_mode"];
-const ADMIN_SETTINGS = [...PUBLIC_SETTINGS, "reminder_message", "inactive_days", "cert_issuer", "activation_message", ...CERT_TEXT_KEYS];
+const ADMIN_SETTINGS = [...PUBLIC_SETTINGS, "reminder_message", "inactive_days", "cert_issuer", "activation_message", "demo_message", ...CERT_TEXT_KEYS];
 
 // الأقسام بتتكتب في الإعدادات سطر لكل قسم: المفتاح | الاسم | سطر تعريفي
 const parseLines = (txt, n) => String(txt || "").split("\n").map((l) => l.split("|").map((x) => x.trim())).filter((p) => p[0] && p.length >= n);
@@ -129,6 +129,42 @@ async function unlockOf(db, courseId) {
   return r && UNLOCKS.includes(r.value) ? r.value : "sequence";
 }
 
+// برامج الـ Demo (HR، mini-sys ...): بتتحفظ في الإعدادات تحت demo_apps (JSON)
+// places = بتظهر فين (الرئيسية، صفحة الكورس، كورساتي، المكتبة)، open = أي حد (زائر أو متدرب) يقدر يطلبها،
+// courses = تظهر في صفحات الكورسات دي بس (فاضي = كل الكورسات)، login = بيانات الدخول اللي بتظهر للمشترك في باقة فيها البرنامج
+const DEMO_PLACES = ["home", "course", "dashboard", "library"];
+const demoAppsOf = (s) => (Array.isArray(parseJSON(s.demo_apps, [])) ? parseJSON(s.demo_apps, []) : []);
+const publicDemo = (a, courses) => ({
+  id: a.id, name: a.name, desc: a.desc || "", button: a.button || "", message: a.message || "", places: a.places || [],
+  courses: (a.courses || []).map((id) => (courses.find((c) => c.id === id) || {}).slug).filter(Boolean),
+});
+function cleanDemoApps(list) {
+  if (!Array.isArray(list)) fail(400, "بيانات البرامج غلط.");
+  const seen = new Set();
+  return list.map((a) => {
+    const name = String(a.name || "").trim().slice(0, 80);
+    if (!name) fail(400, "اكتب اسم البرنامج اللي هيظهر.");
+    let id = String(a.id || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30) || "app";
+    for (let i = 2; seen.has(id); i++) id = `${String(a.id || "app").slice(0, 26)}-${i}`;
+    seen.add(id);
+    const url = String(a.url || "").trim().slice(0, 300);
+    if (url && !/^https:\/\//.test(url)) fail(400, "رابط البرنامج لازم يبدأ بـ https://");
+    return {
+      id, name, desc: String(a.desc || "").trim().slice(0, 300), button: String(a.button || "").trim().slice(0, 40), url,
+      login: String(a.login || "").trim().slice(0, 400), message: String(a.message || "").trim().slice(0, 500),
+      places: (Array.isArray(a.places) ? a.places : []).filter((x) => DEMO_PLACES.includes(x)),
+      courses: (Array.isArray(a.courses) ? a.courses : []).map(Number).filter(Boolean),
+      open: !!a.open, visible: a.visible !== false,
+    };
+  });
+}
+
+// الباقة: full = بتفتح محتوى Pro (الفيديوهات)، apps = برامج الـ Demo اللي فيها. الكود pro بيفتح كل حاجة دايماً (زي الأول)
+async function planOf(db, courseId, code) {
+  const p = await db.prepare("SELECT * FROM plans WHERE course_id = ? AND code = ?").bind(courseId, code).first();
+  return { code, name: p ? p.name : code, full: code === "pro" || !!(p && p.full_access), apps: p ? parseJSON(p.apps, []) : [] };
+}
+
 function publicPlan(p) {
   const info = priceInfo(p);
   return {
@@ -155,6 +191,7 @@ async function courseState(db, userId, course, plan) {
     unitOf(db, course.id),
     unlockOf(db, course.id),
   ]);
+  const full = (await planOf(db, course.id, plan)).full;
   const free = unlock === "open";
   const doneSet = new Set(done.map((d) => d.material_id));
   const bestBy = Object.fromEntries(best.map((b) => [b.exam_id, b]));
@@ -180,7 +217,7 @@ async function courseState(db, userId, course, plan) {
     // الفصول بتفتح بالترتيب: الفصل مايفتحش غير لما المتدرب يخلص اللي قبله (اللي في باقته واترفع فعلاً)
     let chainOpen = true;
     const mats = materials.filter((m) => m.level_id === l.id).map((m) => {
-      const allowed = m.min_plan === "basic" || plan === "pro";
+      const allowed = m.min_plan === "basic" || full;
       const isDone = doneSet.has(m.id);
       const ready = !(m.kind === "pdf" && !m.pages);
       if (allowed) { total++; if (isDone) doneCount++; }
@@ -280,7 +317,7 @@ const courseCard = (c) => ({
 route("GET", "/public/site", async ({ db }) => {
   const s = await getSettings(db);
   const { results: courses } = await db.prepare("SELECT * FROM courses WHERE status != 'hidden' ORDER BY sort, id").all();
-  const { results: plans } = await db.prepare("SELECT * FROM plans WHERE visible = 1 ORDER BY code").all();
+  const { results: plans } = await db.prepare("SELECT * FROM plans WHERE visible = 1 ORDER BY sort, id").all();
   const { results: counts } = await db.prepare("SELECT course_id, COUNT(*) AS n FROM levels GROUP BY course_id").all();
   // الفصول المجانية في كل الكورسات، علشان قسم "جرّب قبل ما تشترك" في الصفحة الرئيسية
   const { results: free } = await db.prepare(`SELECT m.id, m.title, m.pages, l.num, c.slug, c.title AS course FROM materials m
@@ -298,6 +335,7 @@ route("GET", "/public/site", async ({ db }) => {
       plans: plans.filter((p) => p.course_id === c.id).map(publicPlan),
     })),
     free,
+    demos: demoAppsOf(s).filter((a) => a.visible !== false && a.open).map((a) => publicDemo(a, courses)),
   });
 });
 
@@ -305,7 +343,7 @@ route("GET", "/public/course/:slug", async ({ db, params }) => {
   const c = await db.prepare("SELECT * FROM courses WHERE slug = ? AND status != 'hidden'").bind(params.slug).first();
   if (!c) fail(404, "الكورس ده مش موجود.");
   const { results: levels } = await db.prepare("SELECT num, title, topics, teaser FROM levels WHERE course_id = ? ORDER BY num").bind(c.id).all();
-  const { results: plans } = await db.prepare("SELECT * FROM plans WHERE course_id = ? AND visible = 1 ORDER BY code").bind(c.id).all();
+  const { results: plans } = await db.prepare("SELECT * FROM plans WHERE course_id = ? AND visible = 1 ORDER BY sort, id").bind(c.id).all();
   const { results: exams } = await db.prepare("SELECT kind, after_level, title, pass_pct FROM exams WHERE course_id = ? ORDER BY after_level, kind DESC").bind(c.id).all();
   // أسامي الفصول بس (من غير محتوى) علشان الزائر يشوف الكورس فيه إيه، والمجاني منها يتفتح للتجربة
   const { results: mats } = await db.prepare(`SELECT m.id, l.num, m.kind, m.title, m.pages, m.min_plan, m.free FROM materials m
@@ -351,7 +389,7 @@ async function whoIs(db, request) {
   return { user, visitor };
 }
 const needVisitor = () => fail(403, "سجّل دخول سريع كزائر الأول، ده مجاني ومن غير باسورد.");
-const EVENT_KINDS = ["contact", "notify", "file", "chapter"];
+const EVENT_KINDS = ["contact", "notify", "file", "chapter", "demo"];
 
 route("GET", "/public/visitor", async ({ db, request }) => {
   const { user, visitor } = await whoIs(db, request);
@@ -400,6 +438,29 @@ route("POST", "/public/notify", async ({ db, request }) => {
   if (!v) needVisitor();
   await visitorEvent(db, v, "notify", c.slug);
   await bump(db, "wa_notify", c.slug);
+  return json({ ok: true });
+});
+
+// طلب Demo لبرنامج: بيتسجل باسم الزائر (أو المتدرب) علشان الأدمن يبعتله بيانات الدخول على واتساب
+route("POST", "/public/demo/:id", async ({ db, request, params }) => {
+  const s = await getSettings(db);
+  const a = demoAppsOf(s).find((x) => x.id === params.id && x.visible !== false);
+  if (!a) fail(404, "البرنامج ده مش متاح دلوقتي.");
+  const { user, visitor } = await whoIs(db, request);
+  if (!user && !visitor) needVisitor();
+  if (!a.open && !user) fail(403, "الـ Demo ده للمشتركين بس.");
+  if (visitor && !user) await visitorEvent(db, visitor, "demo", a.id);
+  if (user) {
+    // المتدرب بيتسجل كزائر بنفس رقمه علشان طلبه يظهر في قايمة الطلبات
+    const phone = user.phone || "";
+    if (phone) {
+      let v = await db.prepare("SELECT * FROM visitors WHERE phone = ?").bind(phone).first();
+      if (!v) v = await db.prepare("INSERT INTO visitors (name, phone, consent_service, consent_at, source, last_seen) VALUES (?, ?, 1, datetime('now'), ?, datetime('now')) RETURNING *")
+        .bind(user.name, phone, user.source || "student").first();
+      if (user.role !== "admin") await visitorEvent(db, v, "demo", a.id);
+    }
+  }
+  if (!user || user.role !== "admin") await bump(db, "demo_req", a.id);
   return json({ ok: true });
 });
 
@@ -623,17 +684,26 @@ route("GET", "/student/dashboard", async ({ db, user }) => {
   const { results: enr } = await db.prepare(`SELECT e.*, c.slug, c.title, c.subtitle, c.status FROM enrollments e
                                              JOIN courses c ON c.id = e.course_id WHERE e.user_id = ? ORDER BY c.sort`).bind(user.id).all();
   const courses = [];
+  const s = await getSettings(db);
+  const apps = demoAppsOf(s).filter((a) => a.visible !== false);
+  const mine = new Set();
   for (const e of enr) {
     const st = await courseState(db, user.id, { id: e.course_id }, e.plan_code);
     const cur = st.levels.find((l) => l.num === st.current_level);
+    const p = await planOf(db, e.course_id, e.plan_code);
+    if (!e.expires_at || e.expires_at >= today()) for (const id of p.apps) mine.add(id);
     courses.push({
-      slug: e.slug, title: e.title, subtitle: e.subtitle, plan: e.plan_code, expires_at: e.expires_at,
+      slug: e.slug, title: e.title, subtitle: e.subtitle, plan: e.plan_code, plan_name: p.name, plan_full: p.full, expires_at: e.expires_at,
       active: !e.expires_at || e.expires_at >= today(), progress: st.progress, completed: st.completed,
       current_level: st.current_level, current_title: cur ? cur.title : "", levels: st.levels.length, unit: st.unit,
       ...courseSummary(st), study: await studyTime(db, user.id, e.course_id),
     });
   }
-  return json({ user: { name: user.name, must_change: !!user.must_change }, courses });
+  // برامج الـ Demo: اللي في باقته بيشوف الرابط وبيانات الدخول، والباقي (لو متاح للكل) بيطلبه
+  const { results: cs } = await db.prepare("SELECT id, slug FROM courses").all();
+  const demos = apps.filter((a) => mine.has(a.id) || (a.open && (a.places || []).includes("dashboard")))
+    .map((a) => ({ ...publicDemo(a, cs), mine: mine.has(a.id), ...(mine.has(a.id) ? { url: a.url, login: a.login } : {}) }));
+  return json({ user: { name: user.name, must_change: !!user.must_change }, courses, demos });
 }, "user");
 
 route("GET", "/student/course/:slug", async ({ db, user, params }) => {
@@ -664,7 +734,7 @@ async function materialForUser(db, user, materialId) {
     const st = await courseState(db, user.id, { id: l.cid }, e.plan_code);
     const lv = st.levels.find((x) => x.id === l.id);
     if (!lv.unlocked) fail(403, `${st.unit.this} لسه ${st.unit.closed}.`);
-    if (m.min_plan === "pro" && e.plan_code !== "pro") fail(403, "المادة دي في باقة Pro.");
+    if (m.min_plan === "pro" && !(await planOf(db, l.cid, e.plan_code)).full) fail(403, "المادة دي مش ضمن باقتك.");
     const sm = lv.materials.find((x) => x.id === m.id);
     if (sm && !sm.open) fail(403, "الفصل ده هيفتح لما تخلص الفصل اللي قبله.");
   }
@@ -959,7 +1029,9 @@ route("DELETE", "/admin/students/:id", async ({ db, params }) => {
 async function upsertEnrollment(db, userId, b) {
   const c = await db.prepare("SELECT id FROM courses WHERE slug = ?").bind(b.course_slug).first();
   if (!c) fail(400, "الكورس ده مش موجود.");
-  const plan = b.plan_code === "pro" ? "pro" : "basic";
+  const p = await db.prepare("SELECT code FROM plans WHERE course_id = ? AND code = ?").bind(c.id, String(b.plan_code || "basic")).first();
+  if (!p) fail(400, "الباقة دي مش موجودة في الكورس ده.");
+  const plan = p.code;
   const exp = b.expires_at ? String(b.expires_at).slice(0, 10) : null;
   if (exp && !/^\d{4}-\d{2}-\d{2}$/.test(exp)) fail(400, "تاريخ الانتهاء مكتوب غلط.");
   await db.prepare(`INSERT INTO enrollments (user_id, course_id, plan_code, expires_at) VALUES (?, ?, ?, ?)
@@ -1028,7 +1100,7 @@ route("GET", "/admin/export.csv", async ({ db }) => {
 route("GET", "/admin/courses", async ({ db }) => {
   const [{ results: courses }, { results: plans }, { results: levels }, s] = await Promise.all([
     db.prepare("SELECT * FROM courses ORDER BY sort, id").all(),
-    db.prepare("SELECT * FROM plans ORDER BY code").all(),
+    db.prepare("SELECT * FROM plans ORDER BY sort, id").all(),
     db.prepare("SELECT * FROM levels ORDER BY num").all(),
     getSettings(db),
   ]);
@@ -1037,7 +1109,7 @@ route("GET", "/admin/courses", async ({ db }) => {
     unit: unitFrom(s, c.id),
     unlock: unlockFrom(s, c.id),
     cert_note: s["cert_note_" + c.id] || "",
-    plans: plans.filter((p) => p.course_id === c.id).map((p) => ({ ...p, features: parseJSON(p.features, []), ...priceInfo(p) })),
+    plans: plans.filter((p) => p.course_id === c.id).map((p) => ({ ...p, features: parseJSON(p.features, []), apps: parseJSON(p.apps, []), ...priceInfo(p) })),
     levels: levels.filter((l) => l.course_id === c.id),
   })));
 }, "admin");
@@ -1063,8 +1135,8 @@ route("POST", "/admin/courses", async ({ db, request }) => {
   const r = await db.prepare("INSERT INTO courses (slug, title, subtitle, status, sort, track) VALUES (?, ?, ?, ?, ?, ?) RETURNING id")
     .bind(slug, b.title.trim(), b.subtitle || null, ["open", "soon", "hidden"].includes(b.status) ? b.status : "soon", Number(b.sort) || 99, track).first();
   await db.batch([
-    db.prepare("INSERT INTO plans (course_id, code, name, features) VALUES (?, 'basic', 'الباقة الأساسية', '[]')").bind(r.id),
-    db.prepare("INSERT INTO plans (course_id, code, name, features, visible) VALUES (?, 'pro', 'باقة Pro', '[]', 0)").bind(r.id),
+    db.prepare("INSERT INTO plans (course_id, code, name, features, sort) VALUES (?, 'basic', 'الباقة الأساسية', '[]', 1)").bind(r.id),
+    db.prepare("INSERT INTO plans (course_id, code, name, features, visible, full_access, sort) VALUES (?, 'pro', 'باقة Pro', '[]', 0, 1, 2)").bind(r.id),
   ]);
   return json({ ok: true, id: r.id, slug });
 }, "admin");
@@ -1100,14 +1172,46 @@ route("PATCH", "/admin/courses/:id", async ({ db, request, params }) => {
 
 route("PATCH", "/admin/plans/:id", async ({ db, request, params }) => {
   const b = await body(request);
-  const f = pick(b, ["name", "price", "show_price", "discount_type", "discount_value", "discount_ends", "visible"]);
+  const f = pick(b, ["name", "price", "show_price", "discount_type", "discount_value", "discount_ends", "visible", "full_access", "sort"]);
+  if (f.name !== undefined && !String(f.name).trim()) fail(400, "اكتب اسم الباقة.");
+  if (f.sort !== undefined) f.sort = parseInt(toLatinDigits(f.sort), 10) || 0;
+  if (b.apps !== undefined) {
+    const ids = new Set(demoAppsOf(await getSettings(db)).map((a) => a.id));
+    f.apps = JSON.stringify((Array.isArray(b.apps) ? b.apps : []).filter((x) => ids.has(x)));
+  }
   if (b.features !== undefined) f.features = JSON.stringify((Array.isArray(b.features) ? b.features : String(b.features).split("\n")).map((s) => String(s).trim()).filter(Boolean));
   if (f.discount_type && !["none", "percent", "amount"].includes(f.discount_type)) fail(400, "نوع الخصم غلط.");
   if (f.discount_type === "percent" && Number(f.discount_value) > 100) fail(400, "نسبة الخصم مينفعش تزيد عن 100%.");
   for (const k of ["price", "discount_value"]) if (f[k] !== undefined) { f[k] = Number(toLatinDigits(f[k])) || 0; if (f[k] < 0) fail(400, "الأرقام لازم تكون موجبة."); }
-  for (const k of ["show_price", "visible"]) if (f[k] !== undefined) f[k] = f[k] ? 1 : 0;
+  for (const k of ["show_price", "visible", "full_access"]) if (f[k] !== undefined) f[k] = f[k] ? 1 : 0;
   if (f.discount_ends === "") f.discount_ends = null;
   await update(db, "plans", params.id, f);
+  return json({ ok: true });
+}, "admin");
+
+// باقة جديدة للكورس: بتبدأ مخفية علشان الأدمن يكمل بياناتها الأول
+route("POST", "/admin/courses/:id/plans", async ({ db, request, params }) => {
+  const b = await body(request);
+  const name = String(b.name || "").trim().slice(0, 60);
+  if (!name) fail(400, "اكتب اسم الباقة.");
+  const c = await db.prepare("SELECT id FROM courses WHERE id = ?").bind(params.id).first();
+  if (!c) fail(404, "الكورس ده مش موجود.");
+  const { results: taken } = await db.prepare("SELECT code, sort FROM plans WHERE course_id = ?").bind(c.id).all();
+  const base = toLatinDigits(name).toLowerCase().replace(/[\s_.]+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/^-+|-+$/g, "").slice(0, 20) || "plan";
+  let code = base;
+  for (let i = 2; taken.some((t) => t.code === code); i++) code = `${base}-${i}`;
+  const sort = Math.max(0, ...taken.map((t) => t.sort || 0)) + 1;
+  await db.prepare("INSERT INTO plans (course_id, code, name, features, visible, sort) VALUES (?, ?, ?, '[]', 0, ?)").bind(c.id, code, name, sort).run();
+  return json({ ok: true, code });
+}, "admin");
+
+// مسح باقة: مينفعش لو فيه متدربين مشتركين عليها
+route("DELETE", "/admin/plans/:id", async ({ db, params }) => {
+  const p = await db.prepare("SELECT * FROM plans WHERE id = ?").bind(params.id).first();
+  if (!p) fail(404, "الباقة دي مش موجودة.");
+  const n = await db.prepare("SELECT COUNT(*) AS n FROM enrollments WHERE course_id = ? AND plan_code = ?").bind(p.course_id, p.code).first();
+  if (n.n) fail(400, `فيه ${n.n} متدرب مشتركين على الباقة دي. انقلهم لباقة تانية الأول، أو اخفيها بدل ما تمسحها.`);
+  await db.prepare("DELETE FROM plans WHERE id = ?").bind(p.id).run();
   return json({ ok: true });
 }, "admin");
 
@@ -1284,6 +1388,21 @@ route("PATCH", "/admin/questions/:id", async ({ db, request, params }) => {
 route("DELETE", "/admin/questions/:id", async ({ db, params }) => {
   await db.prepare("DELETE FROM questions WHERE id = ?").bind(params.id).run();
   return json({ ok: true });
+}, "admin");
+
+// ---------- برامج الـ Demo وطلباتها ----------
+route("GET", "/admin/demo", async ({ db }) => {
+  const s = await getSettings(db);
+  const { results } = await db.prepare(`SELECT e.ref AS app, e.created_at, v.id AS visitor_id, v.name, v.phone, v.source,
+      (SELECT u.id FROM users u WHERE u.phone = v.phone) AS user_id
+      FROM visitor_events e JOIN visitors v ON v.id = e.visitor_id WHERE e.kind = 'demo' ORDER BY e.id DESC LIMIT 300`).all();
+  return json({ apps: demoAppsOf(s), requests: results, message: s.demo_message || "" });
+}, "admin");
+
+route("PUT", "/admin/demo-apps", async ({ db, request }) => {
+  const apps = cleanDemoApps((await body(request)).apps);
+  await db.prepare("INSERT INTO settings (key, value) VALUES ('demo_apps', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").bind(JSON.stringify(apps)).run();
+  return json({ ok: true, apps });
 }, "admin");
 
 // ---------- الإعدادات ----------

@@ -71,6 +71,7 @@
   const subAny = sub(plan0);
   const freeN = d.levels.reduce((a, l) => a + l.materials.filter((m) => m.free).length, 0);
   const passPct = d.exams[0] ? d.exams[0].pass_pct : 50;
+  const demos = IK.demosFor(site, "course", slug);
   const notifyBtn = `<button class="btn btn-wa js-notify" type="button">🔔 بلغني أول ما يفتح</button>`;
   // كل فصل: المشترك يشوف الاسم بس (ويدخل من "ادخل الكورس")، والزائر يشوف 🔒 أو 🎁 للمجاني
   const chapter = (m, i) => {
@@ -126,6 +127,10 @@
         <p>وفيه امتحانات تراكمية بتجمع اللي فات، وفي الآخر امتحان شامل. ولما تخلص كله بتطلعلك <b>شهادة إتمام</b> باسمك وبكود تحقق أي حد يقدر يتأكد منه.</p>
       </div>
     </section>
+    ${demos.length ? `<section class="sec" id="demos">
+      <h2>جرّب البرنامج بنفسك (Demo)</h2>
+      <div class="files" id="demo-list">${demos.map((a) => IK.demoCard(a)).join("")}</div>
+    </section>` : ""}
     <section class="sec" id="files" hidden>
       <h2>ملفات من مكتبة IK مع الكورس ده</h2>
       <div class="files" id="file-list"></div>
@@ -141,6 +146,8 @@
         </article>`).join("")}</div>
       <p class="muted" style="margin-top:10px">الدفع بيتم مع خدمة العملاء على واتساب، وبعدها بيوصلك رابط تفعيل تختار منه الباسورد بنفسك وتبدأ على طول.</p>
     </section>` : ""}`;
+
+  if (demos.length) IK.bindDemos(IK.$("#demo-list"), demos, me);
 
   // ملفات المكتبة المرتبطة بالكورس
   try {
