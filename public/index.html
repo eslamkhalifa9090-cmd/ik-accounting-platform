@@ -170,6 +170,8 @@ section{padding-block:clamp(52px,7vw,96px)}
 .free-item span{font-size:14px;color:var(--ink-3)}
 .free-item:hover{box-shadow:var(--shadow)}
 .free-note{margin-top:16px;font-size:14.5px;color:var(--ink-2)}
+#demos .free-item{border-style:solid;cursor:default}
+#demos .free-item .btn{align-self:flex-start;margin-top:4px;padding:.6em 1.1em;font-size:15px;white-space:normal}
 
 /* الدورة المحاسبية */
 .cycle{background:var(--navy);color:var(--white);padding-block:clamp(40px,6vw,64px)}
@@ -425,6 +427,17 @@ footer .slogan em{font-style:normal;color:var(--gold)}
     </div>
     <div class="free-list" id="free-list"></div>
     <p class="free-note">🎁 الفصول المجانية بتفتح بـ <b>دخول سريع كزائر</b>: اسمك ورقمك بس، من غير باسورد ومن غير أي فلوس.</p>
+  </div>
+</section>
+
+<section id="demos" aria-labelledby="demos-h" hidden>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Demo</span>
+      <h2 id="demos-h">جرّب البرامج بنفسك قبل ما تقرر</h2>
+      <p>برامج شغالة فعلاً تقدر تدخلها وتجربها. اطلب بيانات الدخول وهنبعتهالك على واتساب.</p>
+    </div>
+    <div class="free-list" id="demo-list"></div>
   </div>
 </section>
 
@@ -693,6 +706,15 @@ footer .slogan em{font-style:normal;color:var(--gold)}
       <small>🎁 ${esc(f.course)}</small><b>${esc(f.title)}</b><span>${f.pages} صفحة · افتحه واقرا ببلاش</span></a>`).join("");
   }
 
+  // برامج الـ Demo
+  function renderDemos() {
+    const list = IK.demosFor(site, "home");
+    IK.$("#demos").hidden = !list.length;
+    IK.$("#demo-list").innerHTML = list.map((a) => `<div class="free-item"><small>🖥️ Demo</small><b>${esc(a.name)}</b>${a.desc ? `<span>${esc(a.desc)}</span>` : ""}
+      <button class="btn btn-wa js-demo" type="button" data-demo="${esc(a.id)}"><svg><use href="#i-chat"/></svg>${esc(a.button || "اطلب Demo")}</button></div>`).join("");
+    IK.bindDemos(IK.$("#demo-list"), list);
+  }
+
   // المكتبة
   async function renderLibrary() {
     let files = [];
@@ -767,7 +789,7 @@ footer .slogan em{font-style:normal;color:var(--gold)}
   IK.$("#phone-num").textContent = S.whatsapp_display || ("0" + String(S.whatsapp).replace(/^20/, ""));
   sel.innerHTML = '<option value="">استفسار عام</option>' + site.courses.map((c) => `<option>${esc(c.title)}</option>`).join("");
   IK.$("#lead-interest").innerHTML = '<option value="general">استفسار عام</option>' + site.courses.map((c) => `<option value="${esc(c.slug)}">${esc(c.title)}</option>`).join("") + '<option value="services">خدمات للشركات</option>';
-  renderCatalog(); renderFree(); renderServices(); renderFaq(); syncWa(); syncPick();
+  renderCatalog(); renderFree(); renderDemos(); renderServices(); renderFaq(); syncWa(); syncPick();
   renderLibrary();
 })();
 </script>

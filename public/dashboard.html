@@ -20,6 +20,10 @@
     <p>هنا هتلاقي كورساتك ونسبة تقدمك في كل كورس، وتكمل من المكان اللي وقفت عنده.</p>
   </div>
   <div id="mine" class="stack"><div class="loading">جاري التحميل...</div></div>
+  <section style="margin-top:36px" id="my-demos" hidden>
+    <h2 style="margin-bottom:14px">برامج الـ Demo</h2>
+    <div id="demos" class="grid grid-3"></div>
+  </section>
   <section style="margin-top:36px" id="my-files" hidden>
     <h2 style="font-size:20px;margin-bottom:12px">ملفاتي من مكتبة IK</h2>
     <div id="files" class="grid grid-3"></div>
@@ -67,7 +71,7 @@
   } else {
     mine.innerHTML = d.courses.map((c) => `
       <article class="card stack">
-        <div class="spread"><h2>${IK.esc(c.title)}</h2><span class="badge ${c.plan === "pro" ? "gold" : ""}">${c.plan === "pro" ? "باقة Pro" : "الباقة الأساسية"}</span></div>
+        <div class="spread"><h2>${IK.esc(c.title)}</h2><span class="badge ${c.plan_full ? "gold" : ""}">${IK.esc(c.plan_name || c.plan)}</span></div>
         <div><div class="spread"><span>نسبة التقدم في الكورس</span><b class="num">${c.progress}%</b></div><div class="bar"><i style="width:${c.progress}%"></i></div></div>
         <div class="stats-row">
           <div><b class="num">${c.current_level}<small> / ${c.levels}</small></b><span>${IK.U(c.unit).the} الحالي${IK.U(c.unit).key === "unit" ? "ة" : ""}</span></div>
@@ -83,6 +87,15 @@
         <h3 style="margin-top:6px">امتحاناتك</h3>
         ${examsTable(c)}
       </article>`).join("");
+  }
+  // برامج الـ Demo: اللي في باقته بيشوف الرابط وبيانات الدخول، والباقي بيطلبه على واتساب
+  const demos = d.demos || [];
+  if (demos.length) {
+    IK.$("#my-demos").hidden = false;
+    IK.$("#demos").innerHTML = demos.map((a) => IK.demoCard(a, a.mine ? `
+      ${a.login ? `<pre class="demo-login">${IK.esc(a.login)}</pre>` : '<p class="muted">بيانات الدخول هتوصلك على واتساب.</p>'}
+      ${a.url ? `<a class="btn btn-primary" target="_blank" rel="noopener" href="${IK.esc(a.url)}">افتح البرنامج</a>` : ""}` : "")).join("");
+    IK.bindDemos(IK.$("#demos"), demos, me);
   }
   // ملفات المكتبة المتفعلة على الحساب (المدفوعة + ملفات الكورسات المشترك فيها)
   try {

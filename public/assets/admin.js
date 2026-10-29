@@ -9,10 +9,20 @@
   await loadCourses();
   let adminSettings = {};
   try { adminSettings = await api("/admin/settings"); } catch (e) {}
+  let demoApps = [];
+  try { demoApps = JSON.parse(adminSettings.demo_apps || "[]"); } catch (e) {}
 
   const toast = (el, kind, msg) => IK.status(el, kind, msg);
   const opt = (v, label, sel) => `<option value="${esc(v)}"${String(v) === String(sel) ? " selected" : ""}>${esc(label)}</option>`;
   const courseOptions = (sel, withEmpty) => (withEmpty ? opt("", "— من غير كورس —", sel) : "") + courses.map((c) => opt(c.slug, c.title, sel)).join("");
+  // باقات كورس معين (أي عدد، بالاسم اللي الأدمن اختاره)، ولما الكورس يتغير الباقات بتتغير معاه
+  const planOptions = (slug, sel) => {
+    const c = courses.find((x) => x.slug === slug);
+    const list = c && c.plans.length ? c.plans : [{ code: "basic", name: "الأساسية", visible: 1 }];
+    return list.map((p) => opt(p.code, p.name + (p.visible ? "" : " (مخفية)"), sel)).join("");
+  };
+  const syncPlans = (courseSel, planSel) => courseSel.addEventListener("change", () => (planSel.innerHTML = planOptions(courseSel.value)));
+  const planName = (e) => { const c = courses.find((x) => x.slug === e.slug); const p = c && c.plans.find((x) => x.code === e.plan_code); return p ? p.name : e.plan_code; };
   const intlPhone = (p) => (p ? (p.startsWith("0") ? "20" + p.slice(1) : p) : "");
   const tracks = () => site.tracks || [];
   const trackName = (k) => (tracks().find((t) => t.key === k) || {}).name || k;
@@ -41,7 +51,7 @@
           <div class="field"><label>الميل <small>(اختياري، يدخل بيه برضه)</small></label><input name="email" dir="ltr"></div>
           <div class="field"><label>جه منين؟ <small>(لو كان زائر بنفس الرقم بيتملا لوحده)</small></label><select name="source">${srcOptions("")}</select></div>
           <div class="field"><label>الكورس</label><select name="course_slug">${courseOptions("financial", true)}</select></div>
-          <div class="field"><label>الباقة</label><select name="plan_code">${opt("basic", "الأساسية (PDF)")}${opt("pro", "Pro (PDF + فيديو)")}</select></div>
+          <div class="field"><label>الباقة</label><select name="plan_code">${planOptions("financial")}</select></div>
           <div class="field"><label>الاشتراك ينتهي في <small>(فاضي = مفتوح)</small></label><input name="expires_at" type="date"></div>
           <div class="field"><label>ملاحظات <small>(ليك بس)</small></label><input name="notes" placeholder="مثلاً: دفع فودافون كاش"></div>
           <div class="status full" id="add-st" hidden></div>
@@ -57,6 +67,7 @@
         <div id="edit" style="margin-top:16px"></div>
       </div>`;
     const f = $("#add");
+    syncPlans(f.course_slug, f.plan_code);
     f.addEventListener("submit", async (e) => {
       e.preventDefault();
       const b = Object.fromEntries(new FormData(f));
@@ -64,7 +75,7 @@
         const r = await api("/admin/students", { method: "POST", body: b });
         toast($("#add-st"), "ok", "اتضاف المتدرب " + b.name + (r.source ? " · المصدر: " + srcLabel(r.source) : "") + ".");
         await showActivation({ id: r.id, name: b.name, phone: b.phone, email: b.email }, b.course_slug, $("#welcome"));
-        f.reset(); f.course_slug.value = "financial";
+        f.reset(); f.course_slug.value = "financial"; f.plan_code.innerHTML = planOptions("financial");
         load(); stats();
       } catch (err) { toast($("#add-st"), "bad", err.message); }
     });
@@ -97,7 +108,7 @@
       <tr>
         <td><b>${esc(u.name)}</b>${u.source ? ` <span class="badge">${esc(srcLabel(u.source))}</span>` : ""}${u.notes ? `<br><small class="muted">${esc(u.notes)}</small>` : ""}</td>
         <td class="num">${esc(u.phone || "")}${u.phone && u.email ? "<br>" : ""}${esc(u.email || "")}</td>
-        <td>${u.enrollments.map((e) => `<span class="badge ${e.plan_code === "pro" ? "gold" : ""}">${esc(e.title)}${e.expires_at ? " · لحد " + esc(e.expires_at) : ""}</span>`).join(" ") || '<span class="muted">—</span>'}</td>
+        <td>${u.enrollments.map((e) => `<span class="badge ${e.plan_code === "basic" ? "" : "gold"}" title="${esc(planName(e))}">${esc(e.title)}${e.expires_at ? " · لحد " + esc(e.expires_at) : ""}</span>`).join(" ") || '<span class="muted">—</span>'}</td>
         <td>${u.active ? '<span class="badge ok">نشط</span>' : '<span class="badge bad">موقوف</span>'}${u.must_change ? '<br><small class="muted">لسه ما فعّلش حسابه</small>' : ""}</td>
         <td class="num"><small>${esc(u.last_login || "لسه ما دخلش")}</small></td>
         <td><div class="row"><button class="btn btn-ghost btn-sm" data-act="edit" data-id="${u.id}" type="button">تعديل</button>
@@ -138,7 +149,7 @@
       ${u.enrollments.length ? `<div class="table-wrap" style="margin-top:8px"><table class="t" id="enr-t"><thead><tr><th>الكورس</th><th>الباقة</th><th>ينتهي في</th><th>الحالة</th><th></th></tr></thead><tbody>
         ${u.enrollments.map((e) => `<tr data-enr="${esc(e.slug)}">
           <td><b>${esc(e.title)}</b></td>
-          <td><select class="js-plan" disabled>${opt("basic", "الأساسية", e.plan_code)}${opt("pro", "Pro", e.plan_code)}</select></td>
+          <td><select class="js-plan" disabled>${planOptions(e.slug, e.plan_code)}</select></td>
           <td><input class="js-exp" type="date" value="${esc(e.expires_at || "")}" disabled><br><small class="muted js-exp-note">${e.expires_at ? "" : "مفتوح من غير تاريخ"}</small></td>
           <td>${!e.expires_at || e.expires_at >= today ? '<span class="badge ok">ساري</span>' : '<span class="badge bad">منتهي</span>'}</td>
           <td><div class="row"><button class="btn btn-ghost btn-sm js-edit-enr" type="button">تعديل</button>
@@ -148,7 +159,7 @@
       ${free.length ? `<button class="btn btn-gold btn-sm" type="button" id="add-enr" style="margin-top:10px">+ إضافة كورس</button>
       <form id="en" class="form-grid card" style="margin-top:10px;background:var(--paper)" hidden>
         <div class="field"><label>الكورس</label><select name="course_slug">${free.map((c) => opt(c.slug, c.title + (c.status === "open" ? "" : " (قيد الافتتاح)"))).join("")}</select></div>
-        <div class="field"><label>الباقة</label><select name="plan_code">${opt("basic", "الأساسية")}${opt("pro", "Pro")}</select></div>
+        <div class="field"><label>الباقة</label><select name="plan_code">${planOptions(free[0].slug)}</select></div>
         <div class="field"><label>ينتهي في <small>(فاضي = مفتوح)</small></label><input name="expires_at" type="date"></div>
         <div class="full row"><button class="btn btn-primary" type="submit">إضافة الكورس للمتدرب</button><button class="btn btn-ghost" type="button" id="en-x">إلغاء</button></div>
       </form>` : '<p class="muted" style="margin-top:10px">مشترك في كل الكورسات الموجودة.</p>'}
@@ -186,6 +197,7 @@
       if (fresh) { editStudent(fresh); toast($("#e-st"), "ok", msg); }
     };
     if ($("#add-enr")) {
+      syncPlans($("#en").course_slug, $("#en").plan_code);
       $("#add-enr").onclick = () => { $("#en").hidden = false; $("#add-enr").hidden = true; };
       $("#en-x").onclick = () => { $("#en").hidden = true; $("#add-enr").hidden = false; };
       $("#en").onsubmit = async (e) => {
@@ -263,9 +275,10 @@
           <div class="full row"><button class="btn btn-primary" type="submit">حفظ الكورس</button><span class="status" hidden></span></div>
         </form>
         <h3 style="margin-top:22px">الباقات والأسعار</h3>
+        <p class="muted">ضيف أي عدد باقات بالاسم اللي يعجبك، واختار كل باقة فيها إيه: محتوى Pro (الفيديوهات) وبرامج الـ Demo. الـ PDF في كل الباقات.</p>
         <div class="grid grid-2" style="margin-top:10px">${c.plans.map((p) => `
           <form class="card stack js-plan" data-id="${p.id}" style="background:var(--paper)">
-            <div class="spread"><b>${p.code === "pro" ? "باقة Pro" : "الباقة الأساسية"}</b>
+            <div class="spread"><b>${esc(p.name)} <small class="muted" dir="ltr">(${esc(p.code)})</small></b>
               <span>${p.show_price ? IK.priceHTML(p) : '<span class="muted">السعر مخفي</span>'}</span></div>
             <div class="field"><label>اسم الباقة</label><input name="name" value="${esc(p.name)}"></div>
             <div class="form-grid">
@@ -276,9 +289,21 @@
             </div>
             <label class="check"><input type="checkbox" name="show_price" ${p.show_price ? "checked" : ""}> اعرض السعر على الموقع</label>
             <label class="check"><input type="checkbox" name="visible" ${p.visible ? "checked" : ""}> الباقة ظاهرة للزوار</label>
-            <div class="field"><label>المميزات <small>(كل ميزة في سطر)</small></label><textarea name="features" rows="4">${esc(p.features.join("\n"))}</textarea></div>
-            <div class="row"><button class="btn btn-primary btn-sm" type="submit">حفظ الباقة</button><span class="status" hidden></span></div>
-          </form>`).join("")}</div>
+            <fieldset class="stack" style="border:1px solid var(--line);border-radius:var(--r-m);padding:10px 12px;gap:6px"><legend class="muted" style="padding:0 6px">الباقة فيها إيه؟</legend>
+              <label class="check"><input type="checkbox" checked disabled> ملفات الـ PDF</label>
+              <label class="check"><input type="checkbox" name="full_access" ${p.full_access || p.code === "pro" ? "checked" : ""}${p.code === "pro" ? " disabled" : ""}> محتوى Pro (الفيديوهات والمواد المميزة)</label>
+              ${demoApps.map((a) => `<label class="check"><input type="checkbox" class="js-app" value="${esc(a.id)}"${(p.apps || []).includes(a.id) ? " checked" : ""}> برنامج: ${esc(a.name)}</label>`).join("") || '<span class="muted" style="font-size:13px">ضيف برامج الـ Demo من تبويب "برامج الـ Demo" وهتظهر هنا.</span>'}
+            </fieldset>
+            <div class="field"><label>المميزات <small>(كل ميزة في سطر، بتظهر للزوار)</small></label><textarea name="features" rows="4">${esc(p.features.join("\n"))}</textarea></div>
+            <div class="field"><label>الترتيب</label><input name="sort" type="number" value="${p.sort || 0}"></div>
+            <div class="row"><button class="btn btn-primary btn-sm" type="submit">حفظ الباقة</button>
+              ${["basic", "pro"].includes(p.code) ? "" : '<button class="btn btn-danger btn-sm js-plan-del" type="button">مسح الباقة</button>'}<span class="status" hidden></span></div>
+          </form>`).join("")}
+          <form class="card stack js-addplan" data-course="${c.id}" style="align-self:start"><b>+ باقة جديدة</b>
+            <div class="field"><label>اسم الباقة</label><input name="name" placeholder="مثلاً: Pro Max" required></div>
+            <p class="muted" style="font-size:13px">بتبدأ مخفية، كمّل بياناتها واختار فيها إيه وبعدين علّم "ظاهرة للزوار".</p>
+            <div class="row"><button class="btn btn-ghost btn-sm" type="submit">إضافة الباقة</button><span class="status" hidden></span></div>
+          </form></div>
         <h3 style="margin-top:22px">${c.unit.pl}</h3>
         <div class="stack" style="margin-top:10px">${c.levels.map((l) => `
           <form class="card js-level" data-id="${l.id}" style="background:var(--paper)">
@@ -313,8 +338,20 @@
     panel.querySelectorAll(".js-plan").forEach((f) => (f.onsubmit = async (e) => {
       e.preventDefault();
       const b = Object.fromEntries(new FormData(f));
-      b.show_price = f.show_price.checked; b.visible = f.visible.checked;
+      b.show_price = f.show_price.checked; b.visible = f.visible.checked; b.full_access = f.full_access.checked;
+      b.apps = [...f.querySelectorAll(".js-app:checked")].map((x) => x.value);
       try { await api("/admin/plans/" + f.dataset.id, { method: "PATCH", body: b }); await loadCourses(); coursesTab(); }
+      catch (err) { note(f, "bad", err.message); }
+    }));
+    panel.querySelectorAll(".js-plan-del").forEach((b) => (b.onclick = async () => {
+      const f = b.closest("form");
+      if (!confirm("مسح الباقة دي؟")) return;
+      try { await api("/admin/plans/" + f.dataset.id, { method: "DELETE" }); await loadCourses(); coursesTab(); }
+      catch (err) { note(f, "bad", err.message); }
+    }));
+    panel.querySelectorAll(".js-addplan").forEach((f) => (f.onsubmit = async (e) => {
+      e.preventDefault();
+      try { await api(`/admin/courses/${f.dataset.course}/plans`, { method: "POST", body: { name: f.name.value } }); await loadCourses(); coursesTab(); }
       catch (err) { note(f, "bad", err.message); }
     }));
     panel.querySelectorAll(".js-level").forEach((f) => (f.onsubmit = async (e) => {
@@ -936,12 +973,72 @@
     });
   }
 
+  // ======================= برامج الـ Demo =======================
+  const PLACES = { home: "الصفحة الرئيسية", course: "صفحة الكورس", dashboard: "كورساتي (للطلبة)", library: "مكتبة IK" };
+  const DEMO_MSG = "أهلاً يا {name} 👋\nدي بيانات دخول Demo {app}:\n{url}\n{login}\n\nالبيانات دي تجريبية، والبرنامج بيرجع لحالته الأصلية كل يوم الساعة 3 الفجر.";
+  async function demoTab() {
+    const d = await api("/admin/demo");
+    demoApps = d.apps;
+    const tpl = d.message || DEMO_MSG;
+    const form = (a = {}) => `
+      <div class="field"><label>الاسم اللي يظهر <small>(مثلاً: برنامج الـ HR والمرتبات)</small></label><input name="name" required value="${esc(a.name || "")}"></div>
+      <div class="field"><label>كود قصير بالإنجليزي <small>(مثلاً hr، مش بيتغير بعد كده)</small></label><input name="id" dir="ltr" value="${esc(a.id || "")}"${a.id ? " readonly" : ""} placeholder="hr"></div>
+      <div class="field full"><label>وصف قصير</label><input name="desc" value="${esc(a.desc || "")}" placeholder="جرّب تعمل كشف مرتبات كامل بالتأمينات والضريبة"></div>
+      <div class="field"><label>كلام الزرار <small>(فاضي = اطلب Demo)</small></label><input name="button" value="${esc(a.button || "")}" placeholder="جرّب Demo برنامج الـ HR"></div>
+      <div class="field"><label>رابط البرنامج <small>(مش بيظهر للزوار، بيتبعت في الرسالة)</small></label><input name="url" dir="ltr" value="${esc(a.url || "")}" placeholder="https://..."></div>
+      <div class="field full"><label>بيانات الدخول <small>(بتتبعت في الرسالة، وبتظهر للمشترك في باقة فيها البرنامج)</small></label><textarea name="login" rows="2" dir="ltr">${esc(a.login || "")}</textarea></div>
+      <div class="field full"><label>رسالة الطلب <small>(اللي الزائر بيبعتها لخدمة العملاء. {name} الاسم، {phone} الرقم، {app} البرنامج. فاضي = رسالة افتراضية)</small></label><input name="message" value="${esc(a.message || "")}"></div>
+      <div class="field full"><label>يظهر فين؟</label><div style="display:flex;flex-wrap:wrap;gap:8px 20px">${Object.entries(PLACES).map(([k, v]) => `<label class="check"><input type="checkbox" name="places" value="${k}"${(a.places || []).includes(k) ? " checked" : ""}> ${v}</label>`).join("")}</div></div>
+      <div class="field full"><label>في صفحات الكورسات دي بس <small>(مفيش اختيار = كل الكورسات)</small></label><div style="display:flex;flex-wrap:wrap;gap:8px 20px">${courses.map((c) => `<label class="check"><input type="checkbox" name="courses" value="${c.id}"${(a.courses || []).includes(c.id) ? " checked" : ""}> ${esc(c.title)}</label>`).join("")}</div></div>
+      <label class="check"><input type="checkbox" name="open"${a.open || !a.id ? " checked" : ""}> أي حد يقدر يطلبه (زائر أو طالب). لو مش متعلّم = للمشتركين في باقة فيها البرنامج بس</label>
+      <label class="check"><input type="checkbox" name="visible"${a.visible === false ? "" : " checked"}> شغال</label>`;
+    const read = (fm) => { const fd = new FormData(fm); return { ...Object.fromEntries(fd), places: fd.getAll("places"), courses: fd.getAll("courses").map(Number), open: fm.open.checked, visible: fm.visible.checked }; };
+    const save = async (next, st) => { try { await api("/admin/demo-apps", { method: "PUT", body: { apps: next } }); demoTab(); } catch (err) { toast(st, "bad", err.message); } };
+    const appName = (id) => (demoApps.find((a) => a.id === id) || {}).name || id;
+    const msgFor = (r) => { const a = demoApps.find((x) => x.id === r.app) || {}; return IK.fill(tpl, { name: r.name.split(" ")[0], app: a.name || r.app, url: a.url || "", login: a.login || "" }); };
+    panel.innerHTML = `
+      <div class="card"><h2>طلبات الـ Demo (${d.requests.length})</h2>
+        <p class="muted">كل اللي طلب Demo من المنصة (زائر أو طالب). زرار "ابعت البيانات" بيفتح واتساب برسالة جاهزة فيها الرابط وبيانات الدخول.</p>
+        <div class="table-wrap" style="margin-top:10px"><table class="t"><thead><tr><th>الاسم</th><th>الرقم</th><th>البرنامج</th><th>النوع</th><th>طلب في</th><th></th></tr></thead><tbody>
+        ${d.requests.map((r) => `<tr><td><b>${esc(r.name)}</b></td><td class="num">${esc(r.phone)}</td><td>${esc(appName(r.app))}</td>
+          <td>${r.user_id ? '<span class="badge ok">طالب</span>' : '<span class="badge">زائر</span>'}</td><td class="num"><small>${esc(r.created_at)}</small></td>
+          <td><a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="${IK.wa(intlPhone(r.phone), msgFor(r))}">${IK.chatIcon}ابعت البيانات</a></td></tr>`).join("") || '<tr><td colspan="6" class="empty">لسه مفيش طلبات.</td></tr>'}
+        </tbody></table></div>
+        <form id="dmsg" class="stack" style="margin-top:14px"><div class="field"><label>رسالة إرسال البيانات <small>({name} الاسم، {app} البرنامج، {url} الرابط، {login} بيانات الدخول)</small></label><textarea name="demo_message" rows="5">${esc(tpl)}</textarea></div>
+          <div class="row"><button class="btn btn-primary btn-sm" type="submit">حفظ الرسالة</button><span class="status" hidden></span></div></form>
+      </div>
+      <div class="card"><h2>إضافة برنامج</h2>
+        <p class="muted">بعد ما تضيف البرنامج، تقدر تحطه في أي باقة من "الكورسات والأسعار" (علّم عليه جوه الباقة)، والمشترك فيها هيلاقي الرابط وبيانات الدخول في "كورساتي".</p>
+        <form id="daf" class="form-grid" style="margin-top:12px">${form()}<div class="full row"><button class="btn btn-primary" type="submit">إضافة البرنامج</button><span class="status" hidden></span></div></form></div>
+      <div class="card"><h2>البرامج (${demoApps.length})</h2>
+        <div class="stack" style="margin-top:12px">${demoApps.map((a) => `
+          <div class="card" style="background:var(--paper)" data-app="${esc(a.id)}">
+            <div class="spread"><div><b>🖥️ ${esc(a.name)}</b> ${a.visible === false ? '<span class="badge">موقوف</span>' : '<span class="badge ok">شغال</span>'} ${a.open ? '<span class="badge gold">للكل</span>' : '<span class="badge">للمشتركين بس</span>'}
+              <p class="muted">${(a.places || []).map((k) => PLACES[k]).join("، ") || "مش ظاهر في أي مكان"}</p></div>
+              <div class="row"><button class="btn btn-ghost btn-sm js-e" type="button">تعديل</button><button class="btn btn-danger btn-sm js-d" type="button">مسح</button></div></div>
+            <form class="form-grid js-f" style="margin-top:12px" hidden>${form(a)}<div class="full row"><button class="btn btn-primary btn-sm" type="submit">حفظ</button><span class="status" hidden></span></div></form>
+          </div>`).join("") || '<p class="muted">لسه مفيش برامج.</p>'}</div></div>`;
+    $("#dmsg").onsubmit = async (e) => {
+      e.preventDefault();
+      const st = e.target.querySelector(".status");
+      try { await api("/admin/settings", { method: "PUT", body: { demo_message: e.target.demo_message.value } }); adminSettings.demo_message = e.target.demo_message.value; toast(st, "ok", "اتحفظت"); demoTab(); }
+      catch (err) { toast(st, "bad", err.message); }
+    };
+    $("#daf").onsubmit = (e) => { e.preventDefault(); save([...demoApps, read(e.target)], e.target.querySelector(".status")); };
+    panel.querySelectorAll("[data-app]").forEach((box) => {
+      const id = box.dataset.app, fm = box.querySelector(".js-f");
+      box.querySelector(".js-e").onclick = () => (fm.hidden = !fm.hidden);
+      fm.onsubmit = (e) => { e.preventDefault(); save(demoApps.map((x) => (x.id === id ? { ...read(fm), id } : x)), fm.querySelector(".status")); };
+      box.querySelector(".js-d").onclick = () => { if (confirm("مسح البرنامج ده؟ هيختفي من كل الأماكن والباقات.")) save(demoApps.filter((x) => x.id !== id), fm.querySelector(".status")); };
+    });
+  }
+
   // ======================= الزوار السريعين =======================
   async function visitorsTab(q = "") {
     const [list, files] = await Promise.all([api("/admin/visitors?q=" + encodeURIComponent(q)), api("/admin/library")]);
     const fBy = Object.fromEntries(files.map((f) => [String(f.id), f.title]));
     const cBy = Object.fromEntries(courses.map((c) => [c.slug, c.title]));
-    const ev = (e) => e.kind === "file" ? "⬇ " + (fBy[e.ref] || "ملف") : e.kind === "chapter" ? "📖 فصل مجاني" : e.kind === "notify" ? "🔔 بلغني: " + (cBy[e.ref] || e.ref) : "💬 تواصل" + (cBy[e.ref] ? ": " + cBy[e.ref] : "");
+    const ev = (e) => e.kind === "file" ? "⬇ " + (fBy[e.ref] || "ملف") : e.kind === "chapter" ? "📖 فصل مجاني" : e.kind === "notify" ? "🔔 بلغني: " + (cBy[e.ref] || e.ref) : e.kind === "demo" ? "🖥️ طلب Demo: " + ((demoApps.find((a) => a.id === e.ref) || {}).name || e.ref) : "💬 تواصل" + (cBy[e.ref] ? ": " + cBy[e.ref] : "");
     panel.innerHTML = `
       <div class="card stack">
         <div class="spread"><h2>الزوار السريعين (${list.length})</h2>
@@ -967,7 +1064,7 @@
   }
 
   // ======================= التابات =======================
-  const tabs = { students: studentsTab, inactive: () => inactiveTab(), courses: coursesTab, content: contentTab, exams: examsTab, lecturers: lecturersTab, library: libraryTab, visitors: visitorsTab, stats: statsTab, settings: settingsTab };
+  const tabs = { students: studentsTab, inactive: () => inactiveTab(), courses: coursesTab, content: contentTab, exams: examsTab, lecturers: lecturersTab, library: libraryTab, demo: demoTab, visitors: visitorsTab, stats: statsTab, settings: settingsTab };
   const tabBtns = document.querySelectorAll(".tabs button");
   function go(name) {
     tabBtns.forEach((b) => b.classList.toggle("on", b.dataset.tab === name));

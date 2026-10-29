@@ -223,3 +223,8 @@ dialog.gate .x{border:0;background:none;font-size:18px;cursor:pointer;color:var(
 .viewer.scroll:not(.fs) .vstage{height:78vh;height:78dvh}
 .viewer .vhint{color:#9fb0c4;font-size:12.5px;margin:8px 4px 0;text-align:center}
 .viewer .vbar .btn:disabled{opacity:.4}
+
+/* برامج الـ Demo */
+.demo-card .badge{align-self:flex-start}
+.demo-card .btn{align-self:flex-start}
+.demo-login{margin:0;padding:10px 12px;background:var(--paper);border:1px dashed var(--gold);border-radius:var(--r-m);font:inherit;white-space:pre-wrap;direction:ltr;text-align:left}
