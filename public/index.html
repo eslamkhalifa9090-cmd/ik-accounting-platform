@@ -61,7 +61,8 @@ p{margin:0}
 /* الهيدر */
 .site-header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.95);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line-2)}
 .site-header .wrap{display:flex;align-items:center;gap:20px;min-height:72px}
-.brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;flex:none}
+.brand span{white-space:nowrap}
 .brand img{height:40px;width:auto}
 .brand span{display:flex;flex-direction:column;line-height:1.15;direction:ltr;text-align:left}
 .brand b{font-family:var(--f-display);font-size:19px;letter-spacing:.02em;color:var(--navy)}
@@ -73,7 +74,7 @@ p{margin:0}
 .head-end{display:flex;align-items:center;gap:8px}
 .site-header .btn{padding:.6em 1.1em;font-size:15px}
 .visitor-chip{display:inline-flex;align-items:center;gap:6px}
-@media (max-width:1180px){
+@media (max-width:1340px){
   .site-header{backdrop-filter:none;background:var(--white)}
   .site-header .wrap{flex-wrap:wrap;row-gap:0;min-height:0;padding-block:10px 0}
   .head-end{margin-inline-start:auto}
@@ -332,6 +333,7 @@ footer .slogan em{font-style:normal;color:var(--gold)}
     </a>
     <nav class="nav" aria-label="التنقل الرئيسي">
       <a href="#catalog">الكورسات</a>
+      <a href="#demos" id="nav-demos" hidden>برامج Demo</a>
       <a href="#free">جرّب مجاناً</a>
       <a href="/library">مكتبة IK</a>
       <a href="#about">عن المؤسس</a>
@@ -418,6 +420,17 @@ footer .slogan em{font-style:normal;color:var(--gold)}
   </div>
 </section>
 
+<section id="demos" aria-labelledby="demos-h" hidden>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Demo</span>
+      <h2 id="demos-h">جرّب البرامج بنفسك قبل ما تقرر</h2>
+      <p>برامج شغالة فعلاً تقدر تدخلها وتجربها. اطلب بيانات الدخول وهنبعتهالك على واتساب.</p>
+    </div>
+    <div class="free-list" id="demo-list"></div>
+  </div>
+</section>
+
 <section id="free" aria-labelledby="free-h">
   <div class="wrap">
     <div class="sec-head">
@@ -427,17 +440,6 @@ footer .slogan em{font-style:normal;color:var(--gold)}
     </div>
     <div class="free-list" id="free-list"></div>
     <p class="free-note">🎁 الفصول المجانية بتفتح بـ <b>دخول سريع كزائر</b>: اسمك ورقمك بس، من غير باسورد ومن غير أي فلوس.</p>
-  </div>
-</section>
-
-<section id="demos" aria-labelledby="demos-h" hidden>
-  <div class="wrap">
-    <div class="sec-head">
-      <span class="eyebrow">Demo</span>
-      <h2 id="demos-h">جرّب البرامج بنفسك قبل ما تقرر</h2>
-      <p>برامج شغالة فعلاً تقدر تدخلها وتجربها. اطلب بيانات الدخول وهنبعتهالك على واتساب.</p>
-    </div>
-    <div class="free-list" id="demo-list"></div>
   </div>
 </section>
 
@@ -710,6 +712,7 @@ footer .slogan em{font-style:normal;color:var(--gold)}
   function renderDemos() {
     const list = IK.demosFor(site, "home");
     IK.$("#demos").hidden = !list.length;
+    IK.$("#nav-demos").hidden = !list.length;
     IK.$("#demo-list").innerHTML = list.map((a) => `<div class="free-item"><small>🖥️ Demo</small><b>${esc(a.name)}</b>${a.desc ? `<span>${esc(a.desc)}</span>` : ""}
       <button class="btn btn-wa js-demo" type="button" data-demo="${esc(a.id)}"><svg><use href="#i-chat"/></svg>${esc(a.button || "اطلب Demo")}</button></div>`).join("");
     IK.bindDemos(IK.$("#demo-list"), list);
