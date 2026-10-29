@@ -295,7 +295,8 @@
       <div class="card"><h2>إضافة مديول جديد</h2>
         <form id="newc" class="form-grid" style="margin-top:12px">
           <div class="field"><label>اسم الكورس</label><input name="title" required></div>
-          <div class="field"><label>رابط مختصر بالإنجليزي <small>(مثلاً cost)</small></label><input name="slug" dir="ltr" required></div>
+          <div class="field"><label>رابط مختصر بالإنجليزي <small>(اختياري، مثلاً hr. لو سبته فاضي هيتعمل لوحده)</small></label><input name="slug" dir="ltr" placeholder="hr"></div>
+          <div class="field"><label>القسم</label><select name="track">${tracks().map((t) => opt(t.key, t.name, "accounting")).join("")}</select></div>
           <div class="field full"><label>سطر تعريفي</label><input name="subtitle"></div>
           <div class="full row"><button class="btn btn-primary" type="submit">إضافة</button><span class="status" hidden></span></div>
         </form></div>`;
@@ -328,8 +329,14 @@
     }));
     $("#newc").onsubmit = async (e) => {
       e.preventDefault();
-      try { await api("/admin/courses", { method: "POST", body: Object.fromEntries(new FormData(e.target)) }); await loadCourses(); coursesTab(); }
-      catch (err) { note(e.target, "bad", err.message); }
+      const st = e.target.querySelector(".status");
+      try {
+        const r = await api("/admin/courses", { method: "POST", body: Object.fromEntries(new FormData(e.target)) });
+        await loadCourses(); coursesTab();
+        const card = panel.querySelector(`[data-course="${r.id}"]`);
+        if (card) { card.scrollIntoView({ behavior: "smooth", block: "start" }); IK.status(card.querySelector(".js-course .status"), "ok", `اتضاف ✓ ورابطه: /course?c=${r.slug}`); }
+      }
+      catch (err) { IK.status(st, "bad", err.message); } // الرسالة بتفضل ظاهرة لحد المحاولة الجاية
     };
   }
 

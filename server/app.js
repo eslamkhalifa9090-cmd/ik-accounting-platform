@@ -1051,16 +1051,22 @@ async function update(db, table, id, fields) {
 
 route("POST", "/admin/courses", async ({ db, request }) => {
   const b = await body(request);
-  const slug = String(b.slug || "").trim().toLowerCase();
-  if (!/^[a-z0-9-]{2,40}$/.test(slug)) fail(400, "الرابط المختصر لازم يكون حروف إنجليزي صغيرة وأرقام وشرطة بس.");
   if (!String(b.title || "").trim()) fail(400, "اكتب اسم الكورس.");
-  const r = await db.prepare("INSERT INTO courses (slug, title, subtitle, status, sort) VALUES (?, ?, ?, ?, ?) RETURNING id")
-    .bind(slug, b.title.trim(), b.subtitle || null, ["open", "soon", "hidden"].includes(b.status) ? b.status : "soon", Number(b.sort) || 99).first();
+  // الرابط اختياري: بننضّفه (مسافات → شرطة، ونشيل أي حاجة مش إنجليزي)، ولو فاضي بناخده من الاسم، ولو متكرر بنزود رقم
+  const clean = (v) => toLatinDigits(v).toLowerCase().replace(/[\s_.]+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+  const base = clean(b.slug) || clean(b.title) || (/^[a-z0-9-]{1,30}$/.test(b.track || "") ? b.track : "course");
+  const { results: taken } = await db.prepare("SELECT slug FROM courses").all();
+  const used = new Set(taken.map((t) => t.slug));
+  let slug = base.length < 2 ? base + "-course" : base;
+  for (let i = 2; used.has(slug); i++) slug = `${base}-${i}`;
+  const track = /^[a-z0-9-]{1,30}$/.test(b.track || "") ? b.track : "accounting";
+  const r = await db.prepare("INSERT INTO courses (slug, title, subtitle, status, sort, track) VALUES (?, ?, ?, ?, ?, ?) RETURNING id")
+    .bind(slug, b.title.trim(), b.subtitle || null, ["open", "soon", "hidden"].includes(b.status) ? b.status : "soon", Number(b.sort) || 99, track).first();
   await db.batch([
     db.prepare("INSERT INTO plans (course_id, code, name, features) VALUES (?, 'basic', 'الباقة الأساسية', '[]')").bind(r.id),
     db.prepare("INSERT INTO plans (course_id, code, name, features, visible) VALUES (?, 'pro', 'باقة Pro', '[]', 0)").bind(r.id),
   ]);
-  return json({ ok: true, id: r.id });
+  return json({ ok: true, id: r.id, slug });
 }, "admin");
 
 route("PATCH", "/admin/courses/:id", async ({ db, request, params }) => {
