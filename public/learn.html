@@ -37,7 +37,7 @@
     : e.tries ? `<span class="badge bad">لسه معديتش ${IK.esc(e.kind === "level" ? "الامتحان" : "التراكمي")} · أعلى درجة ${e.best}%</span>` : "";
   root.innerHTML = `
     <div class="page-head spread">
-      <div><span class="eyebrow">كورساتي</span><h1>${IK.esc(d.course.title)}</h1><p>${IK.esc(d.course.subtitle || "")}</p></div>
+      <div><a class="back" href="/dashboard">← كورساتي</a><h1>${IK.esc(d.course.title)}</h1><p>${IK.esc(d.course.subtitle || "")}</p></div>
       ${follow}
     </div>
     <div class="card stack">

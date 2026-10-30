@@ -47,7 +47,7 @@
 </style>
 <main class="wrap">
   <div class="page-head spread">
-    <div><span class="eyebrow">شهادة إتمام</span><h1>مبروك على إنهاء الكورس</h1>
+    <div><a class="back" id="cert-back" href="/dashboard">← رجوع</a><span class="eyebrow" style="display:block">شهادة إتمام</span><h1>مبروك على إنهاء الكورس</h1>
       <p>تقدر تطبع الشهادة أو تحفظها PDF من زر الطباعة (اختار "Save as PDF").</p></div>
     <button class="btn btn-gold" type="button" onclick="print()">اطبع أو احفظ PDF</button>
   </div>
@@ -62,6 +62,7 @@
   let c;
   const slug = encodeURIComponent(IK.qs("c") || "financial");
   const preview = IK.qs("preview") === "1" && me.role === "admin";
+  IK.$("#cert-back").href = preview ? "/admin" : "/learn?c=" + slug;
   try { c = await IK.api((preview ? "/admin/certificate-preview/" : "/student/certificate/") + slug); }
   catch (e) { el.innerHTML = `<div class="empty" style="padding-top:300px">${IK.esc(e.message)}</div>`; return; }
   if (preview) IK.$(".page-head h1").textContent = "معاينة الشهادة (اسم وكود تجريبيين)";

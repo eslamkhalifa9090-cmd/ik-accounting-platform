@@ -64,13 +64,23 @@ const deletePrefix = (db, prefix) => db.prepare("DELETE FROM files WHERE key LIK
 // نصوص الشهادة (الديباجة): الأدمن بيعدلها من الإعدادات، والفاضي بيرجع للنص الافتراضي
 const CERT_TEXTS = { cert_title: "شهادة إتمام", cert_title_en: "CERTIFICATE OF COMPLETION", cert_lead: "تشهد المنصة بأن", cert_course_lead: "أتم بنجاح كورس" };
 const CERT_TEXT_KEYS = Object.keys(CERT_TEXTS);
+// قيم افتراضية لحد ما الأدمن يغيرها من الإعدادات (لو فضاها خالص القسم بيستخبى)
+const SETTING_DEFAULTS = {
+  services: [
+    "Accounting Software | إنشاء البرامج المحاسبية | برنامج محاسبي على مقاس شغلك بدل البرامج الجاهزة اللي مش مناسبة لحجمك. | الدليل المحاسبي والقيود والأستاذ؛ العملاء والموردين والمخزون؛ التقارير والقوائم المالية",
+    "Documentary Cycles | تصميم الدورات المستندية | كل عملية ليها مستند، وكل مستند ليه خط سير ومراجعة، فمفيش حاجة تضيع. | دورة المبيعات والتحصيل؛ دورة المشتريات والسداد؛ دورة المخزون والخزينة",
+    "Excel Accounting Cycles | تصميم دورات محاسبية بالإكسيل | الدورة المحاسبية كاملة على Excel: من القيد لحد القوائم المالية، بمعادلات مربوطة ومحمية. | دفتر اليومية والأستاذ وميزان المراجعة؛ التسويات والإقفال؛ القوائم المالية والتقارير",
+    "Skills Development | كورسات تنمية المهارات | تدريب عملي لفريق الحسابات والـ HR عندك، على شغلكم الحقيقي ومستواكم. | محاسبة وضرايب عملية؛ Excel للمحاسبين؛ برنامج مصمم على احتياج الشركة",
+  ].join("\n"),
+  testimonials: "",
+};
 async function getSettings(db) {
   const { results } = await db.prepare("SELECT key, value FROM settings").all();
-  return Object.fromEntries(results.map((r) => [r.key, r.value]));
+  return { ...SETTING_DEFAULTS, ...Object.fromEntries(results.map((r) => [r.key, r.value])) };
 }
 // whatsapp = خدمة العملاء، support_whatsapp = الدعم الفني، lecturer_whatsapp = المحاضر
 const PUBLIC_SETTINGS = ["whatsapp", "whatsapp_display", "support_whatsapp", "lecturer_whatsapp", "brand_name", "brand_by", "footer_line1", "footer_line2",
-  "subscribe_message", "support_message", "follow_message", "notify_message", "cert_signature", "wm_text", "wm_student", "wm_level", "tracks", "lib_subcats", "follow_mode"];
+  "subscribe_message", "support_message", "follow_message", "notify_message", "cert_signature", "wm_text", "wm_student", "wm_level", "tracks", "lib_subcats", "follow_mode", "services", "testimonials"];
 const ADMIN_SETTINGS = [...PUBLIC_SETTINGS, "reminder_message", "inactive_days", "cert_issuer", "activation_message", "demo_message", ...CERT_TEXT_KEYS];
 
 // الأقسام بتتكتب في الإعدادات سطر لكل قسم: المفتاح | الاسم | سطر تعريفي
@@ -324,7 +334,11 @@ route("GET", "/public/site", async ({ db }) => {
       JOIN levels l ON l.id = m.level_id JOIN courses c ON c.id = l.course_id
       WHERE m.free = 1 AND m.kind = 'pdf' AND m.pages > 0 AND c.status != 'hidden' ORDER BY c.sort, l.num, m.sort, m.id`).all();
   const nBy = Object.fromEntries(counts.map((c) => [c.course_id, c.n]));
+  // أرقام حقيقية للصفحة الرئيسية: الكورسات المفتوحة ووحداتها وأسئلتها
+  const openIds = courses.filter((c) => c.status === "open").map((c) => c.id);
+  const q = openIds.length ? await db.prepare(`SELECT COUNT(*) AS n FROM questions q JOIN exams e ON e.id = q.exam_id WHERE e.course_id IN (${openIds.map(() => "?").join(",")})`).bind(...openIds).first() : { n: 0 };
   return json({
+    numbers: { courses: openIds.length, levels: openIds.reduce((a, id) => a + (nBy[id] || 0), 0), questions: q.n },
     settings: Object.fromEntries(PUBLIC_SETTINGS.map((k) => [k, s[k] || ""])),
     has_cert_bg: !!s.cert_bg,
     tracks: parseTracks(s),
@@ -1429,6 +1443,9 @@ route("PUT", "/admin/settings", async ({ db, request }) => {
       for (const [key] of t) if (!/^[a-z0-9-]{1,30}$/.test(key)) fail(400, `مفتاح القسم "${key}" لازم يكون إنجليزي صغير من غير مسافات، زي accounting.`);
       v = t.map((x) => x.slice(0, 3).join(" | ")).join("\n");
     }
+    // الخدمات: الوسم بالإنجليزي | العنوان | الوصف | البنود مفصولة بـ ؛  — والآراء: الاسم | الوظيفة | الرأي
+    if (k === "services") v = parseLines(v, 2).map((x) => x.slice(0, 4).join(" | ")).join("\n");
+    if (k === "testimonials") v = parseLines(v, 3).map((x) => x.slice(0, 3).join(" | ")).join("\n");
     if (k === "lib_subcats") v = parseLines(v, 2).map((x) => x.slice(0, 2).join(" | ")).join("\n");
     stmts.push(db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").bind(k, v));
   }

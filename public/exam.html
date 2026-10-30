@@ -32,7 +32,7 @@
 
   function intro() {
     root.innerHTML = `
-      <div class="page-head"><a class="muted" href="${back}">← ${U.the} ${info.level.num}: ${IK.esc(info.level.title)}</a>
+      <div class="page-head"><a class="back" href="${back}">← ${U.the} ${info.level.num}: ${IK.esc(info.level.title)}</a>
         <h1>${IK.esc(e.title)}</h1></div>
       <div class="card stack">
         <p>الامتحان فيه <b>${e.questions}</b> سؤال اختيار من متعدد، والنجاح من <b>${e.pass_pct}%</b> أو أكتر.</p>

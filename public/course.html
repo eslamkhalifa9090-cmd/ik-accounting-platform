@@ -44,6 +44,11 @@
   @media (max-width:560px){.lv{grid-template-columns:1fr;gap:10px}.lv .n{width:38px;height:38px}.chs li{padding:8px 10px}}
   .chs li.free{background:#FBF7EE;outline:1px dashed var(--gold)}
   .chs .ic{flex:none}
+  .chd{margin-top:10px}
+  .chd summary{cursor:pointer;font-weight:600;color:var(--navy);padding:6px 0;list-style-position:inside}
+  .hero-c .price b{color:#fff}
+  .hero-c .price s,.hero-c .muted{color:rgba(255,255,255,.7)}
+  .hero-c .price-line{margin-top:18px;font-size:16px}
   .files{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
 </style>
 <script>
@@ -82,7 +87,8 @@
     return `<li class="${m.free && !enrolled ? "free" : ""}"><span class="t"><b class="num">${i + 1}.</b> ${IK.esc(m.title)} <small>${meta}</small></span>${right}</li>`;
   };
   root.innerHTML = `
-    <section class="hero-c">
+    <a class="back" style="margin-top:20px" href="${enrolled ? "/dashboard" : "/#catalog"}">← ${enrolled ? "كورساتي" : "كل الكورسات"}</a>
+    <section class="hero-c" style="margin-top:8px">
       <span class="eyebrow">${c.track_name ? IK.esc(c.track_name) + " · " : ""}${soon ? "قيد الافتتاح قريباً" : "كورس متاح دلوقتي"}</span>
       <h1>${IK.esc(c.title)}</h1>
       ${c.subtitle ? `<p style="font-weight:600;color:var(--sky)">${IK.esc(c.subtitle)}</p>` : ""}
@@ -91,11 +97,12 @@
       ${c.outcome ? `<p class="outcome"><b>هتقدر تعمل إيه بعد الكورس؟</b>${IK.esc(c.outcome)}</p>` : ""}
       ${c.audience ? `<p><b style="color:var(--gold)">الكورس ده لمين؟</b> ${IK.esc(c.audience)}</p>` : ""}
       <div class="tags">${IK.tags(c.audiences, c.tools, site.audiences)}</div>
-      <div class="row" style="margin-top:22px">
+      ${!soon && !enrolled && plan0 ? `<p class="price-line">${d.plans.length > 1 ? "يبدأ من " : ""}${IK.priceHTML(plan0)}</p>` : ""}
+      <div class="row" style="margin-top:14px">
         ${enrolled ? `<a class="btn btn-gold" href="/learn?c=${encodeURIComponent(slug)}">ادخل الكورس</a>` :
           soon ? notifyBtn : `<a class="btn btn-wa" href="#plans">${IK.chatIcon}اشترك دلوقتي</a>`}
-        ${!enrolled && freeN ? '<a class="btn btn-ghost" style="color:#fff;border-color:rgba(255,255,255,.3)" href="#chapters">🎁 جرّب فصل مجاناً</a>' : ""}
-        ${me ? "" : '<a class="btn btn-ghost" style="color:#fff;border-color:rgba(255,255,255,.3)" href="/login">مشترك بالفعل؟ ادخل</a>'}
+        ${!enrolled && freeN ? '<a class="btn btn-ghost on-dark" href="#chapters">🎁 جرّب فصل مجاناً</a>' : ""}
+        ${me ? "" : '<a class="btn btn-ghost on-dark" href="/login">مشترك بالفعل؟ ادخل</a>'}
       </div>
     </section>
     ${(c.lecturers || []).some((l) => l.bio || l.role) ? `<section class="sec" id="lecturers">
@@ -105,13 +112,18 @@
     ${d.levels.length ? `<section class="sec" id="chapters">
       <h2>${U.pl} (${d.levels.length})</h2>
       ${!enrolled && freeN ? `<p class="muted" style="margin:-6px 0 12px">🎁 فيه ${freeN === 1 ? "فصل مجاني تقدر تقراه" : freeN + " فصول مجانية تقدر تقراها"} كامل${freeN === 1 ? "" : "ة"} من غير اشتراك. كل اللي محتاجه دخول سريع كزائر (اسمك ورقمك بس). باقي الفصول 🔒 للمشتركين.</p>` : ""}
-      <section id="free-viewer" style="margin-bottom:20px" hidden></section>
+      <section id="free-viewer" style="margin:12px 0 20px" hidden></section>
       <div class="levels">${d.levels.map((l) => `
         <article class="lv"><span class="n">${l.num}</span><div>
           <h3>${U.the} ${l.num}: ${IK.esc(l.title)}</h3>
           ${l.topics ? `<p class="topics">${IK.esc(l.topics)}</p>` : ""}
           ${l.teaser ? `<p class="teaser">${IK.esc(l.teaser)}</p>` : ""}
-          ${l.materials.length ? `<ul class="chs">${l.materials.map(chapter).join("")}</ul>` : `<p class="topics" style="margin-top:8px">الفصول بتتجهز وهتنزل قريب.</p>`}
+          ${l.materials.length ? (() => {
+            // الفصول جوه قايمة بتتفتح وتتقفل، والمستوى اللي فيه فصل مجاني بيبقى مفتوح علطول
+            const fr = !enrolled && l.materials.some((m) => m.free);
+            return `<details class="chd"${fr ? " open" : ""}><summary>الفصول (${l.materials.length})${fr ? ' · <span class="badge gold">🎁 فيه فصل مجاني</span>' : ""}</summary>
+              <ul class="chs">${l.materials.map(chapter).join("")}</ul></details>`;
+          })() : `<p class="topics" style="margin-top:8px">الفصول بتتجهز وهتنزل قريب.</p>`}
           <p class="topics" style="margin-top:8px">+ امتحان ${U.the} ${l.num}${enrolled ? "" : " (للمشتركين)"}</p>
         </div></article>
         ${cumAfter(l.num).map((e) => `<article class="lv cum"><span class="n">★</span><div><h3>${IK.esc(e.title)}</h3><p class="topics">امتحان تراكمي على كل اللي فات، ولازم تعديه علشان تكمل.</p></div></article>`).join("")}`).join("")}
@@ -161,15 +173,18 @@
     }
   } catch (e) {}
 
-  async function openFree(id) {
+  async function openFree(id, from) {
     const v = me ? null : await IK.visitorGate({ item: { kind: "chapter", ref: String(id) }, title: "افتح الفصل ده مجاناً", why: "تقرا الفصول المجانية وتحمّل الشيتات" });
     if (!me && !v) return;
     const m = await fetch("/api/public/materials/" + id, { credentials: "same-origin" }).then(async (r) => r.ok ? r.json() : Promise.reject(new Error((await r.json()).error)));
     const wrap = IK.$("#free-viewer");
+    // العارض بيفتح تحت المستوى اللي فيه الفصل، مش فوق خالص أول القايمة
+    const lv = from && from.closest(".lv");
+    if (lv) lv.after(wrap);
     const who = me || v;
     // العلامة المائية: اسم اللي بيقرا + "نسخة تجريبية" دايماً على الفصول المجانية
     await IK.openPdf(wrap, m, { s: { ...s, wm_student: "1" }, who: { name: (who.name || "") + " · نسخة تجريبية", phone: who.phone },
-      src: (n) => `/api/public/materials/${m.id}/pages/${n}` });
+      src: (n) => `/api/public/materials/${m.id}/pages/${n}`, from });
     const cta = document.createElement("div");
     cta.className = "card spread";
     cta.style.marginTop = "12px";
@@ -193,14 +208,14 @@
     const b = ev.target.closest(".js-free");
     if (!b) return;
     b.disabled = true;
-    try { await openFree(b.dataset.id); } catch (e) { alert(e.message || "الفصل ده مش متاح دلوقتي."); }
+    try { await openFree(b.dataset.id, b); } catch (e) { alert(e.message || "الفصل ده مش متاح دلوقتي."); }
     b.disabled = false;
   });
   // جاي من "جرّب قبل ما تشترك" في الصفحة الرئيسية: افتح الفصل على طول
   const tryId = IK.qs("try");
   if (tryId && !enrolled && d.levels.some((l) => l.materials.some((m) => String(m.id) === tryId && m.free))) {
     IK.$("#chapters").scrollIntoView({ block: "start" });
-    openFree(tryId).catch((e) => alert(e.message));
+    openFree(tryId, document.querySelector(`.js-free[data-id="${tryId}"]`)).catch((e) => alert(e.message));
   }
 })();
 </script>

@@ -55,7 +55,7 @@ p{margin:0}
 .btn-sm{padding:.5em 1em;font-size:14px}
 .btn svg{width:20px;height:20px;flex:none}
 .btn[disabled]{opacity:.6;cursor:wait;transform:none}
-.badge{display:inline-flex;align-items:center;font-size:12.5px;font-weight:600;border-radius:999px;padding:2px 10px;background:var(--paper);color:var(--blue);white-space:nowrap}
+.badge{display:inline-flex;align-items:center;font-size:13.5px;font-weight:600;border-radius:999px;padding:2px 10px;background:var(--paper);color:var(--blue);white-space:nowrap}
 .badge.gold{background:#F6EEDC;color:var(--gold-deep)}
 
 /* الهيدر */
@@ -74,11 +74,11 @@ p{margin:0}
 .head-end{display:flex;align-items:center;gap:8px}
 .site-header .btn{padding:.6em 1.1em;font-size:15px}
 .visitor-chip{display:inline-flex;align-items:center;gap:6px}
-@media (max-width:1340px){
+@media (max-width:1100px){
   .site-header{backdrop-filter:none;background:var(--white)}
   .site-header .wrap{flex-wrap:wrap;row-gap:0;min-height:0;padding-block:10px 0}
   .head-end{margin-inline-start:auto}
-  .nav{order:3;flex-basis:100%;margin-inline:calc(var(--gutter)*-1);padding:6px var(--gutter) 8px;overflow-x:auto;scrollbar-width:none;border-top:1px solid var(--line-2);margin-top:10px}
+  .nav{order:3;flex-basis:100%;flex-wrap:wrap;justify-content:center;margin-inline:calc(var(--gutter)*-1);padding:6px var(--gutter) 8px;border-top:1px solid var(--line-2);margin-top:10px}
   .nav::-webkit-scrollbar{display:none}
   .nav a{flex:none;font-size:14px}
 }
@@ -143,7 +143,7 @@ section{padding-block:clamp(52px,7vw,96px)}
 .paths{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .path{border:1px solid var(--line);border-radius:var(--r-l);padding:22px;display:flex;flex-direction:column;gap:12px;min-width:0;background:var(--white)}
 .path.open{border-color:var(--gold);box-shadow:var(--shadow)}
-.path .st{align-self:flex-start;font-size:12.5px;font-weight:600;border-radius:999px;padding:2px 12px;background:#E7F4EC;color:#145C39}
+.path .st{align-self:flex-start;font-size:13.5px;font-weight:600;border-radius:999px;padding:2px 12px;background:#E7F4EC;color:#145C39}
 .path.soon .st{background:var(--paper);color:var(--ink-3)}
 .path h3{font-size:19px;font-weight:700}
 .path p{font-size:15px;color:var(--ink-2)}
@@ -155,7 +155,7 @@ section{padding-block:clamp(52px,7vw,96px)}
 .path .acts{margin-top:auto;display:grid;gap:8px}
 .path .btn{white-space:normal;text-align:center}
 .tags{display:flex;flex-wrap:wrap;gap:6px}
-.tag{font-size:12.5px;font-weight:600;border-radius:999px;padding:2px 10px;background:#EAF6FB;color:var(--blue)}
+.tag{font-size:13.5px;font-weight:600;border-radius:999px;padding:2px 10px;background:#EAF6FB;color:var(--blue)}
 .tag.tool{background:#F6EEDC;color:var(--gold-deep)}
 .path.ghost{border-style:dashed;background:var(--paper);box-shadow:none}
 .no-match{padding:22px;border:1px dashed var(--line);border-radius:var(--r-l);color:var(--ink-3);text-align:center}
@@ -196,6 +196,26 @@ section{padding-block:clamp(52px,7vw,96px)}
 .lib b{font-family:var(--f-display);font-size:16px}
 .lib span{font-size:14px;color:var(--ink-3)}
 @media (max-width:860px){.lib{grid-template-columns:1fr}}
+
+/* أرقام الواجهة */
+.numbers{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px 20px;margin:26px 0 0;padding-top:18px;border-top:1px solid var(--line)}
+.numbers div{min-width:0}
+.numbers dt{font-family:var(--f-display);font-weight:800;font-size:clamp(24px,2.6vw,30px);color:var(--navy);line-height:1.2;text-align:start}
+.numbers dd{margin:2px 0 0;font-size:14px;line-height:1.5;color:var(--ink-3)}
+@media (max-width:520px){.numbers{grid-template-columns:1fr 1fr}}
+/* آراء المتدربين */
+#voices{background:var(--paper)}
+.voices{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.voice{background:var(--white);border:1px solid var(--line);border-radius:var(--r-l);padding:22px;display:flex;flex-direction:column;gap:12px;margin:0}
+.voice blockquote{margin:0;color:var(--ink-2);font-size:16px}
+.voice blockquote::before{content:"”";display:block;font-family:Georgia,serif;font-size:42px;line-height:.6;color:var(--gold);margin-bottom:8px}
+.voice figcaption b{display:block;font-family:var(--f-display);color:var(--navy)}
+.voice figcaption small{color:var(--ink-3);font-size:14px}
+/* الأقسام اللي لسه بتتجهز: سطر واحد بدل كارت كبير */
+.soon-strip{margin-top:28px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:14px 18px;border:1px dashed var(--line);border-radius:var(--r-m);background:var(--paper);font-size:15px;color:var(--ink-2)}
+.soon-strip b{font-family:var(--f-display);color:var(--navy)}
+/* موبايل: الشيت أصغر علشان الكورسات تبان أسرع */
+@media (max-width:700px){.tb{font-size:13px}.tb td,.tb th{padding:4px 10px}.fx code,.fx i{padding:6px 10px}.sheet-foot{padding:8px 14px 26px}}
 
 /* ليه IK */
 #why{background:var(--paper)}
@@ -241,7 +261,7 @@ section{padding-block:clamp(52px,7vw,96px)}
 
 /* الخدمات */
 #services{background:var(--white)}
-.services{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:var(--r-l);overflow:hidden}
+.services{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));border:1px solid var(--line);border-radius:var(--r-l);overflow:hidden}
 .service{padding:30px 28px;display:flex;flex-direction:column;gap:12px;border-inline-start:1px solid var(--line);min-width:0}
 .service:first-child{border-inline-start:none}
 .service .k{font-family:var(--f-mono);font-size:12px;color:var(--gold-deep);direction:ltr;text-align:right}
@@ -292,7 +312,7 @@ section{padding-block:clamp(52px,7vw,96px)}
 .field input:focus,.field select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(121,211,242,.35)}
 .check{display:flex;gap:8px;align-items:flex-start;font-size:14px;color:var(--ink-2);cursor:pointer;line-height:1.7}
 .check input{margin-top:.35em;flex:none}
-.privacy{font-size:12.5px;color:var(--ink-3);line-height:1.7}
+.privacy{font-size:13.5px;color:var(--ink-3);line-height:1.7}
 .privacy a{color:var(--blue)}
 .status{border-radius:var(--r-m);padding:12px 14px;font-size:15px}
 .status.ok{background:#E7F4EC;color:#145C39}
@@ -337,9 +357,8 @@ footer .slogan em{font-style:normal;color:var(--gold)}
       <a href="#free">جرّب مجاناً</a>
       <a href="/library">مكتبة IK</a>
       <a href="#about">عن المؤسس</a>
-      <a href="#services">الخدمات</a>
-      <a href="#faq">الأسئلة الشائعة</a>
-      <a href="#contact">تواصل</a>
+      <a href="#services">للشركات</a>
+      <a href="#faq">أسئلة شائعة</a>
     </nav>
     <div class="head-end">
       <span id="visitor-slot"></span>
@@ -367,6 +386,7 @@ footer .slogan em{font-style:normal;color:var(--gold)}
       <div class="proof">
         <span>شرح بالعامية وبالقصة</span><span>امتحان بعد كل وحدة</span><span>شهادة بكود تحقق</span><span>شيتات Excel جاهزة</span>
       </div>
+      <dl class="numbers" id="numbers"><div><dt class="num">+10</dt><dd>سنين خبرة في الشغل الحقيقي</dd></div></dl>
     </div>
 
     <figure class="sheet" aria-label="مثال تعليمي: ميزان مراجعة على Excel">
@@ -443,6 +463,34 @@ footer .slogan em{font-style:normal;color:var(--gold)}
   </div>
 </section>
 
+<section id="voices" aria-labelledby="voices-h" hidden>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">آراء المتدربين</span>
+      <h2 id="voices-h">ناس بدأت قبلك، وده رأيهم</h2>
+    </div>
+    <div class="voices" id="voice-list"></div>
+  </div>
+</section>
+
+<section id="about" aria-labelledby="about-h">
+  <div class="wrap about">
+    <div class="portrait"><img src="/assets/portrait.webp" alt="Mr. Islam Khalifa" width="720" height="720" loading="lazy"></div>
+    <div class="about-copy">
+      <span class="eyebrow">عن المؤسس</span>
+      <h2 id="about-h">Mr. Islam Khalifa</h2>
+      <p class="role">مؤسس IK Academy</p>
+      <p class="desc">محاسب بقاله سنين في الشغل الحقيقي، وبيحب يبسّط المحاسبة لدرجة إنك تحس إنها حكاية بتتحكي. مهتم بتصميم الأنظمة المحاسبية على Excel، والتقارير، والتحليل المالي، وربط المعايير الدولية بالتطبيق.</p>
+      <ul class="facts">
+        <li>خبرة +10 سنين في الحسابات والإدارة المالية: التصنيع، والمقاولات، والتصدير، والتجاري، والخدمي.</li>
+        <li>حاصل على دبلومة المعايير الدولية DipIFRS من ACCA، وشهادة FMAA من IMA.</li>
+        <li>متخصص في الضرايب المحلية (القيمة المضافة، والخصم والإضافة، وضريبة الدخل)، وتصميم البرامج المحاسبية على Excel.</li>
+      </ul>
+      <p class="quote">«ماتحفظش النظرية وبس.. ابني الشركة والنظام المحاسبي من الصفر بإيدك.»</p>
+    </div>
+  </div>
+</section>
+
 <section class="cycle" aria-labelledby="cycle-h">
   <div class="wrap">
     <span class="eyebrow">طريقة التعلم</span>
@@ -485,23 +533,6 @@ footer .slogan em{font-style:normal;color:var(--gold)}
   </div>
 </section>
 
-<section id="about" aria-labelledby="about-h">
-  <div class="wrap about">
-    <div class="portrait"><img src="/assets/portrait.webp" alt="Mr. Islam Khalifa" width="720" height="720" loading="lazy"></div>
-    <div class="about-copy">
-      <span class="eyebrow">عن المؤسس</span>
-      <h2 id="about-h">Mr. Islam Khalifa</h2>
-      <p class="role">مؤسس IK Academy</p>
-      <p class="desc">محاسب بقاله سنين في الشغل الحقيقي، وبيحب يبسّط المحاسبة لدرجة إنك تحس إنها حكاية بتتحكي. مهتم بتصميم الأنظمة المحاسبية على Excel، والتقارير، والتحليل المالي، وربط المعايير الدولية بالتطبيق.</p>
-      <ul class="facts">
-        <li>خبرة أكتر من 9 سنين في الحسابات والإدارة المالية: التصنيع، والمقاولات، والتصدير، والتجاري، والخدمي.</li>
-        <li>حاصل على دبلومة المعايير الدولية DipIFRS من ACCA، وشهادة FMAA من IMA.</li>
-        <li>متخصص في الضرايب المحلية (القيمة المضافة، والخصم والإضافة، وضريبة الدخل)، وتصميم البرامج المحاسبية على Excel.</li>
-      </ul>
-      <p class="quote">«ماتحفظش النظرية وبس.. ابني الشركة والنظام المحاسبي من الصفر بإيدك.»</p>
-    </div>
-  </div>
-</section>
 
 <section id="mission" aria-labelledby="mission-h">
   <div class="wrap">
@@ -534,8 +565,8 @@ footer .slogan em{font-style:normal;color:var(--gold)}
   <div class="wrap">
     <div class="sec-head">
       <span class="eyebrow">خدمات للشركات</span>
-      <h2 id="services-h">محتاج نظام محاسبي لشغلك؟ نبنيه معاك</h2>
-      <p>غير التدريب، بنساعد الشركات وأصحاب المنشآت ينظموا حساباتهم من الأساس.</p>
+      <h2 id="services-h">محتاج نظام محاسبي أو تدريب لفريقك؟ نبنيه معاك</h2>
+      <p>غير الكورسات، بنساعد الشركات وأصحاب المنشآت ينظموا حساباتهم من الأساس ويدربوا فريقهم على الشغل الحقيقي.</p>
     </div>
     <div class="services" id="service-list"></div>
   </div>
@@ -606,18 +637,34 @@ footer .slogan em{font-style:normal;color:var(--gold)}
   IK.track("home_view");
 
   // الخدمات
-  const SERVICES = [
-    { key: "Excel Accounting Systems", title: "برنامج محاسبي على Excel على مقاس شغلك", text: "بدل البرامج الجاهزة اللي مش مناسبة لحجمك، بنعملك برنامج على Excel بيمشي زي ما شغلك ماشي.",
-      items: ["الدليل المحاسبي والقيود والأستاذ", "العملاء والموردين والمخزون", "التقارير والقوائم المالية"] },
-    { key: "Accounting Cycle Setup", title: "تنظيم الدورة المحاسبية", text: "من التسجيل اليومي لحد الإقفال والقوائم المالية، كل خطوة ليها ترتيب ومسؤول.",
-      items: ["تصميم الدليل المحاسبي", "خطوات التسجيل والترحيل", "التسويات والإقفال والتقارير"] },
-    { key: "Documentary Cycle", title: "إعداد الدورة المستندية", text: "كل عملية ليها مستند، وكل مستند ليه خط سير ومراجعة، فمفيش حاجة تضيع.",
-      items: ["دورة المبيعات والتحصيل", "دورة المشتريات والسداد", "دورة المخزون والخزينة"] },
-  ];
+  // الخدمات من الإعدادات: الوسم بالإنجليزي | العنوان | الوصف | البنود مفصولة بـ ؛
+  const lines = (txt, n) => String(txt || "").split("\n").map((l) => l.split("|").map((x) => x.trim())).filter((x) => x[0] && x.length >= n);
+  const services = () => lines(S.services, 2).map(([key, title, text, items]) => ({ key, title: title || key, text: text || "",
+    items: String(items || "").split(/[؛;]/).map((x) => x.trim()).filter(Boolean) }));
   const renderServices = () => {
-    IK.$("#service-list").innerHTML = SERVICES.map((s) => `<article class="service"><span class="k">${esc(s.key)}</span><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p>
-      <ul>${s.items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
+    const list = services();
+    IK.$("#services").hidden = !list.length;
+    IK.$("#service-list").innerHTML = list.map((s) => `<article class="service"><span class="k">${esc(s.key)}</span><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p>
+      ${s.items.length ? `<ul>${s.items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>` : ""}
       <a class="btn btn-ghost" target="_blank" rel="noopener" href="${IK.wa(S.whatsapp, "السلام عليكم، عايز أستفسر عن خدمة: " + s.title)}">${chat}اطلب الخدمة</a></article>`).join("");
+  };
+
+  // آراء المتدربين من الإعدادات: الاسم | الوظيفة | الرأي
+  const renderVoices = () => {
+    const list = lines(S.testimonials, 3);
+    IK.$("#voices").hidden = !list.length;
+    IK.$("#voice-list").innerHTML = list.map(([name, role, text]) => `<figure class="voice"><blockquote>${esc(text)}</blockquote>
+      <figcaption><b>${esc(name)}</b>${role ? `<small>${esc(role)}</small>` : ""}</figcaption></figure>`).join("");
+  };
+  // أرقام حقيقية من المنصة جنب سنين الخبرة
+  const renderNumbers = () => {
+    const n = site.numbers || {};
+    const round = (x) => (x >= 200 ? "+" + Math.floor(x / 100) * 100 : String(x));
+    const items = [["+10", "سنين خبرة في الشغل الحقيقي"]];
+    if (n.courses) items.push([String(n.courses), n.courses === 1 ? "كورس متاح دلوقتي" : "كورسات متاحة دلوقتي"]);
+    if (n.levels) items.push([String(n.levels), "وحدة بالقصة والتطبيق"]);
+    if (n.questions >= 50) items.push([round(n.questions), "سؤال امتحان تختبر بيهم نفسك"]);
+    IK.$("#numbers").innerHTML = items.map(([v, t]) => `<div><dt class="num">${esc(v)}</dt><dd>${esc(t)}</dd></div>`).join("");
   };
 
   // الأسئلة الشائعة
@@ -661,20 +708,19 @@ footer .slogan em{font-style:normal;color:var(--gold)}
     // كورس قسمه اتمسح من الإعدادات بيظهر تحت "كورسات تانية"
     if (site.courses.some((c) => !known.has(c.track))) tracks.push({ key: "__other", name: "كورسات تانية", desc: "" });
     let shown = 0;
+    const soon = [];
     box.innerHTML = tracks.map((t) => {
       const all = site.courses.filter((c) => (t.key === "__other" ? !known.has(c.track) : c.track === t.key));
       const list = all.filter(matches);
       shown += list.length;
       if (!all.length) {
-        if (filter !== "all") return "";
-        return `<div class="track"><div class="track-h"><h3>${esc(t.name)}</h3>${t.desc ? `<p>${esc(t.desc)}</p>` : ""}</div>
-          <div class="paths"><article class="path ghost"><span class="st">قريباً</span><h3>القسم ده بيتجهز</h3>
-          <p>بنحضّر فيه كورسات وشيتات عملية. سيب رقمك وأول ما ينزل حاجة هنبلغك.</p>
-          <div class="acts"><button class="btn btn-ghost js-track" type="button" data-track="${esc(t.key)}">🔔 بلغني أول ما ينزل</button></div></article></div></div>`;
+        if (filter === "all") soon.push(t);
+        return "";
       }
       if (!list.length) return "";
       return `<div class="track"><div class="track-h"><h3>${esc(t.name)}</h3>${t.desc ? `<p>${esc(t.desc)}</p>` : ""}</div><div class="paths">${list.map(card).join("")}</div></div>`;
-    }).join("");
+    }).join("") + (soon.length ? `<div class="soon-strip"><b>قريباً:</b> ${soon.map((t) => esc(t.name)).join(" · ")}
+      <button class="btn btn-ghost btn-sm js-track" type="button" data-track="${esc(soon.map((t) => t.key).join(","))}">🔔 بلغني أول ما ينزل</button></div>` : "");
     if (!shown && filter !== "all") box.innerHTML = `<div class="no-match">لسه مفيش كورس مخصوص للهدف ده، بس بنجهزله. <a href="#contact">قولنا محتاج إيه</a> وهنبلغك أول ما ينزل.</div>`;
     if (!site.courses.length && filter === "all" && !site.tracks.length) box.innerHTML = '<p class="muted">الكورسات هتنزل قريب.</p>';
   }
@@ -792,7 +838,7 @@ footer .slogan em{font-style:normal;color:var(--gold)}
   IK.$("#phone-num").textContent = S.whatsapp_display || ("0" + String(S.whatsapp).replace(/^20/, ""));
   sel.innerHTML = '<option value="">استفسار عام</option>' + site.courses.map((c) => `<option>${esc(c.title)}</option>`).join("");
   IK.$("#lead-interest").innerHTML = '<option value="general">استفسار عام</option>' + site.courses.map((c) => `<option value="${esc(c.slug)}">${esc(c.title)}</option>`).join("") + '<option value="services">خدمات للشركات</option>';
-  renderCatalog(); renderFree(); renderDemos(); renderServices(); renderFaq(); syncWa(); syncPick();
+  renderCatalog(); renderFree(); renderDemos(); renderServices(); renderVoices(); renderNumbers(); renderFaq(); syncWa(); syncPick();
   renderLibrary();
 })();
 </script>

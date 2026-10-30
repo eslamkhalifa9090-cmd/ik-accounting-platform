@@ -24,6 +24,9 @@ export async function onRequestGet({ request, env, next }) {
     desc && `<meta property="og:description" content="${esc(desc)}">`,
     `<meta property="og:url" content="${esc(url)}">`,
     `<meta property="og:image" content="${esc(origin)}/assets/logo.webp">`,
+    // بيانات منظمة لجوجل: الصفحة دي كورس
+    `<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "Course", name: c.title, description: desc || c.title,
+      url, inLanguage: "ar", provider: { "@type": "Organization", name: brand, sameAs: origin + "/" } }).replace(/</g, "\\u003c")}</script>`,
   ].filter(Boolean).join("");
   return new HTMLRewriter()
     .on("title", { element(el) { el.setInnerContent(title); } })

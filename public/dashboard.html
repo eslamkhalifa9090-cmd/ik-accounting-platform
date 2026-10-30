@@ -84,8 +84,8 @@
         ${c.active && c.next ? `<div class="next-step"><span class="muted">الخطوة الجاية</span><b>${IK.esc(c.next.label)}</b>
           <div class="row"><a class="btn ${c.next.type === "certificate" ? "btn-gold" : "btn-primary"}" href="${nextHref(c)}">${c.next.type === "certificate" ? "استلم شهادتك" : c.progress ? "كمل من حيث وقفت" : "ابدأ الكورس"}</a>
           <a class="btn btn-ghost" href="/learn?c=${encodeURIComponent(c.slug)}">خريطة ${IK.U(c.unit).pl}</a></div></div>` : ""}
-        <h3 style="margin-top:6px">امتحاناتك</h3>
-        ${examsTable(c)}
+        <details class="exams-d"><summary>امتحاناتك (${c.summary.passed} من ${c.summary.total} عديتهم)</summary>
+        ${examsTable(c)}</details>
       </article>`).join("");
   }
   // برامج الـ Demo: اللي في باقته بيشوف الرابط وبيانات الدخول، والباقي بيطلبه على واتساب

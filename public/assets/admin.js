@@ -817,6 +817,11 @@
           <textarea name="tracks" rows="4" dir="rtl">${esc(s.tracks || "")}</textarea></div>
         <div class="field full"><label>تصنيفات المكتبة <small>(كل تصنيف في سطر: مفتاح القسم | اسم التصنيف)</small></label>
           <textarea name="lib_subcats" rows="6" dir="rtl">${esc(s.lib_subcats || "")}</textarea></div>
+        <h2 class="full" style="margin-top:10px">الصفحة الرئيسية</h2>
+        <div class="field full"><label>خدمات الشركات <small>(كل خدمة في سطر: وسم بالإنجليزي | العنوان | الوصف | البنود مفصولة بـ ؛ — ضيف سطر = كارت جديد، وامسح السطر = يتشال)</small></label>
+          <textarea name="services" rows="9" dir="rtl">${esc(s.services || "")}</textarea></div>
+        <div class="field full"><label>آراء المتدربين <small>(كل رأي في سطر: الاسم | الوظيفة | الرأي. القسم بيظهر في الرئيسية أول ما تكتب رأي واحد)</small></label>
+          <textarea name="testimonials" rows="4" dir="rtl" placeholder="أحمد علي | محاسب في شركة مقاولات | أول مرة أفهم الدورة المحاسبية بجد، والقصة خلت كل حاجة سهلة.">${esc(s.testimonials || "")}</textarea></div>
         <div class="full row"><button class="btn btn-primary" type="submit">حفظ الإعدادات</button><span class="status" hidden></span></div>
       </form>
       <div class="card stack">

@@ -183,20 +183,25 @@
     const header = document.createElement("header");
     header.className = "app-header";
     const lib = '<a class="btn btn-ghost btn-sm" href="/library">مكتبة IK</a>';
+    // الكورسات دايماً في الهيدر، علشان اللي داخل على صفحة كورس من إعلان يلاقي طريقه لباقي الكورسات
+    const courses = '<a class="btn btn-ghost btn-sm" href="/#catalog">الكورسات</a>';
     const links = user
       ? (user.role === "admin" ? '<a class="btn btn-ghost btn-sm" href="/admin">لوحة الأدمن</a>' : "") +
-        '<a class="btn btn-ghost btn-sm" href="/dashboard">كورساتي</a>' + lib +
+        '<a class="btn btn-ghost btn-sm" href="/dashboard">كورساتي</a>' + courses + lib +
         (user.role === "admin" ? "" : '<a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="' + IK.esc(IK.supportLink(s, user.name)) + '">الدعم الفني</a>') +
         '<span class="who">' + IK.esc(user.name) + "</span>" +
         '<button class="btn btn-ghost btn-sm" id="logout-btn" type="button">خروج</button>'
-      : lib + '<span id="visitor-slot"></span><a class="btn btn-primary btn-sm" href="/login">دخول المتدربين</a>';
+      : courses + lib + '<span id="visitor-slot"></span><a class="btn btn-primary btn-sm" href="/login">دخول المتدربين</a>';
     header.innerHTML = '<div class="wrap"><a class="brand" href="/"><img src="/assets/logo.webp" alt=""><span class="brand-t"><b>' +
       IK.esc(s.brand_name || "IK Academy") + "</b>" + (s.brand_by ? "<small>" + IK.esc(s.brand_by) + "</small>" : "") + "</span></a><nav>" + links + "</nav></div>";
     document.body.prepend(header);
     if (!user) IK.visitor().then(IK.showVisitor);
     const footer = document.createElement("footer");
     footer.className = "app-footer";
-    footer.innerHTML = "<b>" + IK.esc(s.footer_line1 || "") + "</b><span>" + IK.esc(s.footer_line2 || "") + '</span><a href="/privacy">الخصوصية</a>';
+    footer.innerHTML = "<b>" + IK.esc(s.footer_line1 || "") + "</b><span>" + IK.esc(s.footer_line2 || "") + "</span>" +
+      '<nav class="foot-links"><a href="/#catalog">الكورسات</a><a href="/library">مكتبة IK</a>' +
+      (s.whatsapp ? '<a target="_blank" rel="noopener" href="' + IK.esc(IK.wa(s.whatsapp, "السلام عليكم")) + '">واتساب</a>' : "") +
+      '<a href="/privacy">الخصوصية</a></nav>';
     document.body.append(footer);
     const lo = IK.$("#logout-btn");
     if (lo) lo.addEventListener("click", async () => { try { await IK.api("/auth/logout", { method: "POST" }); } catch (e) {} location.href = "/login"; });

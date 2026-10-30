@@ -101,6 +101,8 @@
   }
   async function load() {
     try { files = (await IK.api("/public/library", { noRedirect: true })).files; } catch (e) { files = []; }
+    // الفلاتر بتظهر لما يبقى فيه ملفات كفاية تستاهل تتفلتر
+    document.querySelector(".filters").hidden = files.length < 6;
     render();
   }
 
