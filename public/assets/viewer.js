@@ -7,6 +7,25 @@
   const keep = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const ZMAX = 3;
+  // زرار الرجوع في الموبايل أو المتصفح بيقفل العارض ويفضل في نفس الصفحة، بدل ما يخرّجك منها
+  let closeActive = null;
+  addEventListener("popstate", () => { if (closeActive) closeActive(); });
+  IK.viewerOpened = (close) => {
+    if (closeActive) closeActive(true);
+    closeActive = close;
+    if (!(history.state && history.state.ikViewer)) history.pushState({ ikViewer: 1 }, "");
+  };
+  // زرار "قفل": لو العارض واخد خطوة في الـ history نرجعها، والـ popstate هو اللي بيقفل
+  IK.viewerClose = () => {
+    if (history.state && history.state.ikViewer) history.back(); else if (closeActive) closeActive();
+  };
+  IK.viewerDone = () => { closeActive = null; };
+  // المكان اللي العارض بيظهر فيه لازم يبان تحت الهيدر الثابت
+  IK.scrollToViewer = (wrap) => {
+    const h = (document.querySelector(".app-header") || {}).offsetHeight || 0;
+    wrap.style.scrollMarginTop = h + 12 + "px";
+    wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const leaveFs = () => {
     document.body.classList.remove("no-scroll");
     const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
@@ -188,8 +207,19 @@
     IK.$("#v-fit").onclick = () => { fit = fit === "page" ? "width" : "page"; keep("ik-fit", fit); zoom = 1; layout(); go(page); };
     IK.$("#v-mode").onclick = () => { mode = mode === "scroll" ? "page" : "scroll"; keep("ik-mode", mode); zoom = 1; const p = page; build(); layout(); go(p); };
     IK.$("#v-fs").onclick = toggleFs;
-    IK.$("#v-close").onclick = () => { leaveFs(); if (io) io.disconnect(); window.onresize = null; wrap.hidden = true; wrap.innerHTML = ""; if (opts.onClose) opts.onClose(); };
-    IK.$("#v-done").onclick = async () => { leaveFs(); await opts.onDone(); };
+    // replaced = عارض تاني فتح مكانه، فمفيش رجوع لمكان الزرار
+    const close = (replaced) => {
+      IK.viewerDone();
+      leaveFs(); if (io) io.disconnect(); window.onresize = null;
+      if (replaced === true) return;
+      wrap.hidden = true; wrap.innerHTML = "";
+      if (opts.onClose) opts.onClose();
+      // نرجع للفصل اللي كنت فاتحه منه
+      if (opts.from && opts.from.isConnected) opts.from.scrollIntoView({ block: "center" });
+    };
+    IK.viewerOpened(close);
+    IK.$("#v-close").onclick = IK.viewerClose;
+    IK.$("#v-done").onclick = async () => { leaveFs(); if (history.state && history.state.ikViewer) history.replaceState(null, ""); await opts.onDone(); };
     // الكتاب عربي: السهم الشمال = الصفحة الجاية
     document.onkeydown = (e) => {
       if (wrap.hidden || !wrap.contains(box)) return;
@@ -253,7 +283,7 @@
       box.before(note);
       IK.$("#v-first").onclick = (e) => { e.preventDefault(); go(1); note.remove(); };
     }
-    wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+    IK.scrollToViewer(wrap);
   };
 
 })();

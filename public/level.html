@@ -42,7 +42,7 @@
   };
   root.innerHTML = `
     <div class="page-head">
-      <a class="muted" href="/learn?c=${encodeURIComponent(c.slug)}">← ${IK.esc(c.title)}</a>
+      <a class="back" href="/learn?c=${encodeURIComponent(c.slug)}">← ${IK.esc(c.title)}</a>
       <h1>${U.the} ${l.num}: ${IK.esc(l.title)}</h1>
       ${l.topics ? `<p><b>محتوى ${U.the}:</b> ${IK.esc(l.topics)}</p>` : ""}
       ${l.teaser ? `<p style="margin-top:10px">${IK.esc(l.teaser)}</p>` : ""}
@@ -70,8 +70,8 @@
   wrap.addEventListener("contextmenu", (e) => e.preventDefault());
   wrap.addEventListener("dragstart", (e) => e.preventDefault());
 
-  const openPdf = (m) => IK.openPdf(wrap, m, {
-    s, who: me,
+  const openPdf = (m, from) => IK.openPdf(wrap, m, {
+    s, who: me, from,
     src: (n) => `/api/student/materials/${m.id}/pages/${n}?v=${m.version}`,
     onPage: (p) => IK.api(`/student/materials/${m.id}/position`, { method: "PUT", body: { page: p } }).catch(() => {}),
     onDone: async () => { await IK.api(`/student/materials/${m.id}/done`, { method: "POST" }); location.reload(); },
@@ -85,15 +85,21 @@
       return u;
     } catch (e) { return ""; }
   }
-  function openVideo(m) {
+  function openVideo(m, from) {
     wrap.hidden = false;
     const src = embedUrl(m.video_url || "");
     wrap.innerHTML = `<div class="spread" style="margin-bottom:10px"><h2 style="font-size:19px">${IK.esc(m.title)}</h2><button class="btn btn-ghost btn-sm" id="v-close" type="button">قفل</button></div>
       ${src ? `<div style="position:relative;padding-top:56.25%;border-radius:var(--r-l);overflow:hidden;background:#000"><iframe src="${IK.esc(src)}" style="position:absolute;inset:0;width:100%;height:100%;border:0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>` : '<div class="card empty">الفيديو لسه ما اتضافش.</div>'}
       <div class="row" style="margin-top:12px"><button class="btn btn-gold" id="v-done" type="button">خلصت الفيديو ده ✓</button></div>`;
-    IK.$("#v-close").onclick = () => { wrap.hidden = true; wrap.innerHTML = ""; };
-    IK.$("#v-done").onclick = async () => { await IK.api(`/student/materials/${m.id}/done`, { method: "POST" }); location.reload(); };
-    wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+    IK.viewerOpened((replaced) => {
+      IK.viewerDone();
+      if (replaced === true) return;
+      wrap.hidden = true; wrap.innerHTML = "";
+      if (from && from.isConnected) from.scrollIntoView({ block: "center" });
+    });
+    IK.$("#v-close").onclick = IK.viewerClose;
+    IK.$("#v-done").onclick = async () => { if (history.state && history.state.ikViewer) history.replaceState(null, ""); await IK.api(`/student/materials/${m.id}/done`, { method: "POST" }); location.reload(); };
+    IK.scrollToViewer(wrap);
   }
 
   // وقت المذاكرة: نبضة كل دقيقة والفصل مفتوح والتبويب قدامك، والـ PDF كمان لازم تكون بتتحرك فيه (الفيديو بيتحسب وهو شغال)
@@ -105,16 +111,16 @@
     IK.api(`/student/materials/${studying.id}/time`, { method: "POST" }).catch(() => {});
   }, 60 * 1000);
 
-  async function openMaterial(id) {
+  async function openMaterial(id, from) {
     const m = await IK.api("/student/materials/" + id);
     studying = { id: m.id, kind: m.kind };
-    if (m.kind === "pdf") await openPdf(m); else openVideo(m);
+    if (m.kind === "pdf") await openPdf(m, from); else openVideo(m, from);
   }
   root.addEventListener("click", async (ev) => {
     const b = ev.target.closest(".js-open");
     if (!b) return;
     b.disabled = true;
-    try { await openMaterial(b.dataset.id); } catch (e) { alert(e.message); }
+    try { await openMaterial(b.dataset.id, b); } catch (e) { alert(e.message); }
     b.disabled = false;
   });
   // جاي من "كمل من حيث وقفت": افتح الملف على طول
