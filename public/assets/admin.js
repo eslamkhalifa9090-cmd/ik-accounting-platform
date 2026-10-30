@@ -3,7 +3,7 @@
   const { esc, $, api } = IK;
   const me = await IK.requireUser({ admin: true });
   const site = await IK.chrome({ user: me });
-  const panel = $("#panel");
+  let panel = $("#panel"); // جوه صفحة الكورس بيشاور على تاب الكورس نفسه
   let courses = [];
   const loadCourses = async () => (courses = await api("/admin/courses"));
   await loadCourses();
@@ -251,30 +251,113 @@
   }
 
   // ======================= الكورسات والأسعار =======================
+  // قايمة مختصرة بالكورسات (بحث وفلتر بالقسم)، وكل كورس بيفتح صفحته بتابات: البيانات، الباقات، المستويات، المادة العلمية، الامتحانات
+  let cview = { id: null, sub: "basics", q: "", track: "" };
+  try { Object.assign(cview, JSON.parse(localStorage.getItem("ik-admin-course") || "{}")); } catch (e) {}
+  const saveView = () => { try { localStorage.setItem("ik-admin-course", JSON.stringify(cview)); } catch (e) {} };
+  const STATUS = { open: ["ok", "متاح"], soon: ["gold", "قيد الافتتاح"], hidden: ["lock", "مخفي"] };
+  const statusBadge = (c) => { const [k, t] = STATUS[c.status] || ["", c.status]; return `<span class="badge ${k}">${t}</span>`; };
+  const note = (form, kind, msg) => { const s = form.querySelector(".status"); IK.status(s, kind, msg); setTimeout(() => (s.hidden = true), 2500); };
+
   function coursesTab() {
-    panel.innerHTML = courses.map((c) => `
-      <div class="card" data-course="${c.id}">
-        <div class="spread"><h2>${esc(c.title)}</h2><div class="row"><a class="btn btn-ghost btn-sm" href="/certificate?c=${encodeURIComponent(c.slug)}&preview=1" target="_blank">🎓 معاينة الشهادة</a><a class="btn btn-ghost btn-sm" href="/course?c=${encodeURIComponent(c.slug)}" target="_blank">شوف صفحة الكورس</a></div></div>
-        <form class="form-grid js-course" style="margin-top:12px">
+    panel = $("#panel");
+    const c = cview.id && courses.find((x) => String(x.id) === String(cview.id));
+    if (c) return courseView(c);
+    cview.id = null; saveView();
+    courseList();
+  }
+
+  function courseList() {
+    panel.innerHTML = `
+      <div class="row" style="margin-bottom:14px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:180px"><input id="cq" type="search" placeholder="🔍 دوّر على كورس..." value="${esc(cview.q)}"></div>
+        <div class="field"><select id="ct">${opt("", "كل الأقسام", cview.track)}${tracks().map((t) => opt(t.key, t.name, cview.track)).join("")}</select></div>
+        <button class="btn btn-primary" type="button" id="addc">+ كورس جديد</button>
+      </div>
+      <div class="card" id="newbox" hidden style="margin-bottom:16px"><h2>إضافة كورس جديد</h2>
+        <form id="newc" class="form-grid" style="margin-top:12px">
+          <div class="field"><label>اسم الكورس</label><input name="title" required></div>
+          <div class="field"><label>رابط مختصر بالإنجليزي <small>(اختياري، مثلاً hr. لو سبته فاضي هيتعمل لوحده)</small></label><input name="slug" dir="ltr" placeholder="hr"></div>
+          <div class="field"><label>القسم</label><select name="track">${tracks().map((t) => opt(t.key, t.name, "accounting")).join("")}</select></div>
+          <div class="field full"><label>سطر تعريفي</label><input name="subtitle"></div>
+          <div class="full row"><button class="btn btn-primary" type="submit">إضافة</button><span class="status" hidden></span></div>
+        </form></div>
+      <div class="grid grid-2" id="clist"></div>`;
+    const draw = () => {
+      const q = cview.q.trim().toLowerCase();
+      const list = courses.filter((c) => (!cview.track || c.track === cview.track) && (!q || `${c.title} ${c.slug} ${c.subtitle || ""}`.toLowerCase().includes(q)));
+      $("#clist").innerHTML = list.map((c) => { const p = c.plans.find((x) => x.visible && x.show_price);
+        return `<button type="button" class="card js-open" data-id="${c.id}" style="margin:0;text-align:start;cursor:pointer;font:inherit;color:inherit;width:100%">
+          <div class="spread"><b style="font-family:var(--f-display);font-size:17px">${esc(c.title)}</b>${statusBadge(c)}</div>
+          <div class="muted" style="margin-top:6px;font-size:14px">${esc(trackName(c.track))} · ${c.levels.length} ${esc(c.unit.pl)} · ${c.plans.length} باقة</div>
+          <div style="margin-top:6px">${p ? IK.priceHTML(p) : '<span class="muted">السعر مخفي</span>'}</div></button>`; }).join("")
+        || '<div class="card empty" style="margin:0">مفيش كورس بالبحث ده.</div>';
+      $("#clist").querySelectorAll(".js-open").forEach((b) => (b.onclick = () => { cview.id = b.dataset.id; cview.sub = "basics"; saveView(); coursesTab(); window.scrollTo(0, 0); }));
+    };
+    $("#cq").oninput = (e) => { cview.q = e.target.value; saveView(); draw(); };
+    $("#ct").onchange = (e) => { cview.track = e.target.value; saveView(); draw(); };
+    $("#addc").onclick = () => { const b = $("#newbox"); b.hidden = !b.hidden; if (!b.hidden) b.querySelector("input").focus(); };
+    draw();
+    $("#newc").onsubmit = async (e) => {
+      e.preventDefault();
+      const st = e.target.querySelector(".status");
+      try {
+        const r = await api("/admin/courses", { method: "POST", body: Object.fromEntries(new FormData(e.target)) });
+        await loadCourses();
+        cview.id = r.id; cview.sub = "basics"; saveView(); coursesTab();
+        IK.status(panel.querySelector(".js-course .status"), "ok", `اتضاف ✓ ورابطه: /course?c=${r.slug}`);
+      }
+      catch (err) { IK.status(st, "bad", err.message); } // الرسالة بتفضل ظاهرة لحد المحاولة الجاية
+    };
+  }
+
+  function courseView(c) {
+    const subs = [["basics", "البيانات"], ["plans", "الباقات والأسعار"], ["levels", c.unit.pl], ["content", "المادة العلمية"], ["exams", "الامتحانات"]];
+    if (!subs.some(([k]) => k === cview.sub)) cview.sub = "basics";
+    panel.innerHTML = `
+      <div class="spread" style="flex-wrap:wrap;gap:10px;margin-bottom:8px">
+        <div class="row"><button class="btn btn-ghost btn-sm" type="button" id="cback">→ كل الكورسات</button><h2 style="margin:0">${esc(c.title)}</h2>${statusBadge(c)}</div>
+        <div class="row"><a class="btn btn-ghost btn-sm" href="/certificate?c=${encodeURIComponent(c.slug)}&preview=1" target="_blank">🎓 معاينة الشهادة</a><a class="btn btn-ghost btn-sm" href="/course?c=${encodeURIComponent(c.slug)}" target="_blank">شوف صفحة الكورس</a></div>
+      </div>
+      <div class="tabs">${subs.map(([k, n]) => `<button type="button" data-sub="${k}"${k === cview.sub ? ' class="on"' : ""}>${esc(n)}</button>`).join("")}</div>
+      <div id="csub" data-course="${c.id}"></div>`;
+    $("#cback").onclick = () => { cview.id = null; saveView(); coursesTab(); };
+    panel.querySelectorAll("[data-sub]").forEach((b) => (b.onclick = () => { cview.sub = b.dataset.sub; saveView(); coursesTab(); }));
+    const box = $("#csub");
+    if (cview.sub === "content" || cview.sub === "exams") {
+      // المادة العلمية والامتحانات بنفس شاشاتهم، بس جوه صفحة الكورس ومن غير اختيار كورس
+      if (pick.course !== c.slug) { pick.course = c.slug; pick.level = null; examPick = null; }
+      panel = box;
+      box.innerHTML = '<div class="loading">جاري التحميل...</div>';
+      return (cview.sub === "content" ? contentTab() : examsTab()).catch((e) => { if (e.message !== "login") box.innerHTML = `<div class="card status bad">${esc(e.message)}</div>`; });
+    }
+    if (cview.sub === "basics") box.innerHTML = `
+      <div class="card">
+        <form class="form-grid js-course">
           <div class="field"><label>اسم الكورس</label><input name="title" value="${esc(c.title)}"></div>
           <div class="field"><label>الحالة</label><select name="status">${opt("open", "متاح للاشتراك", c.status)}${opt("soon", "قيد الافتتاح قريباً", c.status)}${opt("hidden", "مخفي", c.status)}</select></div>
+          <div class="field"><label>القسم</label><select name="track">${tracks().map((t) => opt(t.key, t.name, c.track)).join("")}${tracks().some((t) => t.key === c.track) ? "" : opt(c.track, c.track, c.track)}</select></div>
+          <div class="field"><label>الرابط</label><input value="/course?c=${esc(c.slug)}" dir="ltr" readonly></div>
           <div class="field full"><label>سطر تعريفي</label><input name="subtitle" value="${esc(c.subtitle || "")}"></div>
           <div class="field full"><label>المقدمة (النبذة)</label><textarea name="intro" rows="4">${esc(c.intro || "")}</textarea></div>
           <div class="field full"><label>الكورس لمين؟ <small>(جملة بتظهر في صفحة الكورس)</small></label><input name="audience" value="${esc(c.audience || "")}"></div>
-          <div class="field"><label>القسم</label><select name="track">${tracks().map((t) => opt(t.key, t.name, c.track)).join("")}${tracks().some((t) => t.key === c.track) ? "" : opt(c.track, c.track, c.track)}</select></div>
-          <div class="field"><label>الأدوات <small>(مفصولة بفاصلة، زي Excel, Power BI)</small></label><input name="tools" value="${esc(c.tools || "")}"></div>
           <div class="field full"><label>مناسب لـ <small>(بيستخدم في فلتر "عايز تحقق إيه؟")</small></label><div>${audChecks(String(c.audiences || "").split(","))}</div></div>
           <div class="field full"><label>هتقدر تعمل إيه بعده؟ <small>(سطر واحد بيظهر على كارت الكورس)</small></label><input name="outcome" value="${esc(c.outcome || "")}" placeholder="مثلاً: تمسك دورة محاسبية كاملة لشركة تجارية لحد القوائم المالية"></div>
-          <div class="field full"><label>وصف جوجل <small>(لحد 160 حرف، بيظهر في نتايج البحث ولما الرابط يتبعت)</small></label><textarea name="seo_desc" rows="2" maxlength="300">${esc(c.seo_desc || "")}</textarea></div>
-          <div class="field"><label>الترتيب</label><input name="sort" type="number" value="${c.sort}"></div>
-          <div class="field"><label>اسم التقسيم <small>(بيظهر للمتدرب في كل الصفحات وعناوين الامتحانات)</small></label>
-            <select name="unit">${opt("level", "مستويات (المستوى 1، 2 ...)", c.unit.key)}${opt("unit", "وحدات (الوحدة 1، 2 ...)", c.unit.key)}${opt("module", "موديولات (الموديول 1، 2 ...)", c.unit.key)}</select></div>
-          <div class="field"><label>طريقة فتح المحتوى <small>(بالترتيب للكورس اللي مبني على قصة، ومفتوح للكورس اللي كل جزء فيه مستقل)</small></label>
-            <select name="unlock">${opt("sequence", "بالترتيب: الفصل بعد اللي قبله، و" + c.unit.the + " بعد امتحان اللي قبله", c.unlock)}${opt("open", "كل الكورس مفتوح: المتدرب يبدأ من أي " + c.unit.a, c.unlock)}</select></div>
-          <div class="field full"><label>سطر إضافي على الشهادة <small>(اختياري، بيظهر تحت اسم الكورس. مثلاً: 10 مستويات و13 امتحان. فاضي = مفيش)</small></label><input name="cert_note" maxlength="200" value="${esc(c.cert_note || "")}"></div>
-          <div class="full row"><button class="btn btn-primary" type="submit">حفظ الكورس</button><span class="status" hidden></span></div>
+          <details class="full"><summary style="cursor:pointer;font-weight:600">⚙️ إعدادات متقدمة: التقسيم وطريقة الفتح والترتيب والأدوات ووصف جوجل والشهادة</summary>
+            <div class="form-grid" style="margin-top:12px">
+              <div class="field"><label>اسم التقسيم <small>(بيظهر للمتدرب في كل الصفحات وعناوين الامتحانات)</small></label>
+                <select name="unit">${opt("level", "مستويات (المستوى 1، 2 ...)", c.unit.key)}${opt("unit", "وحدات (الوحدة 1، 2 ...)", c.unit.key)}${opt("module", "موديولات (الموديول 1، 2 ...)", c.unit.key)}</select></div>
+              <div class="field"><label>طريقة فتح المحتوى <small>(بالترتيب للكورس اللي مبني على قصة، ومفتوح للكورس اللي كل جزء فيه مستقل)</small></label>
+                <select name="unlock">${opt("sequence", "بالترتيب: الفصل بعد اللي قبله، و" + c.unit.the + " بعد امتحان اللي قبله", c.unlock)}${opt("open", "كل الكورس مفتوح: المتدرب يبدأ من أي " + c.unit.a, c.unlock)}</select></div>
+              <div class="field"><label>الترتيب</label><input name="sort" type="number" value="${c.sort}"></div>
+              <div class="field"><label>الأدوات <small>(مفصولة بفاصلة، زي Excel, Power BI)</small></label><input name="tools" value="${esc(c.tools || "")}"></div>
+              <div class="field full"><label>وصف جوجل <small>(لحد 160 حرف، بيظهر في نتايج البحث ولما الرابط يتبعت)</small></label><textarea name="seo_desc" rows="2" maxlength="300">${esc(c.seo_desc || "")}</textarea></div>
+              <div class="field full"><label>سطر إضافي على الشهادة <small>(اختياري، بيظهر تحت اسم الكورس. مثلاً: 10 مستويات و13 امتحان. فاضي = مفيش)</small></label><input name="cert_note" maxlength="200" value="${esc(c.cert_note || "")}"></div>
+            </div></details>
+          <div class="full row" style="position:sticky;bottom:0;background:var(--white);padding:10px 0;border-top:1px solid var(--line-2);z-index:2"><button class="btn btn-primary" type="submit">حفظ الكورس</button><span class="status" hidden></span></div>
         </form>
-        <h3 style="margin-top:22px">الباقات والأسعار</h3>
+      </div>`;
+    if (cview.sub === "plans") box.innerHTML = `<div class="card">
         <p class="muted">ضيف أي عدد باقات بالاسم اللي يعجبك، واختار كل باقة فيها إيه: محتوى Pro (الفيديوهات) وبرامج الـ Demo. الـ PDF في كل الباقات.</p>
         <div class="grid grid-2" style="margin-top:10px">${c.plans.map((p) => `
           <form class="card stack js-plan" data-id="${p.id}" style="background:var(--paper)">
@@ -304,7 +387,8 @@
             <p class="muted" style="font-size:13px">بتبدأ مخفية، كمّل بياناتها واختار فيها إيه وبعدين علّم "ظاهرة للزوار".</p>
             <div class="row"><button class="btn btn-ghost btn-sm" type="submit">إضافة الباقة</button><span class="status" hidden></span></div>
           </form></div>
-        <h3 style="margin-top:22px">${c.unit.pl}</h3>
+      </div>`;
+    if (cview.sub === "levels") box.innerHTML = `<div>
         <div class="stack" style="margin-top:10px">${c.levels.map((l) => `
           <form class="card js-level" data-id="${l.id}" style="background:var(--paper)">
             <div class="form-grid">
@@ -312,27 +396,19 @@
               <div class="field full"><label>المحتوى</label><input name="topics" value="${esc(l.topics || "")}"></div>
               <div class="field full"><label>المقدمة التشويقية</label><textarea name="teaser" rows="2">${esc(l.teaser || "")}</textarea></div>
             </div>
-            <div class="row" style="margin-top:10px"><button class="btn btn-primary btn-sm" type="submit">حفظ</button><span class="status" hidden></span></div>
+            <div class="row" style="margin-top:10px"><button class="btn btn-primary btn-sm" type="submit">حفظ</button><button class="btn btn-ghost btn-sm js-chap" type="button" data-level="${l.id}">📄 الفصول والملفات</button><span class="status" hidden></span></div>
           </form>`).join("")}
           <form class="card js-addlevel row" data-course="${c.id}"><div class="field" style="flex:1"><input name="title" placeholder="عنوان ${c.unit.a} جديد"></div><button class="btn btn-ghost" type="submit">إضافة ${c.unit.a}</button></form>
         </div>
-      </div>`).join("") + `
-      <div class="card"><h2>إضافة مديول جديد</h2>
-        <form id="newc" class="form-grid" style="margin-top:12px">
-          <div class="field"><label>اسم الكورس</label><input name="title" required></div>
-          <div class="field"><label>رابط مختصر بالإنجليزي <small>(اختياري، مثلاً hr. لو سبته فاضي هيتعمل لوحده)</small></label><input name="slug" dir="ltr" placeholder="hr"></div>
-          <div class="field"><label>القسم</label><select name="track">${tracks().map((t) => opt(t.key, t.name, "accounting")).join("")}</select></div>
-          <div class="field full"><label>سطر تعريفي</label><input name="subtitle"></div>
-          <div class="full row"><button class="btn btn-primary" type="submit">إضافة</button><span class="status" hidden></span></div>
-        </form></div>`;
+      </div>`;
+    box.querySelectorAll(".js-chap").forEach((b) => (b.onclick = () => { pick.course = c.slug; pick.level = b.dataset.level; cview.sub = "content"; saveView(); coursesTab(); }));
 
-    const note = (form, kind, msg) => { const s = form.querySelector(".status"); IK.status(s, kind, msg); setTimeout(() => (s.hidden = true), 2500); };
     panel.querySelectorAll(".js-course").forEach((f) => (f.onsubmit = async (e) => {
       e.preventDefault();
       const fd = new FormData(f);
       const b = Object.fromEntries(fd);
       b.audiences = fd.getAll("audiences");
-      try { await api("/admin/courses/" + f.closest("[data-course]").dataset.course, { method: "PATCH", body: b }); await loadCourses(); coursesTab(); }
+      try { await api("/admin/courses/" + f.closest("[data-course]").dataset.course, { method: "PATCH", body: b }); await loadCourses(); coursesTab(); IK.status(panel.querySelector(".js-course .status"), "ok", "اتحفظ ✓"); }
       catch (err) { note(f, "bad", err.message); }
     }));
     panel.querySelectorAll(".js-plan").forEach((f) => (f.onsubmit = async (e) => {
@@ -364,17 +440,6 @@
       try { await api(`/admin/courses/${f.dataset.course}/levels`, { method: "POST", body: { title: f.title.value } }); await loadCourses(); coursesTab(); }
       catch (err) { alert(err.message); }
     }));
-    $("#newc").onsubmit = async (e) => {
-      e.preventDefault();
-      const st = e.target.querySelector(".status");
-      try {
-        const r = await api("/admin/courses", { method: "POST", body: Object.fromEntries(new FormData(e.target)) });
-        await loadCourses(); coursesTab();
-        const card = panel.querySelector(`[data-course="${r.id}"]`);
-        if (card) { card.scrollIntoView({ behavior: "smooth", block: "start" }); IK.status(card.querySelector(".js-course .status"), "ok", `اتضاف ✓ ورابطه: /course?c=${r.slug}`); }
-      }
-      catch (err) { IK.status(st, "bad", err.message); } // الرسالة بتفضل ظاهرة لحد المحاولة الجاية
-    };
   }
 
   // ======================= المادة العلمية =======================
@@ -383,10 +448,10 @@
     const c = courses.find((x) => x.slug === pick.course) || courses[0];
     if (!pick.level || !c.levels.find((l) => String(l.id) === String(pick.level))) pick.level = c.levels[0] && c.levels[0].id;
     const html = `<div class="row" style="margin-bottom:16px">
-      <div class="field"><label>الكورس</label><select id="pc">${courseOptions(c.slug)}</select></div>
+      ${panel.id === "csub" ? "" : `<div class="field"><label>الكورس</label><select id="pc">${courseOptions(c.slug)}</select></div>`}
       <div class="field" style="flex:1;min-width:220px"><label>${c.unit.the}</label><select id="pl">${c.levels.map((l) => opt(l.id, l.num + ". " + l.title, pick.level)).join("")}</select></div></div>`;
     const bind = () => {
-      $("#pc").onchange = (e) => { pick.course = e.target.value; pick.level = null; onChange(); };
+      if ($("#pc")) $("#pc").onchange = (e) => { pick.course = e.target.value; pick.level = null; onChange(); };
       $("#pl").onchange = (e) => { pick.level = e.target.value; onChange(); };
     };
     return { html, course: c, bind };
@@ -572,7 +637,7 @@
     if (!examPick || !exams.find((e) => String(e.id) === String(examPick))) examPick = exams[0] && exams[0].id;
     const ex = exams.find((e) => String(e.id) === String(examPick));
     panel.innerHTML = `
-      <div class="row" style="margin-bottom:16px"><div class="field"><label>الكورس</label><select id="pc">${courseOptions(c.slug)}</select></div></div>
+      ${panel.id === "csub" ? "" : `<div class="row" style="margin-bottom:16px"><div class="field"><label>الكورس</label><select id="pc">${courseOptions(c.slug)}</select></div></div>`}
       <div class="card"><h2>امتحانات الكورس</h2>
         <div class="table-wrap" style="margin-top:12px"><table class="t"><thead><tr><th>الامتحان</th><th>بعد ${esc(c.unit.the)}</th><th>أسئلة في كل محاولة</th><th>النجاح من % أو أكتر</th><th>المدة (دقيقة)</th><th>بنك الأسئلة</th><th></th></tr></thead><tbody>
         ${exams.map((e) => `<tr data-ex="${e.id}"${String(e.id) === String(examPick) ? ' style="background:#FBF7EE"' : ""}>
@@ -589,7 +654,7 @@
         <form id="addx" class="row" style="margin-top:12px"><span>إضافة امتحان تراكمي بعد ${esc(c.unit.the)}</span><input name="after_level" type="number" min="1" style="width:70px" required><button class="btn btn-ghost btn-sm" type="submit">إضافة</button></form>
       </div>
       ${ex ? `<div class="card" id="qs"><div class="loading">جاري تحميل الأسئلة...</div></div>` : ""}`;
-    $("#pc").onchange = (e) => { pick.course = e.target.value; examPick = null; examsTab(); };
+    if ($("#pc")) $("#pc").onchange = (e) => { pick.course = e.target.value; examPick = null; examsTab(); };
     panel.querySelectorAll("tr[data-ex]").forEach((tr) => {
       const id = tr.dataset.ex;
       tr.querySelector(".js-save").onclick = async () => {
@@ -1067,6 +1132,7 @@
   const tabs = { students: studentsTab, inactive: () => inactiveTab(), courses: coursesTab, content: contentTab, exams: examsTab, lecturers: lecturersTab, library: libraryTab, demo: demoTab, visitors: visitorsTab, stats: statsTab, settings: settingsTab };
   const tabBtns = document.querySelectorAll(".tabs button");
   function go(name) {
+    panel = $("#panel");
     tabBtns.forEach((b) => b.classList.toggle("on", b.dataset.tab === name));
     try { localStorage.setItem("ik-admin-tab", name); } catch (e) {}
     panel.innerHTML = '<div class="loading">جاري التحميل...</div>';
