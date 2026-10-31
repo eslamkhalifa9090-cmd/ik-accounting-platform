@@ -365,6 +365,14 @@ route("GET", "/public/site", async ({ db }) => {
   });
 });
 
+// روابط السوشيال لبرامج الـ Demo (HR وMINi SYS): بيانات عامة للقراءة بس، علشان لو اتغيرت من الأدمن تتغير في كل مكان
+route("GET", "/public/social", async ({ db, url }) => {
+  const s = await getSettings(db);
+  const links = Object.fromEntries(SOCIAL_URL_KEYS.map((k) => [k.replace("social_", ""), s[k] || ""]));
+  return json({ site: url.origin, brand: s.brand_name || "IK Academy", whatsapp: s.social_whatsapp || s.whatsapp || "", fab: s.social_fab !== "0", links },
+    200, { "cache-control": "public, max-age=300", "access-control-allow-origin": "*" });
+});
+
 route("GET", "/public/course/:slug", async ({ db, params }) => {
   const c = await db.prepare("SELECT * FROM courses WHERE slug = ? AND status != 'hidden'").bind(params.slug).first();
   if (!c) fail(404, "الكورس ده مش موجود.");
