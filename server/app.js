@@ -80,7 +80,8 @@ async function getSettings(db) {
 }
 // whatsapp = خدمة العملاء، support_whatsapp = الدعم الفني، lecturer_whatsapp = المحاضر
 const PUBLIC_SETTINGS = ["whatsapp", "whatsapp_display", "support_whatsapp", "lecturer_whatsapp", "brand_name", "brand_by", "footer_line1", "footer_line2",
-  "subscribe_message", "support_message", "follow_message", "notify_message", "cert_signature", "wm_text", "wm_student", "wm_level", "tracks", "lib_subcats", "follow_mode", "services", "testimonials"];
+  "subscribe_message", "support_message", "follow_message", "notify_message", "cert_signature", "wm_text", "wm_student", "wm_level", "tracks", "lib_subcats", "follow_mode", "services", "testimonials",
+  "social_instagram", "social_facebook", "social_tiktok", "social_youtube", "social_linkedin", "social_whatsapp", "social_fab"];
 const ADMIN_SETTINGS = [...PUBLIC_SETTINGS, "reminder_message", "inactive_days", "cert_issuer", "activation_message", "demo_message", ...CERT_TEXT_KEYS];
 
 // الأقسام بتتكتب في الإعدادات سطر لكل قسم: المفتاح | الاسم | سطر تعريفي
@@ -95,7 +96,18 @@ const cleanAudiences = (v) => {
 const splitList = (v) => String(v || "").split(",").map((x) => x.trim()).filter(Boolean);
 // مصدر الزيارة بيتسجل حروف إنجليزي صغيرة وأرقام وشرطة بس (facebook، whatsapp، google ...)
 const cleanSource = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40);
-const WHATSAPP_KEYS = ["whatsapp", "support_whatsapp", "lecturer_whatsapp"];
+const WHATSAPP_KEYS = ["whatsapp", "support_whatsapp", "lecturer_whatsapp", "social_whatsapp"];
+// روابط صفحات السوشيال: فاضي = الأيقونة بتستخبى. بنقبل الرابط من غير https وبنكمله
+const SOCIAL_URL_KEYS = ["social_instagram", "social_facebook", "social_tiktok", "social_youtube", "social_linkedin"];
+const cleanUrl = (raw, label) => {
+  let v = String(raw || "").trim();
+  if (!v) return "";
+  if (!/^https?:\/\//i.test(v)) v = "https://" + v.replace(/^\/+/, "");
+  let u;
+  try { u = new URL(v); } catch (e) { u = null; }
+  if (!u || !/^https?:$/.test(u.protocol) || !u.hostname.includes(".") || v.length > 300) fail(400, `رابط ${label} مش صحيح. انسخه من المتصفح كامل، زي https://www.facebook.com/...`);
+  return u.href;
+};
 const cleanWhatsapp = (raw) => {
   let v = toLatinDigits(String(raw || "")).replace(/\D/g, "");
   if (v.startsWith("0")) v = "20" + v.slice(1);
@@ -579,7 +591,7 @@ route("GET", "/public/library/:id/download", async ({ db, request, params }) => 
 
 // ---------- الإحصائيات: عداد واحد لكل (يوم، نوع، كورس) من غير أي خدمة خارجية ----------
 // visit_src = زيارة من مصدر (فيسبوك ...)، sub_src = ضغطة اشترك من مصدر
-const TRACK_KINDS = ["home_view", "course_view", "wa_subscribe", "wa_notify", "visit_src", "sub_src", "library_view"];
+const TRACK_KINDS = ["home_view", "course_view", "wa_subscribe", "wa_notify", "visit_src", "sub_src", "library_view", "social_click"];
 const bump = (db, kind, ref = "") => db.prepare(`INSERT INTO stats (day, kind, ref, n) VALUES (?, ?, ?, 1)
                                                  ON CONFLICT (day, kind, ref) DO UPDATE SET n = n + 1`).bind(today(), kind, ref).run();
 
@@ -1430,6 +1442,8 @@ route("PUT", "/admin/settings", async ({ db, request }) => {
     let v = String(b[k]).trim();
     if (WHATSAPP_KEYS.includes(k)) v = cleanWhatsapp(v);
     if (k === "follow_mode" && !FOLLOW_MODES.includes(v)) v = "lecturer";
+    if (SOCIAL_URL_KEYS.includes(k)) v = cleanUrl(v, { social_instagram: "إنستجرام", social_facebook: "فيسبوك", social_tiktok: "تيك توك", social_youtube: "يوتيوب", social_linkedin: "لينكد إن" }[k]);
+    if (k === "social_fab") v = v === "0" ? "0" : "1";
     if (k === "inactive_days") {
       v = String(parseInt(toLatinDigits(v), 10) || 0);
       if (!(Number(v) >= 1 && Number(v) <= 365)) fail(400, "عدد أيام الانقطاع لازم يكون من 1 لـ 365.");

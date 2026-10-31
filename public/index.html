@@ -333,6 +333,7 @@ footer a:hover{color:var(--gold)}
 footer .slogan{display:flex;flex-direction:column;line-height:1.5}
 footer .slogan b{font-family:var(--f-display);color:#fff;direction:ltr;text-align:right;font-weight:600;font-size:17px}
 footer .slogan em{font-style:normal;color:var(--gold)}
+footer .home-social{margin-top:0;justify-content:flex-start}
 .fab{position:fixed;z-index:30;inset-inline-start:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:none;align-items:center;gap:8px;background:var(--wa);color:var(--white);text-decoration:none;font-family:var(--f-display);font-weight:600;font-size:15px;padding:12px 18px;border-radius:999px;box-shadow:0 10px 24px -8px rgba(16,43,78,.45)}
 .fab svg{width:22px;height:22px}
 @media (max-width:900px){.fab{display:inline-flex}footer{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}}
@@ -621,6 +622,7 @@ footer .slogan em{font-style:normal;color:var(--gold)}
     <nav aria-label="روابط سريعة">
       <a href="#catalog">الكورسات</a><a href="/library">مكتبة IK</a><a href="#about">عن المؤسس</a><a href="#faq">الأسئلة الشائعة</a><a href="/privacy">الخصوصية</a><a class="js-wa" href="#" target="_blank" rel="noopener">واتساب</a>
     </nav>
+    <div id="foot-social"></div>
   </div>
 </footer>
 
@@ -835,6 +837,8 @@ footer .slogan em{font-style:normal;color:var(--gold)}
   if (S.brand_by) IK.$("#brand-by").textContent = S.brand_by;
   if (S.footer_line1) IK.$("#foot-1").textContent = S.footer_line1;
   if (S.footer_line2) IK.$("#foot-2").textContent = S.footer_line2;
+  IK.$("#foot-social").innerHTML = IK.socialLinks(S, "social-row home-social");
+  IK.socialFab(S);
   IK.$("#phone-num").textContent = S.whatsapp_display || ("0" + String(S.whatsapp).replace(/^20/, ""));
   sel.innerHTML = '<option value="">استفسار عام</option>' + site.courses.map((c) => `<option>${esc(c.title)}</option>`).join("");
   IK.$("#lead-interest").innerHTML = '<option value="general">استفسار عام</option>' + site.courses.map((c) => `<option value="${esc(c.slug)}">${esc(c.title)}</option>`).join("") + '<option value="services">خدمات للشركات</option>';
