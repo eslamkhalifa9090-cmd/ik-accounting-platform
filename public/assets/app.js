@@ -175,6 +175,58 @@
     b.onclick = () => { const a = list.find((x) => x.id === b.dataset.demo); if (a) IK.requestDemo(a, user); };
   });
 
+  // ===== روابط السوشيال: من تبويب "روابط السوشيال" في الأدمن، والفاضي بيستخبى =====
+  const SOC_SVG = {
+    facebook: '<path fill="currentColor" d="M14 13.5h2.5l1-4H14v-2c0-1 0-2 2-2h1.5V2.1C17.2 2.1 16 2 14.6 2 11.9 2 10 3.7 10 6.7v2.8H7v4h3V22h4Z"/>',
+    instagram: '<rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.4" cy="6.6" r="1.3" fill="currentColor"/>',
+    tiktok: '<path fill="currentColor" d="M16.6 5.8A4.3 4.3 0 0 1 15.5 3h-3.3v12.4a2.6 2.6 0 1 1-2.6-2.6c.3 0 .5 0 .8.1V9.5a6 6 0 0 0-.8-.1 5.9 5.9 0 1 0 5.9 5.9V9a7.6 7.6 0 0 0 4.5 1.4V7.1a4.3 4.3 0 0 1-3.4-1.3Z"/>',
+    youtube: '<path fill="currentColor" d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4a2.5 2.5 0 0 0-1.8 1.8A26 26 0 0 0 2 12a26 26 0 0 0 .4 4.8 2.5 2.5 0 0 0 1.8 1.8c1.6.4 7.8.4 7.8.4s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8A26 26 0 0 0 22 12a26 26 0 0 0-.4-4.8ZM10 15V9l5.2 3Z"/>',
+    linkedin: '<path fill="currentColor" d="M5 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9.5h4V21H3Zm7 0h3.8v1.6h.1c.5-1 1.8-2 3.8-2 4 0 4.8 2.6 4.8 6V21h-4v-5.2c0-1.2 0-2.8-1.7-2.8s-2 1.3-2 2.7V21h-4Z"/>',
+  };
+  IK.SOCIALS = [["facebook", "فيسبوك", "#1877F2"], ["instagram", "إنستجرام", "#E1306C"], ["tiktok", "تيك توك", "#111111"],
+    ["youtube", "يوتيوب", "#FF0000"], ["linkedin", "لينكد إن", "#0A66C2"], ["whatsapp", "واتساب", "#25D366"]];
+  IK.socialList = (s) => IK.SOCIALS.map(([k, name, color]) => {
+    const url = k === "whatsapp" ? ((s.social_whatsapp || s.whatsapp) ? IK.wa(s.social_whatsapp || s.whatsapp, "السلام عليكم") : "") : s["social_" + k];
+    return url && { k, name, color, url };
+  }).filter(Boolean);
+  IK.socialIcon = (k) => k === "whatsapp" ? IK.chatIcon : '<svg viewBox="0 0 24 24" aria-hidden="true">' + SOC_SVG[k] + "</svg>";
+  IK.socialLinks = (s, cls = "social-row") => {
+    const list = IK.socialList(s);
+    return list.length ? `<div class="${cls}">${list.map((x) => `<a class="soc" style="--c:${x.color}" href="${IK.esc(x.url)}" target="_blank" rel="noopener" data-soc="${x.k}" aria-label="${x.name}" title="${x.name}">${IK.socialIcon(x.k)}</a>`).join("")}</div>` : "";
+  };
+  const SOC_CSS = `.social-row{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:12px}
+.soc{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;text-decoration:none;transition:background .15s,transform .15s}
+.soc:hover,.soc:focus-visible{background:var(--c);transform:translateY(-2px)}
+.soc svg{width:20px;height:20px}
+.soc-fab{position:fixed;z-index:40;inset-inline-end:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column-reverse;align-items:center;gap:10px}
+.soc-fab>button{width:52px;height:52px;border-radius:50%;border:0;background:#102B4E;color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 24px -8px rgba(16,43,78,.55);font:inherit;outline:2px solid rgba(255,255,255,.85);outline-offset:-2px}
+.soc-fab>button svg{width:24px;height:24px;transition:transform .2s}
+.soc-fab.open>button svg{transform:rotate(45deg)}
+.soc-fab .soc-list{display:flex;flex-direction:column-reverse;gap:10px;align-items:center}
+.soc-fab:not(.open) .soc-list{display:none}
+.soc-fab .soc{width:44px;height:44px;background:var(--c);box-shadow:0 6px 16px -6px rgba(0,0,0,.4)}
+.soc-fab .soc:hover{transform:scale(1.08)}
+body:has(.soc-fab) .app-footer{padding-bottom:84px}
+@media print{.soc-fab{display:none}}`;
+  // الزرار العائم: في كل الصفحات ما عدا الامتحان، وبيتقفل من الإعدادات (social_fab = 0)
+  IK.socialFab = (s) => {
+    if (!document.getElementById("soc-css")) { const st = document.createElement("style"); st.id = "soc-css"; st.textContent = SOC_CSS; document.head.append(st); }
+    document.addEventListener("click", (e) => { const a = e.target.closest && e.target.closest("a[data-soc]"); if (a) IK.track("social_click", a.dataset.soc); });
+    if (s.social_fab === "0" || /^\/(exam|admin)/.test(location.pathname) || document.querySelector(".soc-fab")) return;
+    const list = IK.socialList(s);
+    if (!list.length) return;
+    const box = document.createElement("div");
+    box.className = "soc-fab";
+    box.innerHTML = `<button type="button" aria-expanded="false" aria-label="صفحاتنا على السوشيال" title="تابعنا"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M12 5v14M5 12h14"/></svg></button>` +
+      IK.socialLinks(s, "soc-list");
+    const btn = box.querySelector("button");
+    const set = (on) => { box.classList.toggle("open", on); btn.setAttribute("aria-expanded", on); };
+    btn.onclick = (e) => { e.stopPropagation(); set(!box.classList.contains("open")); };
+    document.addEventListener("click", (e) => { if (!box.contains(e.target)) set(false); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") set(false); });
+    document.body.append(box);
+  };
+
   // الهيدر والفوتر لكل صفحات المنصة
   IK.chrome = async ({ user } = {}) => {
     IK.source();
@@ -201,8 +253,9 @@
     footer.innerHTML = "<b>" + IK.esc(s.footer_line1 || "") + "</b><span>" + IK.esc(s.footer_line2 || "") + "</span>" +
       '<nav class="foot-links"><a href="/#catalog">الكورسات</a><a href="/library">مكتبة IK</a>' +
       (s.whatsapp ? '<a target="_blank" rel="noopener" href="' + IK.esc(IK.wa(s.whatsapp, "السلام عليكم")) + '">واتساب</a>' : "") +
-      '<a href="/privacy">الخصوصية</a></nav>';
+      '<a href="/privacy">الخصوصية</a></nav>' + IK.socialLinks(s);
     document.body.append(footer);
+    IK.socialFab(s);
     const lo = IK.$("#logout-btn");
     if (lo) lo.addEventListener("click", async () => { try { await IK.api("/auth/logout", { method: "POST" }); } catch (e) {} location.href = "/login"; });
     return site;

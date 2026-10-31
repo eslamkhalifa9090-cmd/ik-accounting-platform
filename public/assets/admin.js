@@ -860,6 +860,42 @@
     };
   }
 
+  // ======================= روابط السوشيال =======================
+  async function socialTab() {
+    const s = await api("/admin/settings");
+    let clicks = {};
+    try { (await api("/admin/stats")).rows.filter((r) => r.kind === "social_click").forEach((r) => (clicks[r.ref] = r.d30)); } catch (e) {}
+    const ph = { facebook: "https://www.facebook.com/...", instagram: "https://www.instagram.com/...", tiktok: "https://www.tiktok.com/@...", youtube: "https://www.youtube.com/@...", linkedin: "https://www.linkedin.com/in/..." };
+    const base = location.origin + "/";
+    panel.innerHTML = `
+      <form id="soc-f" class="card form-grid">
+        <h2 class="full">روابط صفحات السوشيال</h2>
+        <p class="muted full">الروابط دي بتظهر كأيقونات في الفوتر وفي زرار عائم صغير في كل صفحات المنصة (ما عدا الامتحان). أي خانة فاضية = الأيقونة بتاعتها مش بتظهر. غيّر اللينك واحفظ، وهيتغير في كل حتة على طول.</p>
+        ${IK.SOCIALS.map(([k, name]) => `<div class="field"><label>${name} <small>(ضغطات آخر 30 يوم: ${clicks[k] || 0})</small></label>
+          ${k === "whatsapp" ? `<input name="social_whatsapp" dir="ltr" value="${esc(s.social_whatsapp || "")}" placeholder="فاضي = رقم خدمة العملاء ${esc(s.whatsapp || "")}">`
+            : `<input name="social_${k}" dir="ltr" value="${esc(s["social_" + k] || "")}" placeholder="${ph[k]}">`}</div>`).join("")}
+        <div class="field"><label>الزرار العائم في الصفحات</label>
+          <select name="social_fab"><option value="1">يظهر</option><option value="0"${s.social_fab === "0" ? " selected" : ""}>يستخبى (الأيقونات تفضل في الفوتر بس)</option></select></div>
+        <div class="full row"><button class="btn btn-primary" type="submit">حفظ الروابط</button><span class="status" hidden></span></div>
+      </form>
+      <div class="card stack">
+        <h2>لينك المنصة جاهز للبايو</h2>
+        <p class="muted">حط اللينك ده في البايو أو البوستات على كل منصة، وتبويب الإحصائيات هيعرفك الزوار والاشتراكات جت من أنهي منصة.</p>
+        <div class="table-wrap"><table class="t"><tbody>${IK.SOCIALS.map(([k, name]) => { const u = base + "?utm_source=" + k;
+          return `<tr><td>${name}</td><td dir="ltr" style="font-size:13px">${esc(u)}</td><td><button class="btn btn-ghost btn-sm js-copy" type="button" data-u="${esc(u)}">نسخ</button></td></tr>`; }).join("")}</tbody></table></div>
+      </div>`;
+    panel.querySelectorAll(".js-copy").forEach((b) => (b.onclick = async () => {
+      try { await navigator.clipboard.writeText(b.dataset.u); b.textContent = "اتنسخ ✓"; } catch (e) { prompt("انسخ اللينك:", b.dataset.u); }
+    }));
+    const f = $("#soc-f");
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const st = f.querySelector(".status");
+      try { await api("/admin/settings", { method: "PUT", body: Object.fromEntries(new FormData(f)) }); adminSettings = await api("/admin/settings"); toast(st, "ok", "اتحفظت"); setTimeout(socialTab, 700); }
+      catch (err) { toast(st, "bad", err.message); }
+    };
+  }
+
   // ======================= الإحصائيات =======================
   async function statsTab() {
     const d = await api("/admin/stats");
@@ -1134,7 +1170,7 @@
   }
 
   // ======================= التابات =======================
-  const tabs = { students: studentsTab, inactive: () => inactiveTab(), courses: coursesTab, content: contentTab, exams: examsTab, lecturers: lecturersTab, library: libraryTab, demo: demoTab, visitors: visitorsTab, stats: statsTab, settings: settingsTab };
+  const tabs = { students: studentsTab, inactive: () => inactiveTab(), courses: coursesTab, content: contentTab, exams: examsTab, lecturers: lecturersTab, library: libraryTab, demo: demoTab, visitors: visitorsTab, stats: statsTab, social: socialTab, settings: settingsTab };
   const tabBtns = document.querySelectorAll(".tabs button");
   function go(name) {
     panel = $("#panel");
