@@ -32,8 +32,8 @@ export async function handle(context) {
         ctx.user = await currentUser(env.DB, request);
         if (!ctx.user) fail(401, "لازم تسجل دخول الأول.");
         if (r.guard === "admin" && ctx.user.role !== "admin") fail(403, "الصفحة دي للأدمن بس.");
-        // آخر نشاط: بيتحدث مرة كل ساعة بالكتير، علشان قايمة المتدربين المنقطعين
-        if (!ctx.user.last_seen || Date.now() - sqlTime(ctx.user.last_seen) > 3600e3) {
+        // آخر نشاط: أي طلب من متدرب داخل بحسابه بيحدّثه، بس مرة كل 10 دقايق بالكتير علشان منكترش كتابة على الداتابيز
+        if (!ctx.user.last_seen || Date.now() - sqlTime(ctx.user.last_seen) > 600e3) {
           await env.DB.prepare("UPDATE users SET last_seen = datetime('now') WHERE id = ?").bind(ctx.user.id).run();
         }
       }
@@ -965,7 +965,7 @@ route("GET", "/admin/overview", async ({ db }) => {
 
 route("GET", "/admin/students", async ({ db, url }) => {
   const q = "%" + toLatinDigits(url.searchParams.get("q") || "").trim() + "%";
-  const { results } = await db.prepare(`SELECT u.id, u.name, u.email, u.phone, u.active, u.notes, u.created_at, u.last_login, u.must_change, u.source
+  const { results } = await db.prepare(`SELECT u.id, u.name, u.email, u.phone, u.active, u.notes, u.created_at, u.last_login, COALESCE(u.last_seen, u.last_login) AS last_active, u.must_change, u.source
       FROM users u WHERE u.role = 'student' AND (u.name LIKE ?1 OR IFNULL(u.email,'') LIKE ?1 OR IFNULL(u.phone,'') LIKE ?1)
       ORDER BY u.id DESC LIMIT 500`).bind(q).all();
   const [{ results: enr }, { results: grants }] = await Promise.all([
@@ -1107,15 +1107,15 @@ route("GET", "/admin/inactive", async ({ db, url }) => {
 }, "admin");
 
 route("GET", "/admin/export.csv", async ({ db }) => {
-  const { results: rows } = await db.prepare(`SELECT u.id, u.name, u.email, u.phone, u.active, u.last_login, e.course_id, e.plan_code, e.expires_at, c.title
+  const { results: rows } = await db.prepare(`SELECT u.id, u.name, u.email, u.phone, u.active, COALESCE(u.last_seen, u.last_login) AS last_active, e.course_id, e.plan_code, e.expires_at, c.title
       FROM users u LEFT JOIN enrollments e ON e.user_id = u.id LEFT JOIN courses c ON c.id = e.course_id
       WHERE u.role = 'student' ORDER BY u.id`).all();
-  const head = ["الاسم", "الميل", "التليفون", "الحالة", "آخر دخول", "الكورس", "الباقة", "ينتهي في", "نسبة التقدم", "واقف عند", "خلص الكورس", "دقايق المذاكرة"];
+  const head = ["الاسم", "الميل", "التليفون", "الحالة", "آخر نشاط (UTC)", "الكورس", "الباقة", "ينتهي في", "نسبة التقدم", "واقف عند", "خلص الكورس", "دقايق المذاكرة"];
   const lines = [head];
   for (const r of rows) {
     let st = null, time = null;
     if (r.course_id) { st = await courseState(db, r.id, { id: r.course_id }, r.plan_code); time = await studyTime(db, r.id, r.course_id); }
-    lines.push([r.name, r.email || "", r.phone || "", r.active ? "نشط" : "موقوف", r.last_login || "", r.title || "", r.plan_code || "",
+    lines.push([r.name, r.email || "", r.phone || "", r.active ? "نشط" : "موقوف", r.last_active || "", r.title || "", r.plan_code || "",
       r.expires_at || "", st ? st.progress + "%" : "", st ? st.current_level : "", st ? (st.completed ? "نعم" : "لا") : "", time ? time.total : ""]);
   }
   const csv = "﻿" + lines.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
