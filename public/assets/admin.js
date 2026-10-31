@@ -63,7 +63,7 @@
         <div class="spread"><h2>كل المتدربين</h2>
           <div class="row"><input id="q" placeholder="دور بالاسم أو الرقم أو الميل" style="font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-m)">
           <a class="btn btn-ghost btn-sm" href="/api/admin/export.csv">تصدير Excel</a></div></div>
-        <div class="table-wrap" style="margin-top:14px"><table class="t"><thead><tr><th>الاسم</th><th>بيدخل بـ</th><th>الكورسات</th><th>الحالة</th><th>آخر دخول</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+        <div class="table-wrap" style="margin-top:14px"><table class="t"><thead><tr><th>الاسم</th><th>بيدخل بـ</th><th>الكورسات</th><th>الحالة</th><th>آخر نشاط</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
         <div id="edit" style="margin-top:16px"></div>
       </div>`;
     const f = $("#add");
@@ -102,6 +102,9 @@
   }
   IK.toPhone = (p) => String(p || "").replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g, "");
 
+  // الوقت متخزن UTC في الداتابيز، بنعرضه بتوقيت جهاز الأدمن (مصر)
+  const sqlLocal = (t) => { const d = new Date(String(t).replace(" ", "T") + "Z"); return isNaN(d) ? String(t) : d.toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }); };
+
   async function load() {
     const list = await api("/admin/students?q=" + encodeURIComponent(($("#q") || {}).value || ""));
     $("#rows").innerHTML = list.map((u) => `
@@ -110,7 +113,7 @@
         <td class="num">${esc(u.phone || "")}${u.phone && u.email ? "<br>" : ""}${esc(u.email || "")}</td>
         <td>${u.enrollments.map((e) => `<span class="badge ${e.plan_code === "basic" ? "" : "gold"}" title="${esc(planName(e))}">${esc(e.title)}${e.expires_at ? " · لحد " + esc(e.expires_at) : ""}</span>`).join(" ") || '<span class="muted">—</span>'}</td>
         <td>${u.active ? '<span class="badge ok">نشط</span>' : '<span class="badge bad">موقوف</span>'}${u.must_change ? '<br><small class="muted">لسه ما فعّلش حسابه</small>' : ""}</td>
-        <td class="num"><small>${esc(u.last_login || "لسه ما دخلش")}</small></td>
+        <td class="num"><small title="${esc(u.last_login ? "آخر تسجيل بالباسورد: " + sqlLocal(u.last_login) : "")}">${esc(u.last_active ? sqlLocal(u.last_active) : "لسه ما دخلش")}</small></td>
         <td><div class="row"><button class="btn btn-ghost btn-sm" data-act="edit" data-id="${u.id}" type="button">تعديل</button>
           <button class="btn btn-ghost btn-sm" data-act="report" data-id="${u.id}" type="button">التقدم</button></div></td>
       </tr>`).join("") || '<tr><td colspan="6" class="empty">مفيش متدربين لسه.</td></tr>';
